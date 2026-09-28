@@ -1,0 +1,75 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { NAV_ITEMS, isNavItemActive, type NavItem } from "@/config/navigation";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+/** Props of {@link NavRail}. */
+export interface NavRailProps {
+  /** Entries to display (defaults to `NAV_ITEMS`). */
+  items?: readonly NavItem[];
+  /** Extra classes. */
+  className?: string;
+}
+
+/**
+ * Thin vertical glass rail (64 px) on the left. Icon links with tooltips; the
+ * active entry uses the accent color and `aria-current="page"`.
+ */
+export function NavRail({ items = NAV_ITEMS, className }: NavRailProps) {
+  const pathname = usePathname();
+
+  return (
+    <nav
+      aria-label="Navigation principale"
+      data-slot="nav-rail"
+      className={cn(
+        "glass fixed top-3 bottom-3 left-3 z-40 flex w-16 flex-col items-center gap-2 rounded-lg py-3 shadow-panel",
+        className,
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className="mb-2 flex size-9 items-center justify-center rounded-md border border-border-strong bg-surface-2 text-sm font-semibold tracking-tight text-text"
+      >
+        A
+      </div>
+      <ul className="flex flex-col items-center gap-1">
+        {items.map((item) => {
+          const active = isNavItemActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <li key={item.href}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={item.href}
+                    aria-label={item.label}
+                    aria-current={active ? "page" : undefined}
+                    data-active={active || undefined}
+                    className={cn(
+                      "relative flex size-10 items-center justify-center rounded-md text-text-muted transition-colors",
+                      "hover:bg-surface-2 hover:text-text",
+                      active && "bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
+                    )}
+                  >
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-2 bottom-2 -left-3 w-0.5 rounded-full bg-accent"
+                      />
+                    )}
+                    <Icon className="size-5" aria-hidden="true" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}

@@ -1,0 +1,50 @@
+# Local development database. In production the DSI-managed SQL Server
+# instance replaces this container; only DATABASE_URL changes.
+# Apple Silicon: enable "Use Rosetta for x86_64/amd64 emulation" in Docker Desktop.
+name: atlas
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: atlas-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD doit être défini dans .env}
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - atlas-mssql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # One-shot job: creates the `atlas` database if it does not exist (idempotent).
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD doit être défini dans .env}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - >-
+        /opt/mssql-tools18/bin/sqlcmd -C -S db -U sa -P "$$MSSQL_SA_PASSWORD" -b
+        -Q "IF DB_ID(N'atlas') IS NULL CREATE DATABASE [atlas];"
+        && echo "Base 'atlas' prête."
+    restart: "no"
+
+volumes:
+  atlas-mssql-data:
+    name: atlas-mssql-data

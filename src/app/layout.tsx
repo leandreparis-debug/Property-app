@@ -1,0 +1,32 @@
+import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import { AppShell } from "@/components/shell/AppShell";
+import { cn } from "@/lib/utils";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: { default: "Atlas", template: "%s · Atlas" },
+  description: "Référentiel des entrepôts logistiques — Carrefour Property",
+  robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#07090C",
+};
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Reading the request headers opts every page into dynamic rendering, which
+  // is required for Next.js to stamp the per-request CSP nonce on its scripts.
+  await headers();
+
+  return (
+    <html lang="fr" className={cn("dark", GeistSans.variable, GeistMono.variable)}>
+      <body>
+        <AppShell>{children}</AppShell>
+      </body>
+    </html>
+  );
+}
