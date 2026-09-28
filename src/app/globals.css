@@ -79,6 +79,8 @@
 @theme inline {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+  /* Brand typeface: the logo only (Unbounded 600, @fontsource/unbounded). */
+  --font-brand: "Unbounded", system-ui, sans-serif;
 }
 
 /* shadcn/ui semantic variables, mapped onto Vigie tokens (never shadcn defaults). */
@@ -192,4 +194,46 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * National map (src/components/map). MapLibre's own stylesheet is imported
+ * by the map chunk only; these rules restyle the few default elements kept.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes peek-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Cluster count: HTML marker (no glyph needed), Geist Mono, tabular. */
+.vigie-cluster-count {
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-shadow: 0 0 4px var(--color-bg);
+}
+
+.vigie-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: transparent;
+  color: var(--color-text-subtle);
+  font-size: 10px;
+}
+
+.vigie-map .maplibregl-ctrl.maplibregl-ctrl-attrib a {
+  color: var(--color-text-subtle);
+}
+
+.vigie-map .maplibregl-canvas:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }

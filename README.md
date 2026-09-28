@@ -172,6 +172,21 @@ pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --act
 pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --actor admin@vigie.local
 ```
 
+## Carte nationale
+
+La page d'accueil `/` affiche la carte des entrepôts (MapLibre, hors ligne), avec le statut de conformité calculé pour chaque site ([`docs/compliance-rules.md`](docs/compliance-rules.md)).
+
+**Voir la carte complète** : sans paquet cartographique réel, la carte utilise un fond de secours (silhouettes des pays, bandeau « Fond de carte détaillé non installé »). Pour obtenir le fond vectoriel détaillé et les images aériennes :
+
+```bash
+# Sur un poste connecté (docs/offline-bundle.md) : pmtiles requis
+pnpm bundle:build --sites sites.json --out .
+# Sur le serveur ou le poste de développement
+pnpm map:install --bundle vigie-offline-bundle-AAAAMMJJ --actor admin@vigie.local
+```
+
+Recharger `/` : le fond complet est choisi automatiquement dès que `france.pmtiles`, les polices et les symboles sont installés.
+
 ## Variables d'environnement
 
 Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête immédiatement si l'une d'elles manque ou est invalide, avec un message qui la nomme.
@@ -187,6 +202,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `TRUST_PROXY` | `true` uniquement derrière un reverse proxy qui renseigne `X-Forwarded-For` (défaut `false`) |
 | `STORAGE_ROOT` | Dossier racine des fichiers écrits par l'application (rapports d'import et d'enrichissement, carte installée `map/`, documents). Par défaut `./storage` hors production ; **obligatoire en production**. Tous les chemins sont résolus sous cette racine. |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
+| `VIGIE_E2E_TEST_HOOKS` | Réservée à la suite e2e (`1` expose `window.__vigieMap`) ; **ne jamais la définir en production** |
 
 ## Arborescence
 
@@ -211,6 +227,8 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── import.md             # procédure d'import, anomalies, décisions
 │   ├── security.md           # sessions, rôles, audit
 │   ├── offline-bundle.md     # paquet hors ligne : procédure, données sortantes, licences
+│   ├── compliance-rules.md   # règles de conformité, complétude
+│   ├── brand/                # SVG de référence du logo
 │   └── design-system.md      # tokens, règles des couleurs de statut, accessibilité
 ├── scripts/
 │   ├── check-no-external.ts  # garde anti-dépendance externe

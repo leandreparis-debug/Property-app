@@ -11,7 +11,8 @@ const BASE_URL = `http://localhost:${PORT}`;
  *
  * - globalSetup creates the e2e admin and viewer with the `user:*` scripts;
  * - the `setup` project logs them in (after the server started) and saves
- *   their sessions; the other suites reuse them.
+ *   their sessions; the other suites reuse them;
+ * - Chromium uses software WebGL so the MapLibre map renders headless.
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -30,11 +31,20 @@ export default defineConfig({
       name: "chromium",
       testMatch: /.*\.spec\.ts/,
       dependencies: ["setup"],
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, storageState: ADMIN_STATE },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+        storageState: ADMIN_STATE,
+        // Software WebGL (SwiftShader): the national map renders without a GPU.
+        launchOptions: { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] },
+      },
     },
   ],
   webServer: {
+    // VIGIE_E2E_TEST_HOOKS exposes window.__vigieMap in this test server only;
+    // map.spec.ts starts the same build WITHOUT it and checks it is absent.
     command: "pnpm build && pnpm start",
+    env: { VIGIE_E2E_TEST_HOOKS: "1" },
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,

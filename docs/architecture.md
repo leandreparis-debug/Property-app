@@ -10,8 +10,9 @@
 3. **Fichiers sur disque, métadonnées en base.** Tous les fichiers écrits par l'application vivent sous `STORAGE_ROOT` (`src/server/storage.ts` refuse tout chemin qui en sortirait). Plans, photos et documents sont stockés sur le système de fichiers du serveur ; la base conserve leurs métadonnées (chemin, type, taille, empreinte, auteur, date).
 4. **Audit systématique.** Chaque modification de donnée est tracée : qui, quand, quoi, valeur avant et après (étape 9).
 5. **Seul `tools/` joint internet.** Le code qui appelle des services publics vit exclusivement dans `tools/offline-bundle/`, exécuté sur un poste connecté. Il n'est jamais importé par l'application (test dédié) et n'entre pas dans le build. Le serveur ne reçoit que des paquets vérifiés par somme de contrôle (voir [`docs/offline-bundle.md`](offline-bundle.md)).
-6. **L'enrichissement ne remplit que les champs vides.** Une valeur publique différente d'une valeur existante est une **divergence** : listée dans le rapport, jamais appliquée. Un champ vidé volontairement dans l'interface est préservé. Les données publiques sans champ métier vont dans `site_public_data`.
-7. **Sécurité par défaut.** En-têtes de sécurité sur toutes les réponses, CSP à nonce par requête (pas de `'unsafe-inline'` pour les scripts), variables d'environnement validées au démarrage, aucun secret dans le code.
+6. **La carte ne sort jamais de l'origine.** MapLibre, PMTiles et `world-atlas` sont des paquets npm embarqués. Le fond, les polices et les symboles sont servis par `/api/map-assets`, avec des adresses construites à l'exécution depuis `window.location.origin`, jamais écrites en dur.
+7. **L'enrichissement ne remplit que les champs vides.** Une valeur publique différente d'une valeur existante est une **divergence** : listée dans le rapport, jamais appliquée. Un champ vidé volontairement dans l'interface est préservé. Les données publiques sans champ métier vont dans `site_public_data`.
+8. **Sécurité par défaut.** En-têtes de sécurité sur toutes les réponses, CSP à nonce par requête (pas de `'unsafe-inline'` pour les scripts), variables d'environnement validées au démarrage, aucun secret dans le code.
 
 ## Stack
 
@@ -47,6 +48,10 @@
 | `src/server/import/` | Import du tableur : fonctions pures (analyse, en-têtes, correspondance, contrôles, plan) et un seul module d'écriture (`writer.ts`) | Écrit toujours via `runWithAuditContext({ source: "import", batchId })` |
 | `src/server/enrichment/` | Application d'un `enrichment.json` : plan pur (`plan.ts`), lecture de l'état, un seul module d'écriture, rapport ; export des sites | Écrit via `runWithAuditContext({ source: "enrichment", batchId })` ; ne remplit que les champs vides |
 | `src/server/map/`, `src/server/http/range.ts` | Installation du paquet cartographique (vérification SHA-256, bascule atomique, retour arrière) ; service des fichiers par plages d'octets (`/api/map-assets`) | Fichiers uniquement sous `STORAGE_ROOT/map/` |
+| `src/domain/compliance/` | Moteur de conformité : règles déclaratives, complétude, évaluation (voir [`docs/compliance-rules.md`](compliance-rules.md)) | Pur ; la date du jour est injectée ; aucun statut stocké |
+| `src/server/map/sites.ts`, `transform.ts` | Données de la carte : une requête, puis une transformation pure en DTO minimal | Aucun loyer, montant ni donnée de bail détaillée dans le DTO (test sur les clés) |
+| `src/components/map/` | Carte nationale MapLibre : styles (fond complet et de secours), couches des sites, panneaux | Chargée en import dynamique sur `/` uniquement |
+| `src/components/brand/` | Logo (symbole et nom) | Couleurs de marque réservées au logo |
 | `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
 | `tools/offline-bundle/` | Outil de préparation du paquet hors ligne (poste connecté) : client HTTP partagé, fournisseurs, carte, manifeste | **Seul code autorisé à joindre internet.** Jamais importé par `src/`, exclu du build, mais couvert par le typecheck, le lint et les tests |
 | `generated/prisma/` | Client Prisma généré | Hors de `src/` : n'est pas analysé par `check:offline` (ses commentaires contiennent des liens de documentation, jamais chargés) |
@@ -69,6 +74,30 @@ Détails et justifications : [`docs/security.md`](security.md).
 - `/` rend `MapStage`, plein écran en arrière-plan. Son emplacement `data-slot="map-canvas"` recevra le canvas MapLibre à l'étape 6 (via `children`) ; les panneaux flottants passent par `overlay` ;
 - les autres pages utilisent `PageContainer`, qui laisse la place au rail et à la barre de commande.
 
+## Carte nationale
+
+- **Chargement** :
+  - la page serveur `/` calcule les données de la carte avec `getMapSites(todayDateOnly())` et lit le manifeste installé ;
+  - elle passe le tout au composant client `NationalMapLoader`, qui charge `NationalMap` par `next/dynamic` (`ssr: false`) ;
+  - MapLibre, PMTiles, `@protomaps/basemaps` et la feuille de style de MapLibre vivent dans ce seul morceau. Un test e2e vérifie que `/login` n'en télécharge aucun octet.
+  - Le protocole `pmtiles://` est enregistré une seule fois (compteur de références) et retiré au démontage.
+- **Fond complet ou de secours** :
+  - le fond complet est utilisé si le manifeste installé déclare `france.pmtiles`, les symboles et une plage de glyphes non vide (`resolveMapAssets`, mêmes données que `GET /api/map-assets/status`) ;
+  - sinon, le style de secours est construit localement à partir de `world-atlas` (importé dynamiquement, seulement dans ce cas), sans aucune requête de police ;
+  - les images aériennes s'ajoutent dans les deux cas si `ortho-sites.pmtiles` est installé.
+- **DTO minimal** (`src/domain/map-dto.ts`) :
+  - pour chaque point : identifiant, code, nom, ville, département, région, activité, statut, rang, au plus 3 raisons, nombre de raisons, complétude, surface de référence, présence d'une emprise ;
+  - pour chaque emprise : statut et hauteur ;
+  - la liste des sites non localisés, les décomptes, et toutes les raisons par site pour `SitePeek` ;
+  - **aucun loyer, montant ni donnée de bail détaillée**. Le même DTO est servi par `GET /api/map/sites` (permission `site:read`).
+- **URL** : la sélection est reflétée par `?site=CODE`, écrit avec `history.replaceState`. Cela n'ajoute aucune entrée d'historique et ne relance pas le rendu serveur de la page, contrairement à `router.replace`.
+- **Robustesse** :
+  - WebGL indisponible : `EmptyState` avec accès à la liste des sites ;
+  - erreurs de ressources : journalisées en développement ;
+  - `ResizeObserver` pour suivre la taille ;
+  - nettoyage complet au démontage (`map.remove()`, marqueurs, `requestAnimationFrame`).
+- **Crochet de test** : `window.__vigieMap = { ready, selectedCode }` existe en développement, ou si le serveur démarre avec `VIGIE_E2E_TEST_HOOKS=1` (suite e2e uniquement). Un test e2e démarre le même build sans cette variable et vérifie que le crochet est absent.
+
 ## Découpage en 12 étapes
 
 1. **Initialisation** : projet, système de design, coque, Docker, chaîne qualité *(terminée)*.
@@ -76,7 +105,7 @@ Détails et justifications : [`docs/security.md`](security.md).
 3. **Authentification, rôles et journal d'audit automatique** *(terminée, voir `docs/security.md`)*.
 4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import *(terminée, voir `docs/import.md`)*.
 5. **Enrichissement et ressources carto** : paquet hors ligne préparé sur un poste connecté (données publiques, fond de carte, orthophotos), installé et appliqué sur le serveur *(terminée, voir `docs/offline-bundle.md`)*.
-6. **Carte nationale** : MapLibre, calcul du statut de conformité.
+6. **Carte nationale** : MapLibre, statut de conformité calculé, aperçu d'un site *(terminée, voir « Carte nationale » ci-dessous et `docs/compliance-rules.md`)*.
 7. **Filtres et supervision**.
 8. **Fiche entrepôt**.
 9. **Édition tracée** : modifications avec journal d'audit.

@@ -35,13 +35,9 @@ test("la page d'accueil affiche le rail, la barre de commande et la légende", a
 
   const legend = page.getByRole("list", { name: "Légende des statuts de conformité" });
   await expect(legend).toBeVisible();
-  await expect(legend.getByRole("listitem")).toHaveText([
-    "Critique",
-    "À surveiller",
-    "Non évalué",
-    "Conforme",
-  ]);
-  await expect(page.getByRole("region", { name: "Carte" })).toBeVisible();
+  // Each status with its number of sites.
+  await expect(legend.getByRole("listitem")).toHaveText([/^Critique\d+$/, /^À surveiller\d+$/, /^Non évalué\d+$/, /^Conforme\d+$/]);
+  await expect(page.getByRole("region", { name: "Carte des entrepôts" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "fr");
   await expect(page.locator("html")).toHaveClass(/dark/);
   expect(csp).toEqual([]);
@@ -62,6 +58,8 @@ test("le rail permet de naviguer vers les 4 routes", async ({ page }) => {
 test("Ctrl+K ouvre la palette et Échap la ferme", async ({ page }) => {
   await page.goto("/");
   await expect(rail(page)).toBeVisible();
+  // Map fully initialised first (software WebGL can starve the main thread while loading).
+  await page.waitForFunction(() => window.__vigieMap?.ready === true, null, { timeout: 60_000 });
 
   await page.keyboard.press("Control+K");
   const dialog = page.getByRole("dialog", { name: "Recherche" });
