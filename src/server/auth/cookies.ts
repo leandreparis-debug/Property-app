@@ -7,9 +7,9 @@
  */
 
 /** Cookie name when `COOKIE_SECURE=true`. */
-export const SECURE_SESSION_COOKIE = "__Host-atlas_session";
+export const SECURE_SESSION_COOKIE = "__Host-vigie_session";
 /** Cookie name when `COOKIE_SECURE=false`. */
-export const PLAIN_SESSION_COOKIE = "atlas_session";
+export const PLAIN_SESSION_COOKIE = "vigie_session";
 /** Both names (the middleware only checks for presence). */
 export const SESSION_COOKIE_NAMES = [SECURE_SESSION_COOKIE, PLAIN_SESSION_COOKIE] as const;
 

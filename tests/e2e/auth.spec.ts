@@ -15,7 +15,7 @@ test.describe("sans session", () => {
   test("une visite de / redirige vers /login?next=%2F", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveURL(`${ORIGIN}/login?next=%2F`);
-    await expect(page.getByRole("heading", { name: "Atlas" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Vigie" })).toBeVisible();
     await expect(page.getByText("Référentiel des entrepôts")).toBeVisible();
     await expect(page.getByLabel("Adresse email")).toBeFocused();
     await expect(page.getByRole("navigation", { name: "Navigation principale" })).toHaveCount(0);
@@ -36,7 +36,7 @@ test.describe("sans session", () => {
     await page.goto("/login");
     await login(page, ADMIN.email, "ce n'est pas le bon mot de passe");
     await expect(page.getByRole("alert").filter({ hasText: "Identifiants" })).toHaveText("Identifiants invalides.");
-    await login(page, "personne@atlas.local", "peu importe le mot de passe");
+    await login(page, "personne@vigie.local", "peu importe le mot de passe");
     await expect(page.getByRole("alert").filter({ hasText: "Identifiants" })).toHaveText("Identifiants invalides.");
     await expect(page).toHaveURL(/\/login/);
   });
@@ -72,7 +72,7 @@ test.describe("sans session", () => {
     expect(cookies).toHaveLength(1);
     const [cookie] = cookies;
     // Production build: COOKIE_SECURE defaults to true → Secure + __Host- prefix.
-    expect(cookie).toMatchObject({ name: "__Host-atlas_session", httpOnly: true, secure: true, sameSite: "Lax", path: "/", domain: "localhost" });
+    expect(cookie).toMatchObject({ name: "__Host-vigie_session", httpOnly: true, secure: true, sameSite: "Lax", path: "/", domain: "localhost" });
     expect(cookie!.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(cookie!.expires).toBeGreaterThan(Date.now() / 1000 + 11 * 3600);
     expect(await page.evaluate(() => document.cookie)).toBe("");
@@ -87,7 +87,7 @@ test.describe("sans session", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Supervision" })).toBeVisible();
 
     await page.getByRole("button", { name: /Menu utilisateur/ }).click();
-    await expect(page.getByRole("menu")).toContainText("admin@atlas.local".replace("admin", "e2e-admin"));
+    await expect(page.getByRole("menu")).toContainText("admin@vigie.local".replace("admin", "e2e-admin"));
     await expect(page.getByRole("menu")).toContainText("Administrateur");
     await page.getByRole("menuitem", { name: "Se déconnecter" }).click();
 

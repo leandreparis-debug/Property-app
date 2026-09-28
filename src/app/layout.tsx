@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Atlas", template: "%s · Atlas" },
+  title: { default: "Vigie", template: "%s · Vigie" },
   description: "Référentiel des entrepôts logistiques — Carrefour Property",
   robots: { index: false, follow: false },
 };

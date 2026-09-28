@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 /*
- * Atlas design system — dark "control room" theme.
+ * Vigie design system — dark "control room" theme.
  *
  * Structure:
  *   1. `@theme`         → raw design tokens (exact values, source of truth).
@@ -81,7 +81,7 @@
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
-/* shadcn/ui semantic variables, mapped onto Atlas tokens (never shadcn defaults). */
+/* shadcn/ui semantic variables, mapped onto Vigie tokens (never shadcn defaults). */
 :root {
   --background: var(--color-bg);
   --foreground: var(--color-text);

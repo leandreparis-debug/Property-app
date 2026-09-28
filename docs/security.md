@@ -16,7 +16,7 @@
 ### Pourquoi pas Auth.js, et pourquoi pas de JWT
 - **Auth.js** vise surtout OAuth, OIDC et les fournisseurs externes, inutiles sur un réseau fermé avec des comptes locaux. Son adaptateur pour SQL Server et Prisma 7 n'est pas maintenu, et il ajouterait une surface de configuration (callbacks, stratégies) sans bénéfice.
 - **Les JWT sans état** ne se révoquent pas : désactiver un compte ou changer un mot de passe devrait prendre effet immédiatement, ce qu'une session en base permet par une simple suppression de ligne.
-- **Une session opaque en base** est simple, auditable et révocable. Son coût, une lecture indexée par requête, est négligeable à l'échelle d'Atlas.
+- **Une session opaque en base** est simple, auditable et révocable. Son coût, une lecture indexée par requête, est négligeable à l'échelle d'Vigie.
 
 ## Mots de passe
 - **Hachage** : argon2id via `@node-rs/argon2`, qui fournit des binaires précompilés par npm, sans compilation ni appel réseau. Paramètres de l'OWASP : **m = 19 456 Kio, t = 2, p = 1**. Format PHC, sel aléatoire, environ 20 ms par hachage.
@@ -34,14 +34,14 @@
   > ⚠ Cette limite ne vaut que pour **une seule instance** du serveur, et elle est remise à zéro au redémarrage. Avec plusieurs instances derrière un répartiteur, il faudra la déplacer dans un stockage partagé (table SQL, par exemple).
 - **Adresse IP.**
   - `TRUST_PROXY=true`, derrière **un** reverse proxy qui ajoute l'adresse du client à `X-Forwarded-For` : on retient la **dernière** valeur, celle écrite par le proxy de confiance.
-  - `TRUST_PROXY=false`, exposition directe : Next.js 15 n'expose pas l'adresse du socket aux Server Actions. Il la recopie lui-même dans `X-Forwarded-For`, **mais seulement si le client n'a pas déjà envoyé cet en-tête**. Atlas utilise cette valeur, en sachant qu'un client malveillant peut la falsifier pour échapper à la limite par IP. Le verrouillage par compte reste effectif. **Pour la production, placer Atlas derrière un reverse proxy et activer `TRUST_PROXY=true`.**
+  - `TRUST_PROXY=false`, exposition directe : Next.js 15 n'expose pas l'adresse du socket aux Server Actions. Il la recopie lui-même dans `X-Forwarded-For`, **mais seulement si le client n'a pas déjà envoyé cet en-tête**. Vigie utilise cette valeur, en sachant qu'un client malveillant peut la falsifier pour échapper à la limite par IP. Le verrouillage par compte reste effectif. **Pour la production, placer Vigie derrière un reverse proxy et activer `TRUST_PROXY=true`.**
 - **Journal** : `LOGIN`, `LOGIN_FAILED` et `LOGOUT` sont écrits dans `audit_logs` (`entity_type = "User"`, `entity_id` = identifiant du compte, ou `unknown`). `after_value` contient `{ ip, reason }`. La raison (`bad_password`, `unknown_email`, `locked`, `inactive`, `ip_rate_limited`…) n'est **jamais** montrée à l'utilisateur.
 
 ## Cookie
 
 | Attribut | Valeur |
 |---|---|
-| Nom | `__Host-atlas_session` si `COOKIE_SECURE=true`, sinon `atlas_session` |
+| Nom | `__Host-vigie_session` si `COOKIE_SECURE=true`, sinon `vigie_session` |
 | `HttpOnly` | toujours (le cookie n'est pas lisible par `document.cookie`) |
 | `SameSite` | `Lax` |
 | `Path` | `/` |
@@ -117,7 +117,7 @@ Un rôle inconnu n'accorde rien. `assertCan()` lève `ForbiddenError`. La matric
 ## Recommandations pour l'étape 12 (déploiement)
 - **Compte SQL applicatif dédié**, sans `db_owner` :
   - `SELECT` et `INSERT` sur `audit_logs`, **sans** `UPDATE` ni `DELETE` :
-    `DENY UPDATE, DELETE ON dbo.audit_logs TO atlas_app;`
+    `DENY UPDATE, DELETE ON dbo.audit_logs TO vigie_app;`
   - droits de lecture et d'écriture sur les autres tables ;
   - un compte distinct, plus privilégié, pour `prisma migrate deploy`.
 - **HTTPS** sur le reverse proxy, avec `COOKIE_SECURE=true` et `TRUST_PROXY=true`.

@@ -1,6 +1,6 @@
-# Atlas
+# Vigie
 
-Atlas est l'outil interne de Carrefour Property qui centralise les données des entrepôts logistiques en France métropolitaine (moins de 200 sites).
+Vigie est l'outil interne de Carrefour Property qui centralise les données des entrepôts logistiques en France métropolitaine (moins de 200 sites).
 Il remplace un tableur d'environ 200 colonnes et des documents isolés par un référentiel unique, consultable depuis une carte nationale.
 L'application fonctionne **sans aucune dépendance internet à l'exécution** : elle tourne sur un serveur interne, sur un réseau fermé.
 
@@ -14,16 +14,32 @@ L'application fonctionne **sans aucune dépendance internet à l'exécution** : 
 
 **Apple Silicon (M1/M2/M3…)** : l'image SQL Server n'existe qu'en `linux/amd64`. Dans Docker Desktop, ouvrir *Settings → General* et activer **« Use Rosetta for x86_64/amd64 emulation on Apple Silicon »**, puis redémarrer Docker Desktop. Le `docker-compose.yml` force déjà `platform: linux/amd64`.
 
+## Renommage Atlas → Vigie (poste de développement existant)
+
+Le projet s'appelait « Atlas » jusqu'à l'étape 4. La base s'appelle désormais `vigie` (tests : `vigie_test`), le volume Docker `vigie-mssql-data`, le cookie de session `vigie_session` et les comptes de test sont en `@vigie.local`. Sur un poste déjà installé :
+
+```bash
+docker rm -f atlas-db                 # ancien conteneur (le volume atlas-mssql-data n'est pas supprimé)
+# Dans .env : remplacer « database=atlas » par « database=vigie » dans DATABASE_URL
+pnpm install
+pnpm db:up && pnpm db:migrate && pnpm db:seed
+pnpm user:create --email admin@vigie.local --name "Admin Démo" --role admin
+pnpm import:spreadsheet --file samples/vigie-sample.xlsx --actor admin@vigie.local   # facultatif
+# Une fois la nouvelle base vérifiée : docker volume rm atlas-mssql-data
+```
+
+Les sessions ouvertes sous l'ancien nom de cookie sont perdues : il suffit de se reconnecter.
+
 ## Démarrage
 
 ```bash
 cp .env.example .env        # puis changer le mot de passe si besoin (dans les deux variables)
 corepack enable
 pnpm install                # génère aussi le client Prisma (postinstall)
-pnpm db:up                  # démarre SQL Server, attend le healthcheck, crée la base « atlas »
+pnpm db:up                  # démarre SQL Server, attend le healthcheck, crée la base « vigie »
 pnpm db:migrate             # applique les migrations
 pnpm db:seed                # 10 sites de démonstration fictifs (idempotent)
-pnpm user:create --email admin@atlas.local --name "Admin Démo" --role admin
+pnpm user:create --email admin@vigie.local --name "Admin Démo" --role admin
 pnpm dev                    # http://localhost:3000 → page de connexion
 ```
 
@@ -31,7 +47,7 @@ pnpm dev                    # http://localhost:3000 → page de connexion
 
 L'application exige une connexion (comptes locaux, sessions en base, trois rôles). Voir [`docs/security.md`](docs/security.md).
 
-**Premier administrateur** : `pnpm user:create --email admin@atlas.local --name "Admin Démo" --role admin`. Le mot de passe est demandé deux fois, en saisie masquée ; il n'est jamais passé en argument. Politique : 12 à 128 caractères, absent de la liste des mots de passe courants, et sans la partie de l'email avant `@`.
+**Premier administrateur** : `pnpm user:create --email admin@vigie.local --name "Admin Démo" --role admin`. Le mot de passe est demandé deux fois, en saisie masquée ; il n'est jamais passé en argument. Politique : 12 à 128 caractères, absent de la liste des mots de passe courants, et sans la partie de l'email avant `@`.
 
 | Commande | Effet |
 |---|---|
@@ -45,7 +61,7 @@ Vérifier la base (`db:sql` charge `.env` et lance sqlcmd dans le conteneur) :
 
 ```bash
 pnpm db:sql -Q "SELECT COUNT(*) FROM sites; SELECT COUNT(*) FROM annual_metrics;"
-pnpm db:sql                 # session sqlcmd interactive sur la base atlas
+pnpm db:sql                 # session sqlcmd interactive sur la base vigie
 ```
 
 Tests de bout en bout (première fois : installer Chromium pour Playwright ; la base doit tourner) :
@@ -78,9 +94,9 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 
 ### Base de test (intégration)
 
-`pnpm test:integration` travaille sur une base **distincte**, `atlas_test`, sur le même serveur. Le `globalSetup` la réinitialise à chaque lancement avec `prisma migrate reset --force` (elle est créée si elle n'existe pas, puis toutes les migrations sont rejouées). Aucune préparation manuelle n'est nécessaire, à part `pnpm db:up`.
+`pnpm test:integration` travaille sur une base **distincte**, `vigie_test`, sur le même serveur. Le `globalSetup` la réinitialise à chaque lancement avec `prisma migrate reset --force` (elle est créée si elle n'existe pas, puis toutes les migrations sont rejouées). Aucune préparation manuelle n'est nécessaire, à part `pnpm db:up`.
 
-- La chaîne de connexion est dérivée de `DATABASE_URL` en remplaçant `database=…` par `database=atlas_test`. On peut la forcer avec `TEST_DATABASE_URL`.
+- La chaîne de connexion est dérivée de `DATABASE_URL` en remplaçant `database=…` par `database=vigie_test`. On peut la forcer avec `TEST_DATABASE_URL`.
 - Par sécurité, le setup refuse toute base dont le nom ne se termine pas par `_test`.
 - Prisma 7 bloque `migrate reset` lorsqu'il détecte un agent IA (Claude Code, Cursor…) et demande le consentement explicite de l'utilisateur. Lancée par un humain ou par la CI, la commande fonctionne normalement.
 
@@ -95,11 +111,11 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm typecheck` | Vérification TypeScript (`tsc --noEmit`) |
 | `pnpm test` | Tests unitaires Vitest |
 | `pnpm test:watch` | Vitest en mode watch |
-| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner. Le `globalSetup` crée (ou réinitialise) deux comptes de test, `e2e-admin@atlas.local` et `e2e-viewer@atlas.local`, dans la base de `.env` |
-| `pnpm test:integration` | Tests d'intégration Vitest sur la base `atlas_test` (recréée à chaque lancement) |
+| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner. Le `globalSetup` crée (ou réinitialise) deux comptes de test, `e2e-admin@vigie.local` et `e2e-viewer@vigie.local`, dans la base de `.env` |
+| `pnpm test:integration` | Tests d'intégration Vitest sur la base `vigie_test` (recréée à chaque lancement) |
 | `pnpm check:offline` | Échoue si une URL `http(s)://` externe apparaît dans `src/` ou `public/` |
-| `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente de la base `atlas` |
-| `pnpm db:down` | Arrête SQL Server (le volume `atlas-mssql-data` est conservé) |
+| `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente de la base `vigie` |
+| `pnpm db:down` | Arrête SQL Server (le volume `vigie-mssql-data` est conservé) |
 | `pnpm db:generate` | Génère le client Prisma dans `generated/prisma/` (lancé aussi par `pnpm install`) |
 | `pnpm db:migrate` | `prisma migrate dev` : crée ou applique les migrations en développement |
 | `pnpm db:deploy` | `prisma migrate deploy` : applique les migrations en attente (serveurs) |
@@ -111,7 +127,7 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm user:reset-password` | Change le mot de passe d'un compte |
 | `pnpm user:set-active` | Active ou désactive un compte |
 | `pnpm import:spreadsheet` | Importe le tableur `.xlsx` (administrateur ; `--dry-run` d'abord) — voir « Import du tableur » |
-| `pnpm sample:build` | Régénère le fichier de test fictif `samples/atlas-sample.xlsx` |
+| `pnpm sample:build` | Régénère le fichier de test fictif `samples/vigie-sample.xlsx` |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
 ## Import du tableur
@@ -120,9 +136,9 @@ Procédure complète, anomalies et décisions : [`docs/import.md`](docs/import.m
 
 ```bash
 # 1. Toujours simuler d'abord (aucune écriture) et lire le rapport
-pnpm import:spreadsheet --file referentiel.xlsx --actor admin@atlas.local --dry-run
+pnpm import:spreadsheet --file referentiel.xlsx --actor admin@vigie.local --dry-run
 # 2. Import réel (rejouable : un second passage ne modifie rien)
-pnpm import:spreadsheet --file referentiel.xlsx --actor admin@atlas.local
+pnpm import:spreadsheet --file referentiel.xlsx --actor admin@vigie.local
 ```
 
 - `--actor` : email d'un **administrateur actif** (auteur de toutes les modifications dans le journal d'audit).
@@ -130,10 +146,10 @@ pnpm import:spreadsheet --file referentiel.xlsx --actor admin@atlas.local
 - Rapport : `STORAGE_ROOT/imports/<lot>/` (`report.csv` lisible dans Excel, `changes.csv`, `summary.json`).
 - Codes de sortie : `0` succès, `2` succès partiel (lignes rejetées), `1` échec.
 
-**Fichier de test** : `samples/atlas-sample.xlsx` (données entièrement fictives, toutes les colonnes réelles et une vingtaine de cas sales) se régénère avec `pnpm sample:build` :
+**Fichier de test** : `samples/vigie-sample.xlsx` (données entièrement fictives, toutes les colonnes réelles et une vingtaine de cas sales) se régénère avec `pnpm sample:build` :
 
 ```bash
-pnpm import:spreadsheet --file samples/atlas-sample.xlsx --actor admin@atlas.local --dry-run
+pnpm import:spreadsheet --file samples/vigie-sample.xlsx --actor admin@vigie.local --dry-run
 ```
 
 ## Variables d'environnement
@@ -165,7 +181,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── migrations/           # migrations SQL (commitées)
 │   └── seed.ts               # 10 sites de démonstration fictifs
 ├── generated/prisma/         # client Prisma généré (non commité)
-├── samples/atlas-sample.xlsx # tableur de test fictif (pnpm sample:build)
+├── samples/vigie-sample.xlsx # tableur de test fictif (pnpm sample:build)
 ├── storage/                  # STORAGE_ROOT en développement : rapports d'import… (non commité)
 ├── docs/
 │   ├── architecture.md       # principes, stack, découpage en 12 étapes
@@ -217,7 +233,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   └── middleware.ts         # nonce + CSP ; redirection sans cookie de session
 ├── tests/
 │   ├── unit/                 # Vitest + Testing Library
-│   ├── integration/          # Vitest sur SQL Server (base atlas_test)
+│   ├── integration/          # Vitest sur SQL Server (base vigie_test)
 │   └── e2e/                  # Playwright
 ├── vitest.config.ts
 ├── vitest.integration.config.ts

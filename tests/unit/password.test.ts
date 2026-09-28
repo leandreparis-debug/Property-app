@@ -32,7 +32,7 @@ describe("hashPassword / verifyPassword", () => {
 
 describe("validatePasswordPolicy", () => {
   it("accepts a long, uncommon password", () => {
-    expect(validatePasswordPolicy("entrepôt vert sous la pluie", "camille.martin@atlas.local")).toEqual({ ok: true });
+    expect(validatePasswordPolicy("entrepôt vert sous la pluie", "camille.martin@vigie.local")).toEqual({ ok: true });
   });
 
   it("rejects passwords shorter than 12 characters", () => {
@@ -58,11 +58,11 @@ describe("validatePasswordPolicy", () => {
   });
 
   it("rejects a password containing the email local part", () => {
-    const result = validatePasswordPolicy("Bonjour-Camille.Martin-!", "camille.martin@atlas.local");
+    const result = validatePasswordPolicy("Bonjour-Camille.Martin-!", "camille.martin@vigie.local");
     expect(!result.ok && result.errors.join()).toMatch(/identifiant de l'adresse email/);
   });
 
   it("ignores very short local parts (would reject too much)", () => {
-    expect(validatePasswordPolicy("une phrase de passe longue", "al@atlas.local").ok).toBe(true);
+    expect(validatePasswordPolicy("une phrase de passe longue", "al@vigie.local").ok).toBe(true);
   });
 });

@@ -106,7 +106,7 @@ function resolveContext(model: string, operation: string): AuditContext {
   const context = getAuditContext();
   if (context) return context;
   if (process.env.NODE_ENV === "production") {
-    console.warn(`[atlas] audit : écriture ${model}.${operation} sans contexte, attribuée à la source « system ».`);
+    console.warn(`[vigie] audit : écriture ${model}.${operation} sans contexte, attribuée à la source « system ».`);
     return { actorId: null, source: "system", batchId: null };
   }
   throw new MissingAuditContextError(model, operation);
@@ -307,7 +307,7 @@ export function withAudit(base: PrismaClient) {
   };
 
   const extended = base.$extends({
-    name: "atlas-audit",
+    name: "vigie-audit",
     client: {
       /**
        * Interactive transaction. `fn` receives the audited client: all its

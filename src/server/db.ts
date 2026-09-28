@@ -2,7 +2,7 @@ import "server-only";
 import { getEnv } from "@/lib/env";
 import { createAuditedPrismaClient, type AuditedPrismaClient } from "./prisma";
 
-const globalForPrisma = globalThis as typeof globalThis & { __atlasPrisma?: AuditedPrismaClient };
+const globalForPrisma = globalThis as typeof globalThis & { __vigiePrisma?: AuditedPrismaClient };
 
 /**
  * Application-wide Prisma client (singleton), with the audit extension: every
@@ -15,6 +15,6 @@ const globalForPrisma = globalThis as typeof globalThis & { __atlasPrisma?: Audi
  * lazy: nothing connects until the first query.
  */
 export const db: AuditedPrismaClient =
-  globalForPrisma.__atlasPrisma ?? createAuditedPrismaClient(getEnv().DATABASE_URL);
+  globalForPrisma.__vigiePrisma ?? createAuditedPrismaClient(getEnv().DATABASE_URL);
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.__atlasPrisma = db;
+if (process.env.NODE_ENV !== "production") globalForPrisma.__vigiePrisma = db;

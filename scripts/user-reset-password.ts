@@ -2,7 +2,7 @@
  * Sets a new password (asked twice, hidden), unlocks the account and closes
  * all its sessions.
  *
- * Usage: pnpm user:reset-password --email user@atlas.local
+ * Usage: pnpm user:reset-password --email user@vigie.local
  */
 import "dotenv/config";
 import { runWithAuditContext } from "../src/server/audit/context";

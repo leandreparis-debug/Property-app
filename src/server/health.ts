@@ -26,7 +26,7 @@ export async function checkDatabase(timeoutMs: number = DATABASE_PROBE_TIMEOUT_M
     return "ok";
   } catch (error) {
     const kind = error instanceof Error ? error.name : "UnknownError";
-    console.error(`[atlas] health: base de données injoignable (${kind})`);
+    console.error(`[vigie] health: base de données injoignable (${kind})`);
     return "unreachable";
   } finally {
     clearTimeout(timer);

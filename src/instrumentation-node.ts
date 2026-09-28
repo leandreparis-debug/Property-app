@@ -13,7 +13,7 @@ export async function registerNode(): Promise<void> {
     env = getEnv();
   } catch (error) {
     if (error instanceof EnvValidationError) {
-      console.error(`\n[atlas] ${error.message}\n`);
+      console.error(`\n[vigie] ${error.message}\n`);
       process.exit(1);
     }
     throw error;
@@ -21,7 +21,7 @@ export async function registerNode(): Promise<void> {
 
   if (env.NODE_ENV === "production" && !env.COOKIE_SECURE) {
     console.warn(
-      "\n[atlas] ⚠ AVERTISSEMENT SÉCURITÉ : COOKIE_SECURE=false en production. Le cookie de session " +
+      "\n[vigie] ⚠ AVERTISSEMENT SÉCURITÉ : COOKIE_SECURE=false en production. Le cookie de session " +
         "circule sans l'attribut Secure et peut être intercepté sur le réseau. Servir l'application en HTTPS " +
         "et définir COOKIE_SECURE=true dès que possible (voir docs/security.md).\n",
     );
@@ -30,9 +30,9 @@ export async function registerNode(): Promise<void> {
   try {
     const { purgeExpiredSessions } = await import("@/server/auth/session");
     const purged = await purgeExpiredSessions();
-    if (purged > 0) console.info(`[atlas] ${purged} session(s) expirée(s) supprimée(s).`);
+    if (purged > 0) console.info(`[vigie] ${purged} session(s) expirée(s) supprimée(s).`);
   } catch (error) {
     // The database may be down at start-up: /api/health reports it; don't crash.
-    console.warn(`[atlas] purge des sessions impossible (${error instanceof Error ? error.name : "erreur"}).`);
+    console.warn(`[vigie] purge des sessions impossible (${error instanceof Error ? error.name : "erreur"}).`);
   }
 }

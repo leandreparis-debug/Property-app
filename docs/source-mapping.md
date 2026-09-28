@@ -1,6 +1,6 @@
 # Correspondance tableur → base de données
 
-Ce document fait correspondre **chacune des colonnes** du tableur de référence (une ligne par entrepôt, environ 200 colonnes) à sa destination dans la base Atlas. Il sert de spécification à l'import de l'étape 4.
+Ce document fait correspondre **chacune des colonnes** du tableur de référence (une ligne par entrepôt, environ 200 colonnes) à sa destination dans la base Vigie. Il sert de spécification à l'import de l'étape 4.
 
 ## Conventions
 

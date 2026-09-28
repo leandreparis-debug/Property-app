@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-const root = mkdtempSync(join(tmpdir(), "atlas-storage-"));
+const root = mkdtempSync(join(tmpdir(), "vigie-storage-"));
 vi.mock("@/lib/env", () => ({ getEnv: () => ({ STORAGE_ROOT: root }) }));
 const { ensureStorageDir, resolveStoragePath, StoragePathError, storageRoot, toStorageRelative } = await import("@/server/storage");
 

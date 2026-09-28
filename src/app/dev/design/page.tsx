@@ -111,7 +111,7 @@ export default function DesignSystemPage() {
         <p className="text-xs font-medium tracking-wider text-text-muted uppercase">
           Développement uniquement
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Système de design Atlas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Système de design Vigie</h1>
         <p className="max-w-2xl text-sm text-text-muted">
           Tokens, typographie, composants et formats. Les couleurs vert, ambre et rouge sont
           réservées au statut de conformité et toujours accompagnées d&apos;un libellé.

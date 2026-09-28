@@ -18,7 +18,7 @@ export interface AuditContext {
  * hot reload), while the `db` singleton — and its audit extension — is
  * shared. A module-level instance would then be invisible to the extension.
  */
-const STORAGE_KEY = Symbol.for("atlas.audit.context");
+const STORAGE_KEY = Symbol.for("vigie.audit.context");
 const globalStore = globalThis as typeof globalThis & { [STORAGE_KEY]?: AsyncLocalStorage<Readonly<AuditContext>> };
 const storage = (globalStore[STORAGE_KEY] ??= new AsyncLocalStorage<Readonly<AuditContext>>());
 

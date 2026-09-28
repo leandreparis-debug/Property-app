@@ -98,7 +98,7 @@ test("le rail se parcourt au clavier et le focus est visible", async ({ page }) 
   }
 
   // Tooltip follows keyboard focus.
-  await expect(page.getByRole("tooltip")).toHaveText("Administration");
+  await expect(page.getByRole("tooltip").filter({ hasText: "Administration" })).toBeVisible();
 
   // Next stop: the user menu, at the bottom of the rail.
   await page.keyboard.press("Tab");

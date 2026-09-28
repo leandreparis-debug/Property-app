@@ -9,7 +9,7 @@ import {
 import { getClientIp } from "@/server/auth/client-ip";
 import { parseEnv } from "@/lib/env";
 
-const baseEnv = { DATABASE_URL: "sqlserver://localhost:1433;database=atlas", APP_URL: "http://localhost:3000" };
+const baseEnv = { DATABASE_URL: "sqlserver://localhost:1433;database=vigie", APP_URL: "http://localhost:3000" };
 
 describe("session cookie", () => {
   it("uses __Host- and Secure when COOKIE_SECURE=true", () => {

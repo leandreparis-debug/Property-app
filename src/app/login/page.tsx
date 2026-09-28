@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 A
               </div>
               <h1 id="login-title" className="text-2xl font-semibold tracking-tight text-text">
-                Atlas
+                Vigie
               </h1>
               <p className="text-sm text-text-muted">Référentiel des entrepôts</p>
             </header>

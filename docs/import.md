@@ -1,6 +1,6 @@
 # Import du référentiel depuis le tableur
 
-L'import charge le tableur des entrepôts (une ligne par entrepôt, environ 200 colonnes) dans la base Atlas. Il est **rejouable** : un nouvel import du même fichier ne modifie rien. Il **tolère les données sales** : une valeur illisible ne bloque jamais l'import, elle est signalée. Il ne **supprime jamais** de site. C'est une commande en ligne **réservée aux administrateurs** ; l'écran de pilotage viendra à l'étape 11.
+L'import charge le tableur des entrepôts (une ligne par entrepôt, environ 200 colonnes) dans la base Vigie. Il est **rejouable** : un nouvel import du même fichier ne modifie rien. Il **tolère les données sales** : une valeur illisible ne bloque jamais l'import, elle est signalée. Il ne **supprime jamais** de site. C'est une commande en ligne **réservée aux administrateurs** ; l'écran de pilotage viendra à l'étape 11.
 
 - Code : `src/server/import/`. Les analyseurs, les en-têtes, la correspondance, les contrôles et la planification sont des fonctions pures ; seul `writer.ts` écrit en base.
 - Correspondance colonne par colonne : [`source-mapping.md`](source-mapping.md), reprise à l'identique dans `mapping.ts`. Un test vérifie que les deux concordent.
@@ -8,10 +8,10 @@ L'import charge le tableur des entrepôts (une ligne par entrepôt, environ 200 
 ## Procédure pour l'import réel
 
 1. **Exporter le tableur en `.xlsx`.** Dans Google Sheets : *Fichier → Télécharger → Microsoft Excel (.xlsx)*. Seul ce format est accepté, 20 Mo au maximum. Les formules sont lues par leur **valeur calculée** : l'export `.xlsx` les enregistre.
-2. **Copier le fichier sur le serveur Atlas**, par exemple dans `STORAGE_ROOT/imports/sources/`.
+2. **Copier le fichier sur le serveur Vigie**, par exemple dans `STORAGE_ROOT/imports/sources/`.
 3. **Lancer d'abord la simulation.** Elle n'écrit rien en base, pas même l'historique des imports :
    ```bash
-   pnpm import:spreadsheet --file referentiel.xlsx --actor admin@atlas.local --dry-run
+   pnpm import:spreadsheet --file referentiel.xlsx --actor admin@vigie.local --dry-run
    ```
 4. **Lire le rapport**, dans le dossier affiché à la fin : `STORAGE_ROOT/imports/dry-run-<date>/`.
    - `report.csv` : les anomalies, ligne par ligne. Il s'ouvre directement dans Excel (UTF-8, séparateur `;`).
@@ -83,8 +83,8 @@ Sévérités : **erreur**, la ligne ou la valeur n'est pas importée ; **avertis
 | `coordinates_outside_france`, `incomplete_coordinates` | avertissement | Coordonnées hors de la France métropolitaine ou incomplètes : **ignorées**. Le site sera géocodé à l'étape 5. |
 | `address_unparsed` | avertissement | Code postal et ville non trouvés dans ADRESSE : adresse conservée entière. |
 | `status_activity_mismatch` | avertissement | STATUT (« fermé », « vacant »…) incohérent avec EN ACTIVITE. |
-| `arbitration_date_mismatch` | avertissement | La date d'arbitrage du tableur diffère de celle calculée par Atlas (date de préavis − 6 mois, ou prochaine sortie − préavis − 6 mois). Atlas ne stocke que la date calculée. |
-| `per_sqm_mismatch` | avertissement | Une valeur au m² du tableur est incohérente (écart de plus de 1 % sur toutes les surfaces). Atlas recalcule ces valeurs. |
+| `arbitration_date_mismatch` | avertissement | La date d'arbitrage du tableur diffère de celle calculée par Vigie (date de préavis − 6 mois, ou prochaine sortie − préavis − 6 mois). Vigie ne stocke que la date calculée. |
+| `per_sqm_mismatch` | avertissement | Une valeur au m² du tableur est incohérente (écart de plus de 1 % sur toutes les surfaces). Vigie recalcule ces valeurs. |
 | `water_magnitude` | avertissement | Consommation d'eau au m² incohérente avec des m³ (litres ?). |
 | `office_tax_conflict` | avertissement | TAXE BUREAU et TAXE BUREAU IDF diffèrent pour une même année : la valeur IDF est retenue. |
 | `georisques_conflict` | avertissement | « URL Géorisques » et « Lien Géorisques » diffèrent : l'URL est retenue. |
@@ -124,7 +124,7 @@ Sévérités : **erreur**, la ligne ou la valeur n'est pas importée ; **avertis
 
 ## Fichier de test synthétique
 
-`samples/atlas-sample.xlsx`, **entièrement fictif**, est régénéré par `pnpm sample:build` (`scripts/build-sample-spreadsheet.ts`). Il contient :
+`samples/vigie-sample.xlsx`, **entièrement fictif**, est régénéré par `pnpm sample:build` (`scripts/build-sample-spreadsheet.ts`). Il contient :
 - toutes les colonnes réelles, dans l'ordre ;
 - 2 lignes de titre au-dessus des en-têtes, et des en-têtes sur plusieurs lignes ;
 - 21 lignes de sites fictifs, une ligne vide, un code en double et une ligne sans code, couvrant les cas sales : formats français avec « € » et « m² », « NC » et « - », dates variées, années seules, dates multiples, préavis en toutes lettres, coordonnées inversées ou hors de France, département en toutes lettres, ancien nom de région, nom vide, plusieurs clés Qlik, liens hypertextes et chemins réseau, conflit de taxe sur les bureaux, valeur au m² incohérente, eau en litres, colonne inconnue et valeur calculée par formule.

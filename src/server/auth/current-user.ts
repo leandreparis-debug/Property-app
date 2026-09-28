@@ -10,7 +10,7 @@ import { validateSession, type SessionUser } from "./session";
 import { safeRedirectPath } from "./safe-redirect";
 
 /** Request header set by the middleware with the requested path (for `?next=`). */
-export const PATH_HEADER = "x-atlas-path";
+export const PATH_HEADER = "x-vigie-path";
 
 /** Raised by API helpers when no valid session exists. Maps to HTTP 401. */
 export class UnauthorizedError extends Error {

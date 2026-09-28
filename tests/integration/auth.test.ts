@@ -12,7 +12,7 @@ import {
 import { resetPassword, setUserActive } from "@/server/auth/users";
 import { createUserFixture, disconnectAll, raw, resetDatabase, TEST_PASSWORD } from "./helpers";
 
-const EMAIL = "camille.test@atlas.local";
+const EMAIL = "camille.test@vigie.local";
 const MIN = 60_000;
 const T0 = new Date("2026-06-01T08:00:00.000Z");
 const at = (ms: number) => new Date(T0.getTime() + ms);
@@ -50,7 +50,7 @@ describe("login", () => {
   });
 
   it("normalises the email (case, spaces)", async () => {
-    expect((await login(TEST_PASSWORD, T0, "  Camille.TEST@atlas.local ")).ok).toBe(true);
+    expect((await login(TEST_PASSWORD, T0, "  Camille.TEST@vigie.local ")).ok).toBe(true);
   });
 
   it("increments the counter on a wrong password", async () => {
@@ -98,7 +98,7 @@ describe("login", () => {
   });
 
   it("answers an unknown email with the same message and shape", async () => {
-    const unknown = await login(TEST_PASSWORD, T0, "personne@atlas.local");
+    const unknown = await login(TEST_PASSWORD, T0, "personne@vigie.local");
     const wrong = await login("mauvais mot de passe");
     expect(unknown).toEqual({ ok: false, error: INVALID_CREDENTIALS });
     expect(Object.keys(unknown)).toEqual(Object.keys(wrong));
@@ -120,7 +120,7 @@ describe("login", () => {
   it("limits attempts per IP address (20 per 15 minutes)", async () => {
     const limiter = createLoginIpLimiter(() => T0.getTime());
     for (let i = 0; i < 20; i++) {
-      await authenticate("personne@atlas.local", "x", "10.9.9.9", { now: T0, limiter });
+      await authenticate("personne@vigie.local", "x", "10.9.9.9", { now: T0, limiter });
     }
     const blocked = await authenticate(EMAIL, TEST_PASSWORD, "10.9.9.9", { now: T0, limiter });
     expect(blocked).toEqual({ ok: false, error: TOO_MANY_ATTEMPTS });
@@ -173,7 +173,7 @@ describe("sessions", () => {
   it("a password change deletes every session of the user", async () => {
     const a = await createSession(userId, {}, new Date());
     await createSession(userId, {}, new Date());
-    const other = await createUserFixture("autre@atlas.local");
+    const other = await createUserFixture("autre@vigie.local");
     await createSession(other, {}, new Date());
 
     const closed = await system(() => resetPassword(EMAIL, "Une toute nouvelle phrase secrète"));

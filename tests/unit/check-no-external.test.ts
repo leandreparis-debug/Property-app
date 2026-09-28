@@ -33,7 +33,7 @@ describe("scanDirectories", () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "atlas-offline-"));
+    root = mkdtempSync(join(tmpdir(), "vigie-offline-"));
     mkdirSync(join(root, "src", "nested"), { recursive: true });
     mkdirSync(join(root, "public"), { recursive: true });
   });

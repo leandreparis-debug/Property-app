@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 /**
- * Integration tests against a real SQL Server database (`atlas_test`),
+ * Integration tests against a real SQL Server database (`vigie_test`),
  * recreated from the migrations by global-setup. Requires `pnpm db:up`.
  */
 export default defineConfig({

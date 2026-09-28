@@ -4,7 +4,7 @@ import { EnvValidationError, parseEnv } from "@/lib/env";
 const valid = {
   NODE_ENV: "test",
   DATABASE_URL:
-    "sqlserver://localhost:1433;database=atlas;user=sa;password=x;trustServerCertificate=true",
+    "sqlserver://localhost:1433;database=vigie;user=sa;password=x;trustServerCertificate=true",
   APP_URL: "http://localhost:3000",
 };
 
@@ -31,10 +31,10 @@ describe("parseEnv", () => {
   });
 
   it("defaults STORAGE_ROOT to ./storage outside production and requires it in production", () => {
-    expect(parseEnv({ ...valid, STORAGE_ROOT: "/srv/atlas" }).STORAGE_ROOT).toBe("/srv/atlas");
+    expect(parseEnv({ ...valid, STORAGE_ROOT: "/srv/vigie" }).STORAGE_ROOT).toBe("/srv/vigie");
     const error = errorOf(() => parseEnv({ ...valid, NODE_ENV: "production" }));
     expect(error.variables).toEqual(["STORAGE_ROOT"]);
-    expect(parseEnv({ ...valid, NODE_ENV: "production", STORAGE_ROOT: "/srv/atlas" }).STORAGE_ROOT).toBe("/srv/atlas");
+    expect(parseEnv({ ...valid, NODE_ENV: "production", STORAGE_ROOT: "/srv/vigie" }).STORAGE_ROOT).toBe("/srv/vigie");
   });
 
   it("defaults COOKIE_SECURE to true in production only", () => {
@@ -81,7 +81,7 @@ describe("parseEnv", () => {
 
   it("rejects a DATABASE_URL without the sqlserver:// prefix", () => {
     const error = errorOf(() =>
-      parseEnv({ ...valid, DATABASE_URL: "postgres://localhost:5432/atlas" }),
+      parseEnv({ ...valid, DATABASE_URL: "postgres://localhost:5432/vigie" }),
     );
     expect(error.variables).toEqual(["DATABASE_URL"]);
     expect(error.message).toMatch(/DATABASE_URL.*sqlserver:\/\//);

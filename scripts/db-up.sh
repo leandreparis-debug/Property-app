@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts SQL Server, waits for its healthcheck, then creates the `atlas`
+# Starts SQL Server, waits for its healthcheck, then creates the `vigie`
 # database if needed (idempotent). Used by `pnpm db:up`.
 set -euo pipefail
 cd "$(dirname "$0")/.."

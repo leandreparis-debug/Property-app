@@ -54,7 +54,7 @@ describe("design tokens", () => {
     ]);
   });
 
-  it("maps shadcn variables onto Atlas tokens", () => {
+  it("maps shadcn variables onto Vigie tokens", () => {
     expect(css).toMatch(/--background:\s*var\(--color-bg\)/);
     expect(css).toMatch(/--primary:\s*var\(--color-accent\)/);
     expect(css).toMatch(/--ring:\s*var\(--color-accent\)/);

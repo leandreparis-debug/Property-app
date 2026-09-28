@@ -1,7 +1,7 @@
 /**
  * Activates or deactivates an account. Deactivation closes all its sessions.
  *
- * Usage: pnpm user:set-active --email user@atlas.local --active=false
+ * Usage: pnpm user:set-active --email user@vigie.local --active=false
  */
 import "dotenv/config";
 import { runWithAuditContext } from "../src/server/audit/context";

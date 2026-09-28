@@ -342,7 +342,7 @@ export interface SampleOptions {
 export function buildSampleWorkbook(options: SampleOptions = {}): ExcelJS.Workbook {
   const columns = [...realColumns(options.docPath), ...EXTRA_COLUMNS];
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Atlas — fichier de test synthétique";
+  workbook.creator = "Vigie — fichier de test synthétique";
   workbook.created = new Date(Date.UTC(2026, 0, 1));
   workbook.modified = workbook.created;
   const sheet = workbook.addWorksheet("Référentiel");
@@ -350,7 +350,7 @@ export function buildSampleWorkbook(options: SampleOptions = {}): ExcelJS.Workbo
   sheet.getCell(1, 1).value = "RÉFÉRENTIEL ENTREPÔTS — EXPORT FICTIF";
   sheet.mergeCells(1, 1, 1, 8);
   sheet.getCell(1, 1).font = { bold: true, size: 14 };
-  sheet.getCell(2, 1).value = "Données entièrement fictives, générées pour les tests d'import d'Atlas — aucune donnée réelle.";
+  sheet.getCell(2, 1).value = "Données entièrement fictives, générées pour les tests d'import d'Vigie — aucune donnée réelle.";
   sheet.mergeCells(2, 1, 2, 8);
 
   const headerRow = sheet.getRow(3);

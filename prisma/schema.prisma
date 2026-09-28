@@ -1,4 +1,4 @@
-// Atlas — domain model (V1).
+// Vigie — domain model (V1).
 //
 // SQL Server connector constraints (see docs/data-model.md):
 //   * no Prisma enums      → String @db.NVarChar(n), allowed values in src/domain/enums.ts (zod);

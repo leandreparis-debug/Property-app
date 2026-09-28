@@ -2,7 +2,7 @@
  * Creates an account. The password is asked twice, hidden (never passed as an
  * argument, no default).
  *
- * Usage: pnpm user:create --email admin@atlas.local --name "Admin Démo" --role admin
+ * Usage: pnpm user:create --email admin@vigie.local --name "Admin Démo" --role admin
  */
 import "dotenv/config";
 import { runWithAuditContext } from "../src/server/audit/context";

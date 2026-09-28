@@ -82,7 +82,7 @@ function parseCountry(value: CellValue): ParseResult<string> {
   const code = COUNTRIES[key] ?? (/^[a-z]{2}$/.test(key) ? key.toUpperCase() : undefined);
   if (!code) return { value: null, issue: { severity: "warning", kind: "invalid_country", message: `Pays non reconnu : « ${t.value} ».` } };
   if (code !== "FR") {
-    return { value: code, issue: { severity: "warning", kind: "foreign_country", message: `Pays « ${code} » : Atlas ne couvre que la France métropolitaine.` } };
+    return { value: code, issue: { severity: "warning", kind: "foreign_country", message: `Pays « ${code} » : Vigie ne couvre que la France métropolitaine.` } };
   }
   return { value: code };
 }
@@ -363,7 +363,7 @@ export function normalizeRow(row: RawRow, columns: readonly FileColumn[], option
     set("site", "name", `Entrepôt ${code}`);
   }
 
-  // PAYS present but empty: Atlas covers metropolitan France (default FR).
+  // PAYS present but empty: Vigie covers metropolitan France (default FR).
   if (draft.entities.site.has("country") && draft.entities.site.get("country") === null) set("site", "country", "FR");
 
   // Géorisques: the « URL » column wins over « Lien ».

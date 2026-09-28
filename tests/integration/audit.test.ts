@@ -99,10 +99,10 @@ describe("create / update / delete", () => {
 describe("secrets", () => {
   it("redacts passwordHash in CREATE and UPDATE lines, and never stores a hash", async () => {
     await runWithAuditContext({ actorId: null, source: "system" }, async () => {
-      await db.user.create({ data: { email: "secret@atlas.local", role: "viewer", passwordHash: "$argon2id$fake-hash-1" } });
+      await db.user.create({ data: { email: "secret@vigie.local", role: "viewer", passwordHash: "$argon2id$fake-hash-1" } });
     });
     await runWithAuditContext({ actorId: null, source: "system" }, () =>
-      resetPassword("secret@atlas.local", "Encore une phrase secrète 99"),
+      resetPassword("secret@vigie.local", "Encore une phrase secrète 99"),
     );
     const log = await lines();
     expect(JSON.parse(log[0]!.afterValue!).passwordHash).toBe("[redacted]");
@@ -201,11 +201,11 @@ describe("transactions", () => {
 
 describe("authentication events", () => {
   it("writes LOGIN, LOGIN_FAILED and LOGOUT", async () => {
-    const userId = await createUserFixture("events@atlas.local");
+    const userId = await createUserFixture("events@vigie.local");
     const limiter = createLoginIpLimiter();
-    await authenticate("events@atlas.local", "mauvais", "10.0.0.7", { limiter });
-    await authenticate("inconnu@atlas.local", "peu importe", "10.0.0.7", { limiter });
-    const ok = await authenticate("events@atlas.local", TEST_PASSWORD, "10.0.0.7", { limiter });
+    await authenticate("events@vigie.local", "mauvais", "10.0.0.7", { limiter });
+    await authenticate("inconnu@vigie.local", "peu importe", "10.0.0.7", { limiter });
+    const ok = await authenticate("events@vigie.local", TEST_PASSWORD, "10.0.0.7", { limiter });
     expect(ok.ok).toBe(true);
     await logLogout(userId, "10.0.0.7");
 

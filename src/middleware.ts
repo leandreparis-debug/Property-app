@@ -3,7 +3,7 @@ import { buildContentSecurityPolicy } from "@/lib/csp";
 import { SESSION_COOKIE_NAMES } from "@/server/auth/cookies";
 
 /** Header carrying the requested path to server components (for `?next=`). */
-const PATH_HEADER = "x-atlas-path";
+const PATH_HEADER = "x-vigie-path";
 
 /** Paths reachable without a session. */
 function isPublicPath(pathname: string): boolean {

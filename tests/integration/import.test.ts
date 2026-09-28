@@ -8,8 +8,8 @@ import { SpreadsheetFileError } from "@/server/import/workbook";
 import { SAMPLE_FACTS } from "../../scripts/lib/sample-spreadsheet";
 import { asUser, createUserFixture, disconnectAll, raw, resetDatabase } from "./helpers";
 
-const SAMPLE = "samples/atlas-sample.xlsx";
-const ADMIN = "import-admin@atlas.local";
+const SAMPLE = "samples/vigie-sample.xlsx";
+const ADMIN = "import-admin@vigie.local";
 const NOW = new Date("2026-09-28T10:00:00Z");
 const run = (options: Partial<ImportOptions> = {}) =>
   runImport({ filePath: SAMPLE, actorEmail: ADMIN, now: NOW, activityYear: 2025, ...options });
@@ -59,7 +59,7 @@ describe("first import of the sample", () => {
 
   it("closes the ImportBatch as PARTIAL with hash, statistics and report path", async () => {
     const batch = await raw.importBatch.findUniqueOrThrow({ where: { id: result.batchId! } });
-    expect(batch).toMatchObject({ kind: "SPREADSHEET", status: "PARTIAL", fileName: "atlas-sample.xlsx", actorId: adminId });
+    expect(batch).toMatchObject({ kind: "SPREADSHEET", status: "PARTIAL", fileName: "vigie-sample.xlsx", actorId: adminId });
     expect(batch.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(batch.finishedAt).not.toBeNull();
     expect(batch.reportPath).toBe(`imports/${result.batchId}`);
@@ -228,9 +228,9 @@ describe("robustness", () => {
   beforeEach(freshDatabase);
 
   it("refuses an actor who is not an active admin", async () => {
-    await createUserFixture("editeur@atlas.local", { role: "editor" });
-    await createUserFixture("ancien-admin@atlas.local", { role: "admin", isActive: false });
-    for (const email of ["editeur@atlas.local", "ancien-admin@atlas.local", "inconnu@atlas.local"]) {
+    await createUserFixture("editeur@vigie.local", { role: "editor" });
+    await createUserFixture("ancien-admin@vigie.local", { role: "admin", isActive: false });
+    for (const email of ["editeur@vigie.local", "ancien-admin@vigie.local", "inconnu@vigie.local"]) {
       await expect(run({ actorEmail: email })).rejects.toThrow(ImportPreconditionError);
     }
     expect(await raw.importBatch.count()).toBe(0);
@@ -259,7 +259,7 @@ describe("robustness", () => {
   });
 
   it("refuses files that are not .xlsx, not ZIP or too large", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "atlas-import-"));
+    const dir = mkdtempSync(join(tmpdir(), "vigie-import-"));
     const csv = join(dir, "fichier.csv");
     writeFileSync(csv, "ENTREPOT;NOM ENTREPOT\n");
     await expect(run({ filePath: csv })).rejects.toThrow(/seul le format \.xlsx/);
