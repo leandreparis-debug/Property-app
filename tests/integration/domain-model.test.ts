@@ -68,13 +68,27 @@ describe("Site and its relations", () => {
     expect(await prisma.lease.count({ where: { code: null } })).toBe(2);
   });
 
-  it("refuses a duplicated site code and external id", async () => {
+  it("refuses a duplicated site code and a duplicated external id", async () => {
     const site = await prisma.site.create({ data: { code: "IT-007", name: "Test" } });
+    const other = await prisma.site.create({ data: { code: "IT-008", name: "Autre" } });
     await expect(prisma.site.create({ data: { code: "IT-007", name: "Doublon" } })).rejects.toSatisfy(uniqueViolation);
-    await prisma.siteExternalId.create({ data: { siteId: site.id, system: "AL_CODE", value: "AL1" } });
+    // Several ids of one system per site are allowed (several Qlik keys)…
+    await prisma.siteExternalId.create({ data: { siteId: site.id, system: "QLIK_SENSE", value: "QS-1" } });
+    await prisma.siteExternalId.create({ data: { siteId: site.id, system: "QLIK_SENSE", value: "QS-2" } });
+    // …but a (system, value) pair belongs to one site only.
     await expect(
-      prisma.siteExternalId.create({ data: { siteId: site.id, system: "AL_CODE", value: "AL2" } }),
+      prisma.siteExternalId.create({ data: { siteId: other.id, system: "QLIK_SENSE", value: "QS-1" } }),
     ).rejects.toSatisfy(uniqueViolation);
+  });
+
+  it("refuses an invalid date precision (CHECK constraints)", async () => {
+    await expect(
+      prisma.site.create({ data: { code: "IT-009", name: "Test", activityStartDatePrecision: "week" } }),
+    ).rejects.toThrow(/CHECK/i);
+    const site = await prisma.site.create({ data: { code: "IT-009", name: "Test", activityStartDatePrecision: "year" } });
+    await expect(
+      prisma.buildingWork.create({ data: { siteId: site.id, kind: "CONSTRUCTION", datePrecision: "decade" } }),
+    ).rejects.toThrow(/CHECK/i);
   });
 });
 

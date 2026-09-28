@@ -75,11 +75,11 @@ erDiagram
 | Table (modèle) | Cardinalité | Rôle |
 |---|---|---|
 | `sites` (`Site`) | — | Identité, organisation, adresse et coordonnées de l'entrepôt. Racine de toutes les données métier. `code` = ENTREPOT. |
-| `site_external_ids` (`SiteExternalId`) | 0..n par site, au plus 1 par système | Identifiants dans les autres systèmes (`QLIK_SENSE`, `AL_CODE`, `RAMSES`). Unicité sur (système, valeur) et sur (site, système). |
+| `site_external_ids` (`SiteExternalId`) | 0..n par site, **plusieurs par système possibles** | Identifiants dans les autres systèmes (`QLIK_SENSE`, `AL_CODE`, `RAMSES`). Unicité sur (système, valeur) : un identifiant n'appartient qu'à un site. Un site peut avoir plusieurs clés Qlik (l'unicité (site, système) a été supprimée à l'étape 4). |
 | `leases` (`Lease`) | 0..1 par site | Le bail : dates, préavis, négociation, franchise, loyers contractuels. Un bail correspond à un seul entrepôt. La date d'arbitrage n'est pas stockée. |
 | `service_contracts` (`ServiceContract`) | 0..1 par site | Contrat de prestation logistique. |
 | `site_technicals` (`SiteTechnical`) | 0..1 par site | Qualité, hauteur, surfaces (m²), capacités, spécificités. |
-| `building_works` (`BuildingWork`) | 0..n par site | Construction, réhabilitation, extension (remplace les trois colonnes de dates). |
+| `building_works` (`BuildingWork`) | 0..n par site | Construction, réhabilitation, extension (remplace les trois colonnes de dates). `date_precision` (`day`, `month`, `year`) indique si la date n'est connue qu'au mois ou à l'année. |
 | `site_icpes` (`SiteIcpe`) | 0..1 par site | Porteur ICPE, texte d'origine des rubriques, lien Géorisques, documents. |
 | `icpe_headings` (`IcpeHeading`) | 0..n par site | Rubriques ICPE normalisées (code, régime, libellé). |
 | `site_energy_profiles` (`SiteEnergyProfile`) | 0..1 par site | Année et consommations de référence, OPERAT, refacturation de la gestion technique. |
@@ -122,8 +122,10 @@ Tous les champs métier sont facultatifs, sauf `sites.code` et `sites.name`, car
 | Surfaces | `DECIMAL(12,2)` |
 | Consommations et valeurs d'indicateurs | `DECIMAL(18,4)` |
 | Coordonnées | `DECIMAL(9,6)` (WGS 84) |
-| Dates métier | `DATE`, toujours construites avec `toDateOnly()` (`src/domain/dates.ts`) |
+| Dates métier | `DATE`, toujours construites avec `toDateOnly()` (`src/domain/dates.ts`) ; précision éventuelle dans une colonne `*_precision` |
 | Horodatages techniques | `DATETIME2` (UTC) |
+
+**Précision des dates.** Le tableur contient des dates connues seulement au mois ou à l'année (« 2019 », « 03/2016 »). Elles sont stockées au premier jour de la période, avec la précision `month` ou `year` dans `sites.activity_start_date_precision` et `building_works.date_precision` (contraintes `CHECK`). `formatDateWithPrecision()` (`src/lib/format.ts`) affiche alors « 2019 » ou « mars 2016 », jamais « 1 janv. 2019 ».
 
 **Dates métier.** Une date métier est un `Date` à 00:00:00 UTC du jour calendaire. `toDateOnly()` accepte `AAAA-MM-JJ`, `JJ/MM/AAAA`, un `Date` local ou une valeur lue en base, et ne décale jamais le jour, quel que soit le fuseau horaire. C'est vérifié sous `Pacific/Kiritimati` (UTC+14) et `America/Los_Angeles`, en test unitaire comme en aller-retour réel avec SQL Server.
 
@@ -134,7 +136,7 @@ Tous les champs métier sont facultatifs, sauf `sites.code` et `sites.name`, car
 ### Limites du connecteur SQL Server et parades
 | Limite | Parade |
 |---|---|
-| Pas d'`enum` Prisma | Colonnes `NVARCHAR(n)` ; valeurs autorisées et libellés français dans `src/domain/enums.ts` (schémas zod). Quatre listes sont aussi contrôlées par des contraintes `CHECK` en base : `users.role`, `audit_logs.action`, `audit_logs.source` et `annual_metrics.source`. Elles sont écrites à la main dans la migration, car Prisma ne sait pas les exprimer : **toute évolution de ces listes demande une migration**. |
+| Pas d'`enum` Prisma | Colonnes `NVARCHAR(n)` ; valeurs autorisées et libellés français dans `src/domain/enums.ts` (schémas zod). Six listes sont aussi contrôlées par des contraintes `CHECK` en base : `users.role`, `audit_logs.action`, `audit_logs.source` et `annual_metrics.source`, `sites.activity_start_date_precision` et `building_works.date_precision`. Elles sont écrites à la main dans la migration, car Prisma ne sait pas les exprimer : **toute évolution de ces listes demande une migration**. |
 | Pas de type `Json` | JSON sérialisé dans des colonnes `NVARCHAR(MAX)` suffixées `Json`/`_json` (`footprint_geojson`, `control_points_json`, `transform_json`, `stats_json`) ou dans `before_value` et `after_value`. |
 | Pas de listes scalaires | Tables filles (`site_external_ids`, `icpe_headings`, `building_works`). |
 | Un index `UNIQUE` n'accepte qu'un seul `NULL` | `leases.code` utilise un **index unique filtré** (`WHERE [code] IS NOT NULL`), déclaré avec la préversion Prisma `partialIndexes` : plusieurs baux sans code sont admis, un code en double est refusé. |

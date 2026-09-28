@@ -110,7 +110,31 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm user:create` | Crée un compte (voir « Comptes utilisateurs ») |
 | `pnpm user:reset-password` | Change le mot de passe d'un compte |
 | `pnpm user:set-active` | Active ou désactive un compte |
+| `pnpm import:spreadsheet` | Importe le tableur `.xlsx` (administrateur ; `--dry-run` d'abord) — voir « Import du tableur » |
+| `pnpm sample:build` | Régénère le fichier de test fictif `samples/atlas-sample.xlsx` |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
+
+## Import du tableur
+
+Procédure complète, anomalies et décisions : [`docs/import.md`](docs/import.md).
+
+```bash
+# 1. Toujours simuler d'abord (aucune écriture) et lire le rapport
+pnpm import:spreadsheet --file referentiel.xlsx --actor admin@atlas.local --dry-run
+# 2. Import réel (rejouable : un second passage ne modifie rien)
+pnpm import:spreadsheet --file referentiel.xlsx --actor admin@atlas.local
+```
+
+- `--actor` : email d'un **administrateur actif** (auteur de toutes les modifications dans le journal d'audit).
+- Options : `--sheet <nom>`, `--activity-year <aaaa>` (année des colonnes ETP, CA et colis), `--force` (écrase aussi les champs modifiés dans l'application, après confirmation).
+- Rapport : `STORAGE_ROOT/imports/<lot>/` (`report.csv` lisible dans Excel, `changes.csv`, `summary.json`).
+- Codes de sortie : `0` succès, `2` succès partiel (lignes rejetées), `1` échec.
+
+**Fichier de test** : `samples/atlas-sample.xlsx` (données entièrement fictives, toutes les colonnes réelles et une vingtaine de cas sales) se régénère avec `pnpm sample:build` :
+
+```bash
+pnpm import:spreadsheet --file samples/atlas-sample.xlsx --actor admin@atlas.local --dry-run
+```
 
 ## Variables d'environnement
 
@@ -125,6 +149,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `SESSION_IDLE_MINUTES` | Expiration après inactivité, en minutes (défaut 240) |
 | `SESSION_ABSOLUTE_HOURS` | Durée maximale d'une session, en heures (défaut 12) |
 | `TRUST_PROXY` | `true` uniquement derrière un reverse proxy qui renseigne `X-Forwarded-For` (défaut `false`) |
+| `STORAGE_ROOT` | Dossier racine des fichiers écrits par l'application (rapports d'import, documents). Par défaut `./storage` hors production ; **obligatoire en production**. Tous les chemins sont résolus sous cette racine. |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 
 ## Arborescence
@@ -140,10 +165,14 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── migrations/           # migrations SQL (commitées)
 │   └── seed.ts               # 10 sites de démonstration fictifs
 ├── generated/prisma/         # client Prisma généré (non commité)
+├── samples/atlas-sample.xlsx # tableur de test fictif (pnpm sample:build)
+├── storage/                  # STORAGE_ROOT en développement : rapports d'import… (non commité)
 ├── docs/
 │   ├── architecture.md       # principes, stack, découpage en 12 étapes
 │   ├── data-model.md         # diagramme, rôle des tables, règles, modules futurs
 │   ├── source-mapping.md     # colonne du tableur → table.champ
+│   ├── import.md             # procédure d'import, anomalies, décisions
+│   ├── security.md           # sessions, rôles, audit
 │   └── design-system.md      # tokens, règles des couleurs de statut, accessibilité
 ├── scripts/
 │   ├── check-no-external.ts  # garde anti-dépendance externe
@@ -153,7 +182,9 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── user-create.ts        # pnpm user:create
 │   ├── user-reset-password.ts
 │   ├── user-set-active.ts
-│   └── lib/cli.ts            # arguments, saisie masquée
+│   ├── import-spreadsheet.ts # pnpm import:spreadsheet
+│   ├── build-sample-spreadsheet.ts # pnpm sample:build
+│   └── lib/                  # cli.ts (arguments, saisie masquée), sample-spreadsheet.ts
 ├── src/
 │   ├── app/                  # routes (App Router)
 │   │   ├── globals.css       # tokens de design (@theme) + mapping shadcn
@@ -175,11 +206,13 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   │   ├── status/           # StatusDot, StatusBadge, StatusLegend
 │   │   └── empty/            # EmptyState
 │   ├── config/navigation.ts  # entrées du rail
-│   ├── domain/               # règles métier pures : enums (zod), catalogue d'indicateurs, calculs dérivés, dates
+│   ├── domain/               # règles métier pures : enums (zod), catalogue d'indicateurs, calculs dérivés, dates, geo/ (départements, régions)
 │   ├── lib/                  # env, format, status, csp, utils
 │   ├── server/               # accès base (server-only) : db (singleton audité), prisma (fabriques), health
 │   │   ├── auth/             # mots de passe, sessions, cookie, connexion, permissions, couche d'accès
-│   │   └── audit/            # contexte, diff, sérialisation, extension Prisma d'audit
+│   │   ├── audit/            # contexte, diff, sérialisation, extension Prisma d'audit
+│   │   ├── import/           # import du tableur (analyseurs, en-têtes, correspondance, contrôles, plan, écriture, rapport)
+│   │   └── storage.ts        # chemins sous STORAGE_ROOT (anti-traversée)
 │   ├── instrumentation.ts    # démarrage : environnement, avertissement cookie, purge des sessions
 │   └── middleware.ts         # nonce + CSP ; redirection sans cookie de session
 ├── tests/

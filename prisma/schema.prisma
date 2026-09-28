@@ -63,13 +63,16 @@ model Site {
   /// import | manual | enrichment (DataSource).
   coordinatesSource String?  @map("coordinates_source") @db.NVarChar(20)
 
-  distributionSector      String?   @map("distribution_sector") @db.NVarChar(150)
-  typology                String?   @db.NVarChar(150)
-  targetActivity          String?   @map("target_activity") @db.NVarChar(150)
-  storesServedDescription String?   @map("stores_served_description") @db.NVarChar(Max)
-  storesServedCount       Int?      @map("stores_served_count")
-  activityStartDate       DateTime? @map("activity_start_date") @db.Date
-  adminFileReference      String?   @map("admin_file_reference") @db.NVarChar(500)
+  distributionSector         String?   @map("distribution_sector") @db.NVarChar(150)
+  typology                   String?   @db.NVarChar(150)
+  targetActivity             String?   @map("target_activity") @db.NVarChar(150)
+  storesServedDescription    String?   @map("stores_served_description") @db.NVarChar(Max)
+  storesServedCount          Int?      @map("stores_served_count")
+  activityStartDate          DateTime? @map("activity_start_date") @db.Date
+  /// day | month | year (DatePrecision) — CHECK constraint. A date known only by
+  /// its year is stored on 1 January with precision `year`.
+  activityStartDatePrecision String?   @map("activity_start_date_precision") @db.NVarChar(8)
+  adminFileReference         String?   @map("admin_file_reference") @db.NVarChar(500)
 
   /// Optimistic concurrency token (step 9).
   version    Int       @default(1)
@@ -112,7 +115,8 @@ model SiteExternalId {
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@unique([system, value])
-  @@unique([siteId, system])
+  /// Several ids of the same system are allowed per site (e.g. several Qlik keys).
+  @@index([siteId, system])
   @@map("site_external_ids")
 }
 
@@ -227,14 +231,16 @@ model SiteTechnical {
 /// Construction, rehabilitation or extension works. Future anchor of the
 /// « Dommage Ouvrage » module.
 model BuildingWork {
-  id          String    @id @default(cuid()) @db.NVarChar(30)
-  siteId      String    @map("site_id") @db.NVarChar(30)
+  id            String    @id @default(cuid()) @db.NVarChar(30)
+  siteId        String    @map("site_id") @db.NVarChar(30)
   /// CONSTRUCTION | REHABILITATION | EXTENSION (BuildingWorkKind).
-  kind        String    @db.NVarChar(20)
-  date        DateTime? @db.Date
-  description String?   @db.NVarChar(Max)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  kind          String    @db.NVarChar(20)
+  date          DateTime? @db.Date
+  /// day | month | year (DatePrecision) — CHECK constraint.
+  datePrecision String?   @map("date_precision") @db.NVarChar(8)
+  description   String?   @db.NVarChar(Max)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 

@@ -7,7 +7,7 @@
    - `pnpm check:offline`, qui refuse toute URL `http(s)://` externe dans `src/` et `public/` ;
    - un test e2e qui intercepte chaque requête du navigateur et vérifie qu'elle reste sur l'origine de l'application.
 2. **La base de données est la source de vérité.** Le tableur n'est qu'une source d'import (étape 4). Toute donnée affichée provient de SQL Server.
-3. **Fichiers sur disque, métadonnées en base.** Plans, photos et documents sont stockés sur le système de fichiers du serveur ; la base conserve leurs métadonnées (chemin, type, taille, empreinte, auteur, date).
+3. **Fichiers sur disque, métadonnées en base.** Tous les fichiers écrits par l'application vivent sous `STORAGE_ROOT` (`src/server/storage.ts` refuse tout chemin qui en sortirait). Plans, photos et documents sont stockés sur le système de fichiers du serveur ; la base conserve leurs métadonnées (chemin, type, taille, empreinte, auteur, date).
 4. **Audit systématique.** Chaque modification de donnée est tracée : qui, quand, quoi, valeur avant et après (étape 9).
 5. **Sécurité par défaut.** En-têtes de sécurité sur toutes les réponses, CSP à nonce par requête (pas de `'unsafe-inline'` pour les scripts), variables d'environnement validées au démarrage, aucun secret dans le code.
 
@@ -42,6 +42,7 @@
 |---|---|---|
 | `src/domain/` | Règles métier pures : listes de valeurs (zod), catalogue d'indicateurs, calculs dérivés, dates | Aucun accès base ni réseau, importable côté client comme côté serveur |
 | `src/server/` | Accès à la base (`db`, fabrique Prisma, sonde de santé) | `import "server-only"` : jamais importé côté client |
+| `src/server/import/` | Import du tableur : fonctions pures (analyse, en-têtes, correspondance, contrôles, plan) et un seul module d'écriture (`writer.ts`) | Écrit toujours via `runWithAuditContext({ source: "import", batchId })` |
 | `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
 | `generated/prisma/` | Client Prisma généré | Hors de `src/` : n'est pas analysé par `check:offline` (ses commentaires contiennent des liens de documentation, jamais chargés) |
 
@@ -68,7 +69,7 @@ Détails et justifications : [`docs/security.md`](security.md).
 1. **Initialisation** : projet, système de design, coque, Docker, chaîne qualité *(terminée)*.
 2. **Modèle de données** : Prisma, schéma SQL Server, migrations, jeu de démonstration, vérification de la base dans `/api/health` *(terminée, voir `docs/data-model.md`)*.
 3. **Authentification, rôles et journal d'audit automatique** *(terminée, voir `docs/security.md`)*.
-4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import.
+4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import *(terminée, voir `docs/import.md`)*.
 5. **Enrichissement et ressources carto** : géocodage hors ligne, tuiles et styles servis localement.
 6. **Carte nationale** : MapLibre, calcul du statut de conformité.
 7. **Filtres et supervision**.

@@ -160,3 +160,11 @@ export const ImportBatchStatus = defineEnum({
   PARTIAL: "Partiel",
 });
 export type ImportBatchStatus = (typeof ImportBatchStatus.values)[number];
+
+/** Precision of a business date: a date known only by its year is stored on 1 January. */
+export const DatePrecision = defineEnum({
+  day: "Jour",
+  month: "Mois",
+  year: "Année",
+});
+export type DatePrecision = (typeof DatePrecision.values)[number];

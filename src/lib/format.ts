@@ -148,3 +148,25 @@ export function formatDate(value: DateInput): string {
   if (Number.isNaN(date.getTime())) return EMPTY_VALUE;
   return new Intl.DateTimeFormat(LOCALE, { dateStyle: "long", timeZone: TIME_ZONE }).format(date);
 }
+
+/** Precision of a business date (see `DatePrecision` in src/domain/enums.ts). */
+export type DatePrecisionInput = "day" | "month" | "year" | null | undefined;
+
+/**
+ * Formats a business date according to its precision: « 2019 » (year),
+ * « mars 2019 » (month), « 12 mars 2019 » (day or unknown precision).
+ * A year-only date is never shown as « 1 janv. 2019 ».
+ * @param value - Business date (00:00 UTC of the day).
+ * @param precision - Known precision (defaults to day).
+ * @returns The formatted string, or « — ».
+ */
+export function formatDateWithPrecision(value: DateInput, precision: DatePrecisionInput): string {
+  if (value === null || value === undefined) return EMPTY_VALUE;
+  const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return EMPTY_VALUE;
+  if (precision === "year") return String(date.getUTCFullYear());
+  if (precision === "month") {
+    return new Intl.DateTimeFormat(LOCALE, { month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+  }
+  return formatDate(date);
+}

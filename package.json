@@ -31,6 +31,8 @@
     "user:create": "tsx --conditions=react-server scripts/user-create.ts",
     "user:reset-password": "tsx --conditions=react-server scripts/user-reset-password.ts",
     "user:set-active": "tsx --conditions=react-server scripts/user-set-active.ts",
+    "import:spreadsheet": "tsx --conditions=react-server scripts/import-spreadsheet.ts",
+    "sample:build": "tsx scripts/build-sample-spreadsheet.ts",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm check:offline && pnpm build",
     "postinstall": "prisma generate"
   },
@@ -46,6 +48,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "exceljs": "4.4.0",
     "geist": "^1.7.2",
     "lucide-react": "^1.48.0",
     "next": "15.5.26",
@@ -85,6 +88,9 @@
       "prisma",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "exceljs>uuid": "^11.1.1"
+    }
   }
 }

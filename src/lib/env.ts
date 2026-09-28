@@ -47,10 +47,16 @@ const envSchema = z.object({
   SESSION_ABSOLUTE_HOURS: positiveInt(12, 30 * 24),
   /** Read the client IP from X-Forwarded-For (only behind a trusted reverse proxy). */
   TRUST_PROXY: booleanString().default(false),
+  /** Root folder of the files written by the application (reports, documents). */
+  STORAGE_ROOT: z.string().trim().min(1, "ne doit pas être vide").optional(),
 });
 
 /** Validated, typed server environment. */
-export type Env = Omit<z.infer<typeof envSchema>, "COOKIE_SECURE"> & { COOKIE_SECURE: boolean };
+export type Env = Omit<z.infer<typeof envSchema>, "COOKIE_SECURE" | "STORAGE_ROOT"> & {
+  COOKIE_SECURE: boolean;
+  /** Always set: defaults to `./storage` outside production, required in production. */
+  STORAGE_ROOT: string;
+};
 
 /** Raised when one or more environment variables are missing or invalid. */
 export class EnvValidationError extends Error {
@@ -82,7 +88,14 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   const result = envSchema.safeParse(cleaned);
   if (result.success) {
     const data = result.data;
-    return { ...data, COOKIE_SECURE: data.COOKIE_SECURE ?? data.NODE_ENV === "production" };
+    if (!data.STORAGE_ROOT && data.NODE_ENV === "production") {
+      throw new EnvValidationError(["STORAGE_ROOT"], ["STORAGE_ROOT : variable manquante (obligatoire en production)"]);
+    }
+    return {
+      ...data,
+      COOKIE_SECURE: data.COOKIE_SECURE ?? data.NODE_ENV === "production",
+      STORAGE_ROOT: data.STORAGE_ROOT ?? "./storage",
+    };
   }
 
   const variables: string[] = [];

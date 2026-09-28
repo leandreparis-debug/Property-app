@@ -26,13 +26,21 @@ describe("parseEnv", () => {
       SESSION_IDLE_MINUTES: 240,
       SESSION_ABSOLUTE_HOURS: 12,
       TRUST_PROXY: false,
+      STORAGE_ROOT: "./storage",
     });
   });
 
+  it("defaults STORAGE_ROOT to ./storage outside production and requires it in production", () => {
+    expect(parseEnv({ ...valid, STORAGE_ROOT: "/srv/atlas" }).STORAGE_ROOT).toBe("/srv/atlas");
+    const error = errorOf(() => parseEnv({ ...valid, NODE_ENV: "production" }));
+    expect(error.variables).toEqual(["STORAGE_ROOT"]);
+    expect(parseEnv({ ...valid, NODE_ENV: "production", STORAGE_ROOT: "/srv/atlas" }).STORAGE_ROOT).toBe("/srv/atlas");
+  });
+
   it("defaults COOKIE_SECURE to true in production only", () => {
-    expect(parseEnv({ ...valid, NODE_ENV: "production" }).COOKIE_SECURE).toBe(true);
+    expect(parseEnv({ ...valid, NODE_ENV: "production", STORAGE_ROOT: "/srv" }).COOKIE_SECURE).toBe(true);
     expect(parseEnv({ ...valid, NODE_ENV: "development" }).COOKIE_SECURE).toBe(false);
-    expect(parseEnv({ ...valid, NODE_ENV: "production", COOKIE_SECURE: "false" }).COOKIE_SECURE).toBe(false);
+    expect(parseEnv({ ...valid, NODE_ENV: "production", STORAGE_ROOT: "/srv", COOKIE_SECURE: "false" }).COOKIE_SECURE).toBe(false);
     expect(parseEnv({ ...valid, COOKIE_SECURE: "TRUE" }).COOKIE_SECURE).toBe(true);
   });
 

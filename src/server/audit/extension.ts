@@ -11,7 +11,9 @@ import { serializeAuditValue } from "./serialize";
  *
  * Guarantees
  * - Every `create`, `update`, `upsert` and `delete` on an audited model writes
- *   its audit lines IN THE SAME TRANSACTION as the change. Outside a
+ *   its audit lines IN THE SAME TRANSACTION as the change. Lines are queued
+ *   and inserted in batches just before the transaction commits (so audit
+ *   rows are not visible to reads made earlier in that same transaction). Outside a
  *   transaction, the extension opens one; inside `client.$transaction(fn)` it
  *   reuses the caller's transaction (tracked with AsyncLocalStorage).
  * - Operations that would escape a per-record audit are refused on audited
@@ -143,11 +145,39 @@ interface AuditLine {
   after?: string | null;
 }
 
-async function writeAuditLines(tx: TxClient, context: AuditContext, lines: AuditLine[]): Promise<void> {
-  if (lines.length === 0) return;
+/** An audit row waiting to be inserted (flushed at the end of the transaction). */
+type PendingAuditRow = {
+  occurredAt: Date;
+  actorId: string | null;
+  action: string;
+  source: string;
+  entityType: string;
+  entityId: string;
+  siteId: string | null;
+  field: string | null;
+  beforeValue: string | null;
+  afterValue: string | null;
+  batchId: string | null;
+};
+
+/** Transaction being audited: its client and the audit rows not yet inserted. */
+interface AuditTransaction {
+  tx: TxClient;
+  pending: PendingAuditRow[];
+}
+
+/** Rows per INSERT (11 parameters each; SQL Server allows 2 100 per statement). */
+const AUDIT_FLUSH_CHUNK = 150;
+
+/**
+ * Queues audit lines on the transaction. They are inserted in batches by
+ * {@link flushAuditLines} just before the transaction commits — still in the
+ * same transaction, so a rollback discards them too.
+ */
+function writeAuditLines(store: AuditTransaction, context: AuditContext, lines: AuditLine[]): void {
   const occurredAt = new Date();
-  await tx.auditLog.createMany({
-    data: lines.map((line) => ({
+  for (const line of lines) {
+    store.pending.push({
       occurredAt,
       actorId: context.actorId,
       action: line.action,
@@ -159,30 +189,38 @@ async function writeAuditLines(tx: TxClient, context: AuditContext, lines: Audit
       beforeValue: line.before ?? null,
       afterValue: line.after ?? null,
       batchId: context.batchId ?? null,
-    })),
-  });
+    });
+  }
 }
 
-async function auditedCreate(tx: TxClient, model: string, data: unknown, context: AuditContext): Promise<AuditRecord> {
-  const record = (await delegateOf(tx, model).create({ data })) as AuditRecord;
-  await writeAuditLines(tx, context, [
+/** Inserts the queued audit lines of a transaction, in order, in batches. */
+async function flushAuditLines(store: AuditTransaction): Promise<void> {
+  while (store.pending.length > 0) {
+    const chunk = store.pending.splice(0, AUDIT_FLUSH_CHUNK);
+    await store.tx.auditLog.createMany({ data: chunk });
+  }
+}
+
+async function auditedCreate(store: AuditTransaction, model: string, data: unknown, context: AuditContext): Promise<AuditRecord> {
+  const record = (await delegateOf(store.tx, model).create({ data })) as AuditRecord;
+  writeAuditLines(store, context, [
     { action: "CREATE", model, record, after: serializeAuditValue(redactRecord(model, record)) },
   ]);
   return record;
 }
 
 async function auditedUpdate(
-  tx: TxClient,
+  store: AuditTransaction,
   model: string,
   where: unknown,
   data: unknown,
   before: AuditRecord,
   context: AuditContext,
 ): Promise<AuditRecord> {
-  const after = (await delegateOf(tx, model).update({ where, data })) as AuditRecord;
+  const after = (await delegateOf(store.tx, model).update({ where, data })) as AuditRecord;
   const changes = redactChanges(model, diffRecords(before, after, ignoredFieldsFor(model)));
-  await writeAuditLines(
-    tx,
+  writeAuditLines(
+    store,
     context,
     changes.map((change) => ({ action: "UPDATE", model, record: after, ...change })),
   );
@@ -190,33 +228,33 @@ async function auditedUpdate(
 }
 
 async function performAuditedWrite(
-  tx: TxClient,
+  store: AuditTransaction,
   model: string,
   operation: string,
   args: AnyArgs,
   context: AuditContext,
 ): Promise<unknown> {
-  const delegate = delegateOf(tx, model);
+  const delegate = delegateOf(store.tx, model);
   const shape = shapeOf(args);
   const reshape = async (record: AuditRecord) =>
     shape ? delegate.findUniqueOrThrow({ where: { id: record.id }, ...shape }) : record;
 
   switch (operation) {
     case "create":
-      return reshape(await auditedCreate(tx, model, args.data, context));
+      return reshape(await auditedCreate(store, model, args.data, context));
 
     case "update": {
       const before = (await delegate.findUnique({ where: args.where })) as AuditRecord | null;
       // Not found: let Prisma raise its usual « record not found » error.
       if (!before) return delegate.update({ where: args.where, data: args.data });
-      return reshape(await auditedUpdate(tx, model, args.where, args.data, before, context));
+      return reshape(await auditedUpdate(store, model, args.where, args.data, before, context));
     }
 
     case "upsert": {
       const before = (await delegate.findUnique({ where: args.where })) as AuditRecord | null;
       const record = before
-        ? await auditedUpdate(tx, model, args.where, args.update, before, context)
-        : await auditedCreate(tx, model, args.create, context);
+        ? await auditedUpdate(store, model, args.where, args.update, before, context)
+        : await auditedCreate(store, model, args.create, context);
       return reshape(record);
     }
 
@@ -225,7 +263,7 @@ async function performAuditedWrite(
       if (!before) return delegate.delete({ where: args.where });
       const result = shape ? await delegate.findUniqueOrThrow({ where: { id: before.id }, ...shape }) : before;
       await delegate.delete({ where: args.where });
-      await writeAuditLines(tx, context, [
+      writeAuditLines(store, context, [
         { action: "DELETE", model, record: before, before: serializeAuditValue(redactRecord(model, before)) },
       ]);
       return result;
@@ -255,12 +293,17 @@ export interface TransactionOptions {
  * @returns The audited client.
  */
 export function withAudit(base: PrismaClient) {
-  const transactions = new AsyncLocalStorage<{ tx: TxClient }>();
+  const transactions = new AsyncLocalStorage<AuditTransaction>();
 
-  const runInTransaction = <R>(fn: (tx: TxClient) => Promise<R>, options?: TransactionOptions): Promise<R> => {
+  const runInTransaction = <R>(fn: (store: AuditTransaction) => Promise<R>, options?: TransactionOptions): Promise<R> => {
     const current = transactions.getStore();
-    if (current) return fn(current.tx); // Nested: join the outer transaction.
-    return base.$transaction((tx) => transactions.run({ tx }, () => fn(tx)), options);
+    if (current) return fn(current); // Nested: join the outer transaction (and its pending lines).
+    return base.$transaction(async (tx) => {
+      const store: AuditTransaction = { tx, pending: [] };
+      const result = await transactions.run(store, () => fn(store));
+      await flushAuditLines(store); // before commit: same transaction as the changes
+      return result;
+    }, options);
   };
 
   const extended = base.$extends({
@@ -308,7 +351,7 @@ export function withAudit(base: PrismaClient) {
             assertNoNestedWrites(model, input.data);
           }
           const context = resolveContext(model, operation);
-          return runInTransaction((tx) => performAuditedWrite(tx, model, operation, input, context));
+          return runInTransaction((store) => performAuditedWrite(store, model, operation, input, context));
         },
       },
     },

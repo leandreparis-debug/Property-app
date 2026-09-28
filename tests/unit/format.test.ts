@@ -6,6 +6,7 @@ import {
   formatEnergy,
   formatNumber,
   formatPercent,
+  formatDateWithPrecision,
   formatSurface,
 } from "@/lib/format";
 
@@ -147,5 +148,23 @@ describe("formatDate", () => {
     expect(formatDate(Number.NaN)).toBe(EMPTY_VALUE);
     expect(formatDate(new Date("invalid"))).toBe(EMPTY_VALUE);
     expect(formatDate({} as unknown as Date)).toBe(EMPTY_VALUE);
+  });
+});
+
+describe("formatDateWithPrecision", () => {
+  const d = new Date("2019-01-01T00:00:00.000Z");
+  it("shows only the year for precision year", () => {
+    expect(formatDateWithPrecision(d, "year")).toBe("2019");
+  });
+  it("shows month and year for precision month", () => {
+    expect(formatDateWithPrecision(new Date("2021-03-01T00:00:00.000Z"), "month")).toBe("mars 2021");
+  });
+  it("shows the full date for precision day or unknown", () => {
+    expect(formatDateWithPrecision(new Date("2021-03-12T00:00:00.000Z"), "day")).toBe("12 mars 2021");
+    expect(formatDateWithPrecision(new Date("2021-03-12T00:00:00.000Z"), null)).toBe("12 mars 2021");
+  });
+  it("returns « — » for missing values", () => {
+    expect(formatDateWithPrecision(null, "year")).toBe(EMPTY_VALUE);
+    expect(formatDateWithPrecision("n'importe quoi", "day")).toBe(EMPTY_VALUE);
   });
 });

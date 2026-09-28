@@ -17,17 +17,17 @@ Ce document fait correspondre **chacune des colonnes** du tableur de référence
 |---:|---|---|---|
 | 1 | ENTREPOT | `sites.code` | Texte, espaces supprimés. **Obligatoire** : clé d'import (upsert). Ligne rejetée si vide. |
 | 2 | CODE BAIL | `leases.code` | Texte, espaces superflus supprimés ; vide → NULL ; unique si renseigné (index unique filtré) |
-| 3 | CLES QLICKSENS | `site_external_ids.value` (system = `QLIK_SENSE`) | Texte, espaces superflus supprimés ; vide → NULL ; ligne créée seulement si renseigné |
-| 4 | CODE AL | `site_external_ids.value` (system = `AL_CODE`) | Texte, espaces superflus supprimés ; vide → NULL |
+| 3 | CLES QLICKSENS | `site_external_ids.value` (system = `QLIK_SENSE`) | Texte, espaces superflus supprimés ; vide → NULL ; plusieurs clés par site acceptées (séparateurs ; , / | retour à la ligne) — décision A20 |
+| 4 | CODE AL | `site_external_ids.value` (system = `AL_CODE`) | Espaces supprimés, majuscules ; unique par (système, valeur) — décision A24 |
 | 5 | N° | `sites.legacy_number` | Conservé en texte (évite la perte des zéros de tête) |
-| 6 | NOM ENTREPOT | `sites.name` | Texte. **Obligatoire** : si vide, repli sur ENTREPOT + avertissement (voir ambiguïté A19) |
+| 6 | NOM ENTREPOT | `sites.name` | Texte. **Obligatoire** : si vide, « Entrepôt {code} » + avertissement (décision A19) |
 | 7 | PORTEFEUILLE PROPERTY | `sites.portfolio` | Texte, espaces superflus supprimés ; vide → NULL |
 | 8 | BU OCCUPANTE | `sites.occupying_bu` | Texte, espaces superflus supprimés ; vide → NULL |
 | 9 | BASSIN BU | `sites.bu_basin` | Texte, espaces superflus supprimés ; vide → NULL |
 | 10 | PAYS | `sites.country` | Normalisé en code ISO 3166-1 alpha-2 (« France » → `FR`) ; défaut `FR` |
 | 11 | RESPONSABLE DE REGION (DLR) | `sites.regional_director` | Texte, espaces superflus supprimés ; vide → NULL |
 | 12 | RESPONSABLE TECHNIQUE REGIONAL (RTR) | `sites.regional_technical_manager` | Texte, espaces superflus supprimés ; vide → NULL |
-| 13 | RAMSES | `site_external_ids.value` (system = `RAMSES`) | Texte, espaces superflus supprimés ; vide → NULL |
+| 13 | RAMSES | `site_external_ids.value` (system = `RAMSES`) | Espaces supprimés, majuscules ; unique par (système, valeur) — décision A24 |
 | 14 | ENTITE PORTANT LE BAIL | `leases.holding_entity` | Texte, espaces superflus supprimés ; vide → NULL |
 | 15 | STATUT D'OCCUPATION | `sites.occupancy_status` | Texte, espaces superflus supprimés ; vide → NULL (valeurs libres en V1) |
 | 16 | PROPRIETAIRE DES MURS | `sites.walls_owner` | Texte, espaces superflus supprimés ; vide → NULL |
@@ -50,7 +50,7 @@ Ce document fait correspondre **chacune des colonnes** du tableur de référence
 | 33 | BAIL | `leases.document_reference` | Référence texte conservée telle quelle ; le fichier lui-même rejoindra `documents` (catégorie `LEASE`) — ambiguïté A2 |
 | 34 | PLANS | `site_technicals.plans_reference` | Référence texte conservée telle quelle ; fichiers → `documents` (catégorie `PLAN`) — ambiguïté A2 |
 | 35 | DOSSIER ADMINISTRATIF | `sites.admin_file_reference` | Référence texte conservée telle quelle ; fichiers → `documents` (catégorie `ADMIN`) — ambiguïté A2 |
-| 36 | ENTREE EN ACTIVITE | `sites.activity_start_date` | Date (JJ/MM/AAAA ou date Excel) → `toDateOnly()` ; vide/illisible → NULL + avertissement ; une année seule → 1er janvier + avertissement (ambiguïté A8) |
+| 36 | ENTREE EN ACTIVITE | `sites.activity_start_date` | Date (JJ/MM/AAAA ou date Excel) → `toDateOnly()` ; vide/illisible → NULL + avertissement ; précision conservée dans `sites.activity_start_date_precision` (`year` : stockée au 1er janvier, affichée « 2019 ») — décision A8 |
 | 37 | DATE D'EFFET BAIL INITIAL | `leases.initial_effective_date` | Date (JJ/MM/AAAA ou date Excel) → `toDateOnly()` ; vide/illisible → NULL + avertissement |
 | 38 | DATE D'EFFET DERNIER AVENANT | `leases.last_amendment_date` | Date (JJ/MM/AAAA ou date Excel) → `toDateOnly()` ; vide/illisible → NULL + avertissement |
 | 39 | MODALITES DU BAIL EN COURS | `leases.current_terms` | Texte long conservé tel quel |
@@ -88,8 +88,8 @@ Ce document fait correspondre **chacune des colonnes** du tableur de référence
 | 71 | COMMENTAIRES LOYER | `leases.rent_comments` | Texte long |
 | 72 | PORTEUR DE L'ICPE | `site_icpes.holder` | Texte, espaces superflus supprimés ; vide → NULL |
 | 73 | PRINCIPALES RUBRIQUES ICPE | `site_icpes.headings_raw` + lignes `icpe_headings` | Texte d'origine conservé ; extraction des codes à 4 chiffres (ex. 1510) et du régime (A, E, D, DC, NC) ; régime absent → `UNKNOWN` |
-| 74 | Lien Géorisques | `site_icpes.georisques_url` | Texte (URL conservée, jamais chargée par l'application) — ambiguïté A3 |
-| 75 | URL Géorisques | `site_icpes.georisques_url` (si « Lien Géorisques » est vide) | Si les deux sont renseignées et différentes : « Lien » retenu, écart signalé — ambiguïté A3 |
+| 74 | Lien Géorisques | `site_icpes.georisques_url` | Utilisée seulement si « URL Géorisques » est vide ; cible du lien hypertexte si la cellule en a un (URL jamais chargée par l'application) — décision A3 |
+| 75 | URL Géorisques | `site_icpes.georisques_url` (si « Lien Géorisques » est vide) | **Prioritaire** sur « Lien Géorisques » ; si les deux diffèrent, l'URL est retenue + avertissement — décision A3 |
 | 76 | DOCUMENTS ADMINISTRATIFS ICPE | `site_icpes.documents_reference` | Référence texte ; fichiers → `documents` (catégorie `ICPE`) |
 | 77 | ANNEE DE REFERENCE | `site_energy_profiles.reference_year` | Entier ; vide/illisible → NULL + avertissement (année sur 4 chiffres) |
 | 78 | ANNEE DE REFERENCE CONSO ELEC EN KWH | `site_energy_profiles.reference_electricity_kwh` | Nombre (virgule décimale, espaces, « € » retirés) ; vide/illisible → NULL + avertissement (kWh de l'année de référence — ambiguïté A23) |
@@ -172,7 +172,7 @@ Ce document fait correspondre **chacune des colonnes** du tableur de référence
 | 155 | CA MARCHANDISE | `annual_metrics` : `MERCHANDISE_REVENUE` / **année courante** | Nombre (virgule décimale, espaces, « € » retirés) ; vide/illisible → NULL + avertissement ; idem |
 | 156 | NOMBRE DE COLIS ANNUEL | `annual_metrics` : `PARCELS` / **année courante** | Nombre (virgule décimale, espaces, « € » retirés) ; vide/illisible → NULL + avertissement ; idem |
 | 157 | QUALITE BATIMENT | `site_technicals.building_quality` | Texte, espaces superflus supprimés ; vide → NULL |
-| 158 | DATE DE CONSTRUCTION | `building_works` (kind = `CONSTRUCTION`).date | Date (JJ/MM/AAAA ou date Excel) → `toDateOnly()` ; vide/illisible → NULL + avertissement ; une ligne par date ; année seule → 1er janvier + avertissement (ambiguïté A9) |
+| 158 | DATE DE CONSTRUCTION | `building_works` (kind = `CONSTRUCTION`).date | Date (JJ/MM/AAAA ou date Excel) → `toDateOnly()` ; vide/illisible → NULL + avertissement ; une ligne par date (plusieurs dates par cellule acceptées), précision dans `building_works.date_precision` — décision A9 |
 | 159 | DATE DE REHABILITATION | `building_works` (kind = `REHABILITATION`).date | Idem |
 | 160 | DATE D'EXTENSION | `building_works` (kind = `EXTENSION`).date | Idem ; plusieurs dates dans la cellule → plusieurs lignes |
 | 161 | ENTREPOTS (TOTAL BAIL) | `site_technicals.lease_warehouse_area` | Surface m² : Nombre (virgule décimale, espaces, « € » retirés) ; vide/illisible → NULL + avertissement |
@@ -197,7 +197,7 @@ Ce document fait correspondre **chacune des colonnes** du tableur de référence
 | 180 | CERTIFICATION | `site_technicals.certification` | Texte, espaces superflus supprimés ; vide → NULL |
 | 181 | BORNES | `site_technicals.ev_charging` | Texte, espaces superflus supprimés ; vide → NULL (bornes de recharge) |
 | 182 | PHOTOVOLTAIQUE | `site_technicals.photovoltaic` | Texte, espaces superflus supprimés ; vide → NULL |
-| 183 | Date modif | **remplacé par le journal d'audit** | Ignorée : chaque modification est tracée dans `audit_logs` (qui, quand, avant/après) |
+| 183 | Date modif | **remplacé par le journal d'audit** | Aucun champ : conservée comme métadonnée (`sheetModifiedAt`) de la ligne d'audit `IMPORT` du site ; chaque modification est tracée dans `audit_logs` — décision A21 |
 
 ## Synthèse
 
@@ -209,31 +209,33 @@ Ce document fait correspondre **chacune des colonnes** du tableur de référence
 | Remplacée par le journal d'audit | 1 |
 | **Total** | **183** |
 
-## Ambiguïtés à trancher
+## Ambiguïtés : décisions et points ouverts
 
-| # | Sujet | Hypothèse retenue en attendant | Question |
-|---|---|---|---|
-| A1 | **Unité de l'eau** (2022 EAU, 2023 EAU) | m³ | L'unité est-elle bien le m³, et non des litres ou des euros ? |
-| A2 | **Format des colonnes BAIL, PLANS et DOSSIER ADMINISTRATIF** | Texte de référence conservé tel quel | Ces cellules contiennent-elles un chemin réseau, un lien SharePoint, un nom de fichier ou un simple « Oui/Non » ? Les fichiers seront-ils fournis pour être rangés dans `documents` ? |
-| A3 | **« Lien Géorisques » et « URL Géorisques »** | Une seule colonne `georisques_url` ; « Lien » est prioritaire | Quelle différence entre les deux (fiche de l'installation, fiche de la commune, lien hypertexte Excel dont le texte diffère de la cible) ? Faut-il garder les deux ? Rappel : l'application ne charge jamais ces URL. |
-| A4 | ADRESSE | Extraction du code postal et de la ville | La colonne contient-elle l'adresse complète (rue, code postal, ville) ou seulement la voie ? |
-| A5 | DEPARTEMENT | Code (`69`, `2A`) | La colonne contient-elle le code, le nom, ou « 69 - Rhône » ? |
-| A6 | EN ACTIVITE et STATUT | Deux champs distincts | Quelles sont les valeurs possibles de STATUT ? EN ACTIVITE fait-il doublon avec STATUT ? |
-| A7 | DUREE DE PREAVIS | Extraction en mois, texte d'origine conservé | Existe-t-il des formulations non convertibles (« à chaque échéance triennale », « 6 mois avant la fin de chaque période ») ? |
-| A8 | ENTREE EN ACTIVITE | Date ; année seule → 1er janvier | La colonne contient-elle une date complète ou seulement une année ? |
-| A9 | DATE DE CONSTRUCTION, DATE DE REHABILITATION, DATE D'EXTENSION | Une ligne `building_works` par date ; année seule → 1er janvier | Une cellule peut-elle contenir plusieurs dates ou une description ? Une année seule est-elle fréquente ? |
-| A10 | ETP MOYEN, CA MARCHANDISE, NOMBRE DE COLIS ANNUEL (sans année) | Rattachés à l'année courante | Faut-il plutôt les rattacher à l'année de la dernière clôture, ou à une année saisie au moment de l'import ? |
-| A11 | Années absentes (CHARGES 2025, ASSURANCES 2025, TF 2025–2026, énergie 2024–2025) | Aucune ligne créée | Ces trous sont-ils voulus ? L'évolution N-1 de 2026 ne sera pas calculable sans 2025. |
-| A12 | TAXE BUREAU IDF (2021–2022) et TAXE BUREAU (2023–2024) | Même indicateur `OFFICE_TAX` | S'agit-il bien de la même taxe, renommée ? |
-| A13 | EVOLUTION PROVISIONS N-1 | Ignorée | Les provisions n'existent que pour 2024 : à quoi cette évolution se comparait-elle (charges 2023 ?) ? |
-| A14 | EVOLUTION TF N-1 et EVOLUTION TF 24 N-1 | Ignorées, recalculées par année | Confirmer que la première compare 2023 à 2022 et la seconde 2024 à 2023. |
-| A15 | Surface de référence des colonnes « /M² » | Relevé de géomètre, sinon surface entrepôt totale | Quelle surface le tableur utilisait-il ? Les valeurs recalculées peuvent différer de l'historique. |
-| A16 | M² BUREAUX/M²TOTAL | BLS ÷ surface de référence | Les « bureaux » correspondent-ils à la BLS ? Quel dénominateur (total bail, total entrepôt, géomètre) ? |
-| A17 | LOYER ECONOMIQUE / M² et PRIX BUREAUX / M2 | Stockés, car ce sont des données contractuelles | Confirmer qu'il s'agit de valeurs saisies et non calculées. |
-| A18 | FRANCHISE DE LOYER INITIAL, MONTANT FRANCHISE et FRANCHISE MOIS | Trois champs distincts | Quel lien entre la franchise initiale (texte) et la franchise en cours (montant, mois) ? |
-| A19 | NOM ENTREPOT vide | Repli sur le code ENTREPOT | Acceptable, ou faut-il rejeter la ligne ? |
-| A20 | CLES QLICKSENS | Une clé par site | Une cellule peut-elle contenir plusieurs clés ? Le modèle en accepte une par système et par site. |
-| A21 | Date modif | Ignorée | Faut-il l'utiliser comme date de l'événement `IMPORT` initial dans `audit_logs` ? |
-| A22 | Montants | Stockés tels quels | Les loyers, charges et taxes sont-ils HT ? Hors charges ? |
-| A23 | ANNEE DE REFERENCE CONSO ELEC / GAZ EN KWH | Consommation en kWh de l'année de référence | Confirmer qu'il s'agit d'une consommation et non d'une année. |
-| A24 | RAMSES, CODE AL | Identifiants textuels | Formats attendus (longueur, préfixe) pour les contrôler à l'import ? |
+Les décisions prises à l'étape 4 sont intégrées dans `src/server/import/mapping.ts` (voir aussi [`import.md`](import.md)). Les points encore ouverts sont éclairés par les statistiques du rapport d'import.
+
+| # | Sujet | Hypothèse initiale | Question | Statut (étape 4) |
+|---|---|---|---|---|
+| A1 | **Unité de l'eau** (2022 EAU, 2023 EAU) | m³ | L'unité est-elle bien le m³, et non des litres ou des euros ? | **Ouvert** — le rapport d'import donne la médiane en m³/m² et un verdict (m³ ou litres). |
+| A2 | **Format des colonnes BAIL, PLANS et DOSSIER ADMINISTRATIF** | Texte de référence conservé tel quel | Ces cellules contiennent-elles un chemin réseau, un lien SharePoint, un nom de fichier ou un simple « Oui/Non » ? Les fichiers seront-ils fournis pour être rangés dans `documents` ? | **Ouvert** — valeur conservée (cible du lien hypertexte si présent, sinon texte) ; le rapport donne la répartition url / chemin réseau / chemin local / oui-non / autre. |
+| A3 | **« Lien Géorisques » et « URL Géorisques »** | Une seule colonne `georisques_url` ; « Lien » est prioritaire | Quelle différence entre les deux (fiche de l'installation, fiche de la commune, lien hypertexte Excel dont le texte diffère de la cible) ? Faut-il garder les deux ? Rappel : l'application ne charge jamais ces URL. | **Décidé** — « URL Géorisques » prioritaire, avertissement si les deux diffèrent ; cible du lien hypertexte retenue. |
+| A4 | ADRESSE | Extraction du code postal et de la ville | La colonne contient-elle l'adresse complète (rue, code postal, ville) ou seulement la voie ? | **Décidé** — extraction du code postal (5 chiffres) et de la ville ; sinon adresse entière + avertissement. |
+| A5 | DEPARTEMENT | Code (`69`, `2A`) | La colonne contient-elle le code, le nom, ou « 69 - Rhône » ? | **Décidé** — code, nom (sans accents ni tirets), « 95 - Val-d'Oise » ; à défaut, déduit du code postal. |
+| A6 | EN ACTIVITE et STATUT | Deux champs distincts | Quelles sont les valeurs possibles de STATUT ? EN ACTIVITE fait-il doublon avec STATUT ? | **Décidé** — EN ACTIVITE → `is_active` (booléen), STATUT texte libre ; incohérence signalée. |
+| A7 | DUREE DE PREAVIS | Extraction en mois, texte d'origine conservé | Existe-t-il des formulations non convertibles (« à chaque échéance triennale », « 6 mois avant la fin de chaque période ») ? | **Décidé** — texte d'origine toujours conservé ; « six mois », « 1 an », « 3 ans ferme » convertis ; le reste → avertissement. |
+| A8 | ENTREE EN ACTIVITE | Date ; année seule → 1er janvier | La colonne contient-elle une date complète ou seulement une année ? | **Décidé** — précision stockée (`day`, `month`, `year`) ; année seule au 1er janvier, affichée « 2019 ». |
+| A9 | DATE DE CONSTRUCTION, DATE DE REHABILITATION, DATE D'EXTENSION | Une ligne `building_works` par date ; année seule → 1er janvier | Une cellule peut-elle contenir plusieurs dates ou une description ? Une année seule est-elle fréquente ? | **Décidé** — une ligne `building_works` par date, plusieurs dates par cellule, précision stockée. |
+| A10 | ETP MOYEN, CA MARCHANDISE, NOMBRE DE COLIS ANNUEL (sans année) | Rattachés à l'année courante | Faut-il plutôt les rattacher à l'année de la dernière clôture, ou à une année saisie au moment de l'import ? | **Décidé** — option `--activity-year` (par défaut année courante − 1), signalée dans le rapport. |
+| A11 | Années absentes (CHARGES 2025, ASSURANCES 2025, TF 2025–2026, énergie 2024–2025) | Aucune ligne créée | Ces trous sont-ils voulus ? L'évolution N-1 de 2026 ne sera pas calculable sans 2025. | **Constat** — aucune ligne créée pour une année absente ; nouvelles années reconnues automatiquement par motif. |
+| A12 | TAXE BUREAU IDF (2021–2022) et TAXE BUREAU (2023–2024) | Même indicateur `OFFICE_TAX` | S'agit-il bien de la même taxe, renommée ? | **Décidé** — même indicateur `OFFICE_TAX` ; en cas de conflit la valeur IDF est retenue + avertissement. |
+| A13 | EVOLUTION PROVISIONS N-1 | Ignorée | Les provisions n'existent que pour 2024 : à quoi cette évolution se comparait-elle (charges 2023 ?) ? | **Constat** — colonne ignorée (calculée). |
+| A14 | EVOLUTION TF N-1 et EVOLUTION TF 24 N-1 | Ignorées, recalculées par année | Confirmer que la première compare 2023 à 2022 et la seconde 2024 à 2023. | **Constat** — colonnes ignorées ; évolutions recalculées année par année. |
+| A15 | Surface de référence des colonnes « /M² » | Relevé de géomètre, sinon surface entrepôt totale | Quelle surface le tableur utilisait-il ? Les valeurs recalculées peuvent différer de l'historique. | **Ouvert** — le rapport indique quelle surface (référence, totale, bail) explique les valeurs au m² du tableur. |
+| A16 | M² BUREAUX/M²TOTAL | BLS ÷ surface de référence | Les « bureaux » correspondent-ils à la BLS ? Quel dénominateur (total bail, total entrepôt, géomètre) ? | **Ouvert** — colonne ignorée ; ratio recalculé sur la BLS. |
+| A17 | LOYER ECONOMIQUE / M² et PRIX BUREAUX / M2 | Stockés, car ce sont des données contractuelles | Confirmer qu'il s'agit de valeurs saisies et non calculées. | **Décidé** — stockés (données contractuelles), exception à la règle « /M² ignorées ». |
+| A18 | FRANCHISE DE LOYER INITIAL, MONTANT FRANCHISE et FRANCHISE MOIS | Trois champs distincts | Quel lien entre la franchise initiale (texte) et la franchise en cours (montant, mois) ? | **Ouvert** — trois champs distincts conservés. |
+| A19 | NOM ENTREPOT vide | Repli sur le code ENTREPOT | Acceptable, ou faut-il rejeter la ligne ? | **Décidé** — « Entrepôt {code} » + avertissement. |
+| A20 | CLES QLICKSENS | Une clé par site | Une cellule peut-elle contenir plusieurs clés ? Le modèle en accepte une par système et par site. | **Décidé** — plusieurs clés par site (unicité (site, système) supprimée, (système, valeur) conservée). |
+| A21 | Date modif | Ignorée | Faut-il l'utiliser comme date de l'événement `IMPORT` initial dans `audit_logs` ? | **Décidé** — métadonnée de la ligne d'audit `IMPORT` du site. |
+| A22 | Montants | Stockés tels quels | Les loyers, charges et taxes sont-ils HT ? Hors charges ? | **Ouvert** — montants stockés tels quels. |
+| A23 | ANNEE DE REFERENCE CONSO ELEC / GAZ EN KWH | Consommation en kWh de l'année de référence | Confirmer qu'il s'agit d'une consommation et non d'une année. | **Décidé** — consommation en kWh. |
+| A24 | RAMSES, CODE AL | Identifiants textuels | Formats attendus (longueur, préfixe) pour les contrôler à l'import ? | **Décidé** — espaces supprimés, majuscules ; conflit avec un autre site → erreur sur ce code seulement. |

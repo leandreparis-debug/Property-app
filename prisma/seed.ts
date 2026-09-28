@@ -316,11 +316,12 @@ async function seedSites(prisma: AuditedPrismaClient, now: Date): Promise<number
           ["AL_CODE", `AL${String(index + 1).padStart(4, "0")}`],
           ...(full ? ([["RAMSES", `RAM-${900 + index}`]] as [ExternalSystem, string][]) : []),
         ];
+    // Unique on (system, value): several ids of one system may exist per site.
     for (const [system, value] of externalIds) {
       await prisma.siteExternalId.upsert({
-        where: { siteId_system: { siteId, system } },
+        where: { system_value: { system, value } },
         create: { siteId, system, value },
-        update: { value },
+        update: { siteId },
       });
     }
 

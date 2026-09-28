@@ -26,9 +26,9 @@ describe("session cookie", () => {
   });
 
   it("follows the environment defaults (production → secure)", () => {
-    expect(sessionCookieName(parseEnv({ ...baseEnv, NODE_ENV: "production" }))).toBe(SECURE_SESSION_COOKIE);
+    expect(sessionCookieName(parseEnv({ ...baseEnv, NODE_ENV: "production", STORAGE_ROOT: "/srv" }))).toBe(SECURE_SESSION_COOKIE);
     expect(sessionCookieName(parseEnv({ ...baseEnv, NODE_ENV: "development" }))).toBe(PLAIN_SESSION_COOKIE);
-    expect(sessionCookieName(parseEnv({ ...baseEnv, NODE_ENV: "production", COOKIE_SECURE: "false" }))).toBe(PLAIN_SESSION_COOKIE);
+    expect(sessionCookieName(parseEnv({ ...baseEnv, NODE_ENV: "production", STORAGE_ROOT: "/srv", COOKIE_SECURE: "false" }))).toBe(PLAIN_SESSION_COOKIE);
   });
 
   it("expires the cookie with the same attributes", () => {

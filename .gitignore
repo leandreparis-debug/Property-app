@@ -25,3 +25,6 @@ blob-report/
 # prisma client (pnpm db:generate / postinstall)
 /generated/
 /tests/e2e/.auth/
+
+# application files (reports, documents): STORAGE_ROOT
+/storage/
