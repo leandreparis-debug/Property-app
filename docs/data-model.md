@@ -24,6 +24,7 @@ erDiagram
     User |o--o{ Document : "déposé par (NoAction)"
     User |o--o{ SitePlan : "calibré par (NoAction)"
     User |o--o{ ImportBatch : "lancé par (SetNull)"
+    User ||--o{ Session : "sessions (NoAction)"
 
     Site {
         nvarchar id PK
@@ -87,8 +88,9 @@ erDiagram
 | `site_plans` (`SitePlan`) | 0..n par site | Plan (image stockée dans `documents`) et son calage géographique (étape 10). |
 | `equipments` (`Equipment`) | 0..n par site | Équipements positionnés sur un plan ou par coordonnées. Type issu du catalogue `EquipmentType`. |
 | `documents` (`Document`) | 0..n par site | **Métadonnées** d'un fichier stocké sur disque (`storage_path` relatif, type MIME, taille, SHA-256). |
-| `users` (`User`) | — | Comptes de l'application (la logique d'authentification arrive à l'étape 3). |
-| `audit_logs` (`AuditLog`) | — | Journal des modifications, en ajout seul. Rempli automatiquement à partir de l'étape 3. |
+| `users` (`User`) | — | Comptes de l'application : email en minuscules, rôle, hachage argon2id, verrouillage (voir `docs/security.md`). |
+| `sessions` (`Session`) | 0..n par utilisateur | Sessions ouvertes. L'identifiant est l'**empreinte SHA-256** du jeton du cookie (le jeton n'est jamais stocké). Expirations absolue et d'inactivité. Table **non auditée**, supprimée explicitement (déconnexion, désactivation, changement de mot de passe). |
+| `audit_logs` (`AuditLog`) | — | Journal des modifications, en ajout seul, **rempli automatiquement** par l'extension Prisma d'audit (`src/server/audit/`), plus les événements `LOGIN`, `LOGIN_FAILED` et `LOGOUT`. |
 | `import_batches` (`ImportBatch`) | — | Une exécution de l'import du tableur (étape 4) ou de l'enrichissement (étape 5), avec ses statistiques et son rapport. |
 
 ## Règles transverses
@@ -144,6 +146,7 @@ Tous les champs métier sont facultatifs, sauf `sites.code` et `sites.name`, car
 - `site_plans.document_id → documents` : même raisonnement (`documents` est en cascade depuis `sites`).
 - `site_plans.calibrated_by_id` et `documents.uploaded_by_id → users` : un utilisateur **n'est jamais supprimé, il est désactivé** (`is_active = 0`). Le `NO ACTION` empêche de perdre la trace de l'auteur.
 - `import_batches.actor_id → users` : `SET NULL`, sans risque de chemin multiple.
+- `sessions.user_id → users` : `NO ACTION`. Les sessions sont supprimées explicitement par l'application, et un utilisateur n'est jamais supprimé.
 
 La suppression d'un site fonctionne malgré ces `NO ACTION` : SQL Server applique toutes les cascades de l'instruction avant de vérifier les contraintes, et le plan, ses équipements et ses documents disparaissent tous avec le site. Un test d'intégration le vérifie. Pour supprimer un plan ou un document **isolément**, il faut d'abord détacher les équipements ou plans qui le référencent.
 
@@ -162,5 +165,5 @@ Ces modules s'ajouteront **par de nouvelles tables** qui référencent les table
 Principes communs :
 - **Les fichiers** vont toujours dans `documents`. Les catégories `AUDIT`, `CONTROL_REPORT`, `N100`, `VISIT_REPORT`, `DAMAGE_INSURANCE` et `PHOTO` existent déjà. Une nouvelle catégorie n'est qu'une valeur ajoutée dans `DocumentCategory` : pas de migration, puisqu'il n'y a pas de contrainte `CHECK` sur cette colonne.
 - **Les nouveaux types d'équipements** s'ajoutent de la même façon dans `EquipmentType` (`src/domain/enums.ts`).
-- **Les nouvelles tables** suivront les mêmes règles : clé étrangère vers `sites` en `CASCADE`, relations secondaires en `NO ACTION`, `created_at`/`updated_at`, et audit automatique à partir de l'étape 3.
+- **Les nouvelles tables** suivront les mêmes règles : clé étrangère vers `sites` en `CASCADE`, relations secondaires en `NO ACTION`, `created_at`/`updated_at`. Pour être auditées automatiquement, il suffit d'ajouter le modèle à `AUDITED_MODELS` (`src/server/audit/config.ts`).
 - **Les indicateurs** propres à un module (par exemple un score d'audit annuel) peuvent aussi devenir de nouveaux codes du catalogue `annual_metrics`, sans migration.

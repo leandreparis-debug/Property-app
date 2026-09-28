@@ -45,9 +45,21 @@
 | `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
 | `generated/prisma/` | Client Prisma généré | Hors de `src/` : n'est pas analysé par `check:offline` (ses commentaires contiennent des liens de documentation, jamais chargés) |
 
+## Authentification et audit
+
+Détails et justifications : [`docs/security.md`](security.md).
+
+- **Comptes locaux** et **sessions opaques en base** : un jeton aléatoire de 32 octets dans un cookie `HttpOnly`, dont seule l'empreinte SHA-256 est stockée dans `sessions`. Expiration par inactivité (glissante, renouvelée au plus toutes les 5 minutes) et expiration absolue. Mots de passe hachés en argon2id (paramètres OWASP).
+- **Deux niveaux de contrôle** :
+  - le middleware vérifie seulement la présence du cookie, pour rediriger vers `/login` ou répondre 401 sur `/api/*` ;
+  - la couche d'accès `src/server/auth/current-user.ts` valide la session en base à chaque requête (mise en cache par requête). Elle est appelée par le layout `(app)`, les pages restreintes, les Server Actions et `withApiAuth()` pour les route handlers.
+- **Rôles** : matrice unique rôle → actions dans `permissions.ts` (`can`, `assertCan` → `ForbiddenError`, 403).
+- **Journal d'audit automatique** : extension du client Prisma. Chaque écriture sur un modèle métier produit des lignes `audit_logs` (auteur, source, lot, champ, avant, après) **dans la même transaction**. Le contexte (auteur, source) passe par `AsyncLocalStorage` (`runWithAuditContext`). Les écritures imbriquées et les opérations en masse sont refusées sur les modèles audités, et le journal est en ajout seul via le client.
+- `db` (`src/server/db.ts`) est le client **audité** ; `createPrismaClient()` (non audité) est réservé aux jeux de données de test et à la maintenance.
+
 ## Coque de l'application
 
-`AppShell` (dans le layout racine) contient le lien d'évitement, `NavRail` (rail de navigation) et `CommandBar` (barre de recherche et palette Ctrl+K). Chaque page rend son contenu dans `<main>` :
+`AppShell` (dans le layout protégé `(app)/layout.tsx`, qui reçoit l'utilisateur courant) contient le lien d'évitement, `NavRail` (rail de navigation, filtré par rôle, avec `UserMenu` en bas) et `CommandBar` (barre de recherche et palette Ctrl+K). Chaque page rend son contenu dans `<main>` :
 - `/` rend `MapStage`, plein écran en arrière-plan. Son emplacement `data-slot="map-canvas"` recevra le canvas MapLibre à l'étape 6 (via `children`) ; les panneaux flottants passent par `overlay` ;
 - les autres pages utilisent `PageContainer`, qui laisse la place au rail et à la barre de commande.
 
@@ -55,7 +67,7 @@
 
 1. **Initialisation** : projet, système de design, coque, Docker, chaîne qualité *(terminée)*.
 2. **Modèle de données** : Prisma, schéma SQL Server, migrations, jeu de démonstration, vérification de la base dans `/api/health` *(terminée, voir `docs/data-model.md`)*.
-3. **Authentification et rôles**.
+3. **Authentification, rôles et journal d'audit automatique** *(terminée, voir `docs/security.md`)*.
 4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import.
 5. **Enrichissement et ressources carto** : géocodage hors ligne, tuiles et styles servis localement.
 6. **Carte nationale** : MapLibre, calcul du statut de conformité.

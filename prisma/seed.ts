@@ -2,12 +2,17 @@
  * Demonstration data set: 10 ENTIRELY FICTITIOUS warehouses (DEMO-001 … DEMO-010).
  *
  * Idempotent: sites are upserted on `code`, 1-1 records on `siteId`, metrics on
- * (site, year, metric), external ids on (site, system); list tables without a
- * natural key (building works, ICPE headings) are replaced per site. Running it
- * twice yields the same row counts. Lease dates are relative to today, so the
- * « arbitration overdue » and « arbitration within 6 months » profiles stay true.
+ * (site, year, metric), external ids on (site, system); building works and ICPE
+ * headings are synchronised on their natural key (kind + date, code). Running
+ * it twice yields the same row counts and, the same day, no new audit line.
+ * Lease dates are relative to today, so the « arbitration overdue » and
+ * « arbitration within 6 months » profiles stay true.
  *
- * No user is created (step 3).
+ * Every write goes through the audited client, inside
+ * `runWithAuditContext({ source: "system" })`, record by record (bulk
+ * operations are refused on audited models).
+ *
+ * No user is created (use `pnpm user:create`).
  *
  * Run: `pnpm db:seed` (or `prisma db seed`).
  */
@@ -17,7 +22,8 @@ import { fileURLToPath } from "node:url";
 import { addMonths, todayDateOnly, toDateOnly } from "../src/domain/dates";
 import type { BuildingWorkKind, ExternalSystem, IcpeRegime } from "../src/domain/enums";
 import type { MetricCode } from "../src/domain/metrics";
-import { createPrismaClient, type PrismaClient } from "../src/server/prisma";
+import { runWithAuditContext } from "../src/server/audit/context";
+import { createAuditedPrismaClient, type AuditedPrismaClient } from "../src/server/prisma";
 
 type YearValues = Partial<Record<number, number>>;
 
@@ -227,12 +233,29 @@ function leaseFor(site: DemoSite, today: Date) {
 }
 
 /**
- * Upserts the demonstration data set.
- * @param prisma - Client connected to the target database.
+ * Upserts the demonstration data set (audited, source « system »).
+ * @param prisma - Audited client connected to the target database.
  * @param now - Reference instant for relative lease dates.
  * @returns Number of sites processed.
  */
-export async function seed(prisma: PrismaClient, now: Date = new Date()): Promise<number> {
+export function seed(prisma: AuditedPrismaClient, now: Date = new Date()): Promise<number> {
+  return runWithAuditContext({ actorId: null, source: "system" }, () => seedSites(prisma, now));
+}
+
+/** Creates missing rows, deletes extra ones — one record at a time (audited). */
+async function syncList<T extends { id: string }>(
+  existing: T[],
+  wanted: { key: string; create: () => Promise<unknown> }[],
+  keyOf: (row: T) => string,
+  remove: (row: T) => Promise<unknown>,
+): Promise<void> {
+  const wantedKeys = new Set(wanted.map((w) => w.key));
+  const existingKeys = new Set(existing.map(keyOf));
+  for (const row of existing) if (!wantedKeys.has(keyOf(row))) await remove(row);
+  for (const w of wanted) if (!existingKeys.has(w.key)) await w.create();
+}
+
+async function seedSites(prisma: AuditedPrismaClient, now: Date): Promise<number> {
   const today = todayDateOnly(now);
 
   for (const [index, s] of SITES.entries()) {
@@ -370,14 +393,27 @@ export async function seed(prisma: PrismaClient, now: Date = new Date()): Promis
       };
       await prisma.siteIcpe.upsert({ where: { siteId }, create: { siteId, ...icpe }, update: icpe });
     }
-    await prisma.$transaction([
-      prisma.icpeHeading.deleteMany({ where: { siteId } }),
-      prisma.icpeHeading.createMany({ data: s.icpe.map((h) => ({ siteId, ...h })) }),
-      prisma.buildingWork.deleteMany({ where: { siteId } }),
-      prisma.buildingWork.createMany({
-        data: s.works.map((w) => ({ siteId, kind: w.kind, date: toDateOnly(w.date), description: w.description })),
-      }),
-    ]);
+    await syncList(
+      await prisma.icpeHeading.findMany({ where: { siteId } }),
+      s.icpe.map((h) => ({
+        key: `${h.code}|${h.regime}|${h.label}`,
+        create: () => prisma.icpeHeading.create({ data: { siteId, ...h } }),
+      })),
+      (row) => `${row.code}|${row.regime ?? ""}|${row.label ?? ""}`,
+      (row) => prisma.icpeHeading.delete({ where: { id: row.id } }),
+    );
+    await syncList(
+      await prisma.buildingWork.findMany({ where: { siteId } }),
+      s.works.map((w) => ({
+        key: `${w.kind}|${w.date}|${w.description}`,
+        create: () =>
+          prisma.buildingWork.create({
+            data: { siteId, kind: w.kind, date: toDateOnly(w.date), description: w.description },
+          }),
+      })),
+      (row) => `${row.kind}|${row.date?.toISOString().slice(0, 10) ?? ""}|${row.description ?? ""}`,
+      (row) => prisma.buildingWork.delete({ where: { id: row.id } }),
+    );
 
     // Annual metrics.
     for (const row of metricsFor(s, index)) {
@@ -394,7 +430,7 @@ export async function seed(prisma: PrismaClient, now: Date = new Date()): Promis
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL manquante (voir .env.example).");
-  const prisma = createPrismaClient(url);
+  const prisma = createAuditedPrismaClient(url);
   try {
     const count = await seed(prisma);
     const [sites, metrics] = await Promise.all([prisma.site.count(), prisma.annualMetric.count()]);

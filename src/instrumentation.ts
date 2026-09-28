@@ -1,18 +1,11 @@
 /**
- * Runs once when the Next.js server starts. Validates the environment so a
- * missing or invalid variable stops the server immediately, with a message
- * naming the variable.
+ * Runs once when the Next.js server starts. The Node.js tasks live in
+ * `instrumentation-node.ts`; the condition below lets the bundler drop them
+ * from the edge build.
  */
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { getEnv, EnvValidationError } = await import("@/lib/env");
-  try {
-    getEnv();
-  } catch (error) {
-    if (error instanceof EnvValidationError) {
-      console.error(`\n[atlas] ${error.message}\n`);
-      process.exit(1);
-    }
-    throw error;
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { registerNode } = await import("./instrumentation-node");
+    await registerNode();
   }
 }

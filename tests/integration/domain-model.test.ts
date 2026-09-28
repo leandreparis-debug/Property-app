@@ -3,9 +3,12 @@ import { toDateOnly } from "@/domain/dates";
 import { createPrismaClient, Prisma } from "@/server/prisma";
 import { testDatabaseUrl } from "./test-db";
 
+// Plain client on purpose: these tests check database constraints (nested
+// writes allowed here); the audit layer is tested in audit.test.ts.
 const prisma = createPrismaClient(testDatabaseUrl());
 
 async function cleanDatabase() {
+  await prisma.session.deleteMany();
   // Order matters only for the NoAction relations (plans ↔ documents ↔ equipments).
   await prisma.equipment.deleteMany();
   await prisma.sitePlan.deleteMany();

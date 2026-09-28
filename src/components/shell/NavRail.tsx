@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS, isNavItemActive, type NavItem } from "@/config/navigation";
+import type { ReactNode } from "react";
+import { NAV_ITEMS, isNavItemActive, navItemsFor, type NavItem } from "@/config/navigation";
+import type { UserRole } from "@/domain/enums";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +12,13 @@ import { cn } from "@/lib/utils";
 export interface NavRailProps {
   /** Entries to display (defaults to `NAV_ITEMS`). */
   items?: readonly NavItem[];
+  /**
+   * Role of the current user: entries it cannot use are hidden (visual
+   * comfort only — access is enforced on the server).
+   */
+  role?: UserRole;
+  /** Content pinned at the bottom of the rail (user menu). */
+  footer?: ReactNode;
   /** Extra classes. */
   className?: string;
 }
@@ -18,8 +27,9 @@ export interface NavRailProps {
  * Thin vertical glass rail (64 px) on the left. Icon links with tooltips; the
  * active entry uses the accent color and `aria-current="page"`.
  */
-export function NavRail({ items = NAV_ITEMS, className }: NavRailProps) {
+export function NavRail({ items = NAV_ITEMS, role, footer, className }: NavRailProps) {
   const pathname = usePathname();
+  const visible = role ? navItemsFor(role, items) : items;
 
   return (
     <nav
@@ -37,7 +47,7 @@ export function NavRail({ items = NAV_ITEMS, className }: NavRailProps) {
         A
       </div>
       <ul className="flex flex-col items-center gap-1">
-        {items.map((item) => {
+        {visible.map((item) => {
           const active = isNavItemActive(pathname, item.href);
           const Icon = item.icon;
           return (
@@ -70,6 +80,7 @@ export function NavRail({ items = NAV_ITEMS, className }: NavRailProps) {
           );
         })}
       </ul>
+      {footer && <div className="mt-auto flex flex-col items-center">{footer}</div>}
     </nav>
   );
 }

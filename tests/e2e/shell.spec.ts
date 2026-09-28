@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ORIGIN } from "./fixtures";
 
-const ORIGIN = "http://localhost:3000";
+// Every test of this file runs as the e2e admin (storage state from the setup project).
 
 const ROUTES = [
   { label: "Carte", path: "/", heading: "Carte des entrepôts" },
@@ -99,7 +100,11 @@ test("le rail se parcourt au clavier et le focus est visible", async ({ page }) 
   // Tooltip follows keyboard focus.
   await expect(page.getByRole("tooltip")).toHaveText("Administration");
 
-  // Next stop: the command bar; Enter opens the palette.
+  // Next stop: the user menu, at the bottom of the rail.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: /Menu utilisateur/ })).toBeFocused();
+
+  // Then the command bar; Enter opens the palette.
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: /Rechercher un site/ })).toBeFocused();
   await page.keyboard.press("Enter");
@@ -173,7 +178,7 @@ test("/api/health renvoie le statut, la version et l'état de la base", async ({
   expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
 });
 
-test("/dev/design renvoie 404 en production", async ({ page }) => {
+test("/dev/design renvoie 404 en production (même connecté)", async ({ page }) => {
   const response = await page.goto("/dev/design");
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible();

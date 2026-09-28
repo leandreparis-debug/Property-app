@@ -23,8 +23,23 @@ pnpm install                # génère aussi le client Prisma (postinstall)
 pnpm db:up                  # démarre SQL Server, attend le healthcheck, crée la base « atlas »
 pnpm db:migrate             # applique les migrations
 pnpm db:seed                # 10 sites de démonstration fictifs (idempotent)
-pnpm dev                    # http://localhost:3000
+pnpm user:create --email admin@atlas.local --name "Admin Démo" --role admin
+pnpm dev                    # http://localhost:3000 → page de connexion
 ```
+
+## Comptes utilisateurs
+
+L'application exige une connexion (comptes locaux, sessions en base, trois rôles). Voir [`docs/security.md`](docs/security.md).
+
+**Premier administrateur** : `pnpm user:create --email admin@atlas.local --name "Admin Démo" --role admin`. Le mot de passe est demandé deux fois, en saisie masquée ; il n'est jamais passé en argument. Politique : 12 à 128 caractères, absent de la liste des mots de passe courants, et sans la partie de l'email avant `@`.
+
+| Commande | Effet |
+|---|---|
+| `pnpm user:create --email … --name "…" --role admin\|editor\|viewer` | Crée un compte |
+| `pnpm user:reset-password --email …` | Nouveau mot de passe (demandé deux fois) ; déverrouille le compte et ferme toutes ses sessions |
+| `pnpm user:set-active --email … --active=false` | Désactive le compte et ferme ses sessions (`--active=true` pour réactiver) |
+
+Rôles : **Administrateur** (tout), **Éditeur** (modification des sites, équipements, documents, plans), **Lecteur** (consultation et export). Ces commandes sont tracées dans le journal d'audit avec la source `system`.
 
 Vérifier la base (`db:sql` charge `.env` et lance sqlcmd dans le conteneur) :
 
@@ -80,7 +95,7 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm typecheck` | Vérification TypeScript (`tsc --noEmit`) |
 | `pnpm test` | Tests unitaires Vitest |
 | `pnpm test:watch` | Vitest en mode watch |
-| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner |
+| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner. Le `globalSetup` crée (ou réinitialise) deux comptes de test, `e2e-admin@atlas.local` et `e2e-viewer@atlas.local`, dans la base de `.env` |
 | `pnpm test:integration` | Tests d'intégration Vitest sur la base `atlas_test` (recréée à chaque lancement) |
 | `pnpm check:offline` | Échoue si une URL `http(s)://` externe apparaît dans `src/` ou `public/` |
 | `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente de la base `atlas` |
@@ -92,6 +107,9 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm db:seed` | Charge les 10 sites de démonstration fictifs (idempotent) |
 | `pnpm db:studio` | Ouvre Prisma Studio (navigateur local) |
 | `pnpm db:sql` | sqlcmd dans le conteneur, `.env` chargé automatiquement (`-Q "…"` pour une requête, sans argument pour une session interactive) |
+| `pnpm user:create` | Crée un compte (voir « Comptes utilisateurs ») |
+| `pnpm user:reset-password` | Change le mot de passe d'un compte |
+| `pnpm user:set-active` | Active ou désactive un compte |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
 ## Variables d'environnement
@@ -103,6 +121,10 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `MSSQL_SA_PASSWORD` | Mot de passe `sa` du conteneur (utilisé par Docker uniquement) |
 | `DATABASE_URL` | Doit commencer par `sqlserver://` |
 | `APP_URL` | URL valide |
+| `COOKIE_SECURE` | `true`/`false`. Cookie `Secure` avec le préfixe `__Host-`. Par défaut `true` en production et `false` sinon ; un avertissement s'affiche au démarrage en production avec `false` |
+| `SESSION_IDLE_MINUTES` | Expiration après inactivité, en minutes (défaut 240) |
+| `SESSION_ABSOLUTE_HOURS` | Durée maximale d'une session, en heures (défaut 12) |
+| `TRUST_PROXY` | `true` uniquement derrière un reverse proxy qui renseigne `X-Forwarded-For` (défaut `false`) |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 
 ## Arborescence
@@ -127,15 +149,24 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── check-no-external.ts  # garde anti-dépendance externe
 │   ├── db-up.sh              # démarrage de la base (pnpm db:up)
 │   ├── db-sql.sh             # sqlcmd avec .env chargé (pnpm db:sql)
-│   └── db-reset.ts           # réinitialisation confirmée (pnpm db:reset)
+│   ├── db-reset.ts           # réinitialisation confirmée (pnpm db:reset)
+│   ├── user-create.ts        # pnpm user:create
+│   ├── user-reset-password.ts
+│   ├── user-set-active.ts
+│   └── lib/cli.ts            # arguments, saisie masquée
 ├── src/
 │   ├── app/                  # routes (App Router)
 │   │   ├── globals.css       # tokens de design (@theme) + mapping shadcn
 │   │   ├── layout.tsx        # <html lang="fr" class="dark">, polices Geist, coque
-│   │   ├── page.tsx          # carte (placeholder jusqu'à l'étape 6)
-│   │   ├── sites/ supervision/ admin/   # pages placeholder
+│   │   ├── (app)/            # zone protégée : layout (session obligatoire) + coque
+│   │   │   ├── page.tsx      # carte (placeholder jusqu'à l'étape 6)
+│   │   │   └── sites/ supervision/ admin/   # pages placeholder (admin : rôle admin)
+│   │   ├── login/            # page de connexion + Server Action
+│   │   ├── forbidden.tsx     # « Accès refusé » (403)
 │   │   ├── dev/design/       # vitrine du design system (404 en production)
-│   │   ├── api/health/       # sonde de vie
+│   │   ├── api/health/       # sonde de vie (publique)
+│   │   ├── api/auth/logout/  # déconnexion (POST)
+│   │   ├── api/me/           # utilisateur courant (protégée)
 │   │   └── not-found.tsx
 │   ├── components/
 │   │   ├── ui/               # composants shadcn/ui, adaptés aux tokens
@@ -146,9 +177,11 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── config/navigation.ts  # entrées du rail
 │   ├── domain/               # règles métier pures : enums (zod), catalogue d'indicateurs, calculs dérivés, dates
 │   ├── lib/                  # env, format, status, csp, utils
-│   ├── server/               # accès base (server-only) : db (singleton), prisma (fabrique), health
-│   ├── instrumentation.ts    # validation de l'environnement au démarrage
-│   └── middleware.ts         # nonce + Content-Security-Policy
+│   ├── server/               # accès base (server-only) : db (singleton audité), prisma (fabriques), health
+│   │   ├── auth/             # mots de passe, sessions, cookie, connexion, permissions, couche d'accès
+│   │   └── audit/            # contexte, diff, sérialisation, extension Prisma d'audit
+│   ├── instrumentation.ts    # démarrage : environnement, avertissement cookie, purge des sessions
+│   └── middleware.ts         # nonce + CSP ; redirection sans cookie de session
 ├── tests/
 │   ├── unit/                 # Vitest + Testing Library
 │   ├── integration/          # Vitest sur SQL Server (base atlas_test)

@@ -441,8 +441,33 @@ model User {
   calibratedPlans   SitePlan[]    @relation("PlanCalibratedBy")
   uploadedDocuments Document[]    @relation("DocumentUploadedBy")
   importBatches     ImportBatch[] @relation("ImportBatchActor")
+  sessions          Session[]
 
   @@map("users")
+}
+
+/// Server-side session. The id is the SHA-256 (hex) of the random token held
+/// by the browser cookie: the token itself is never stored. Not audited.
+model Session {
+  /// SHA-256 of the session token, lower-case hex.
+  id            String   @id @db.NVarChar(64)
+  userId        String   @map("user_id") @db.NVarChar(30)
+  createdAt     DateTime @default(now()) @map("created_at")
+  /// Absolute expiry (SESSION_ABSOLUTE_HOURS after creation).
+  expiresAt     DateTime @map("expires_at")
+  /// Sliding inactivity expiry (SESSION_IDLE_MINUTES, never beyond expiresAt).
+  idleExpiresAt DateTime @map("idle_expires_at")
+  lastSeenAt    DateTime @map("last_seen_at")
+  ipAddress     String?  @map("ip_address") @db.NVarChar(45)
+  /// Truncated to 255 characters.
+  userAgent     String?  @map("user_agent") @db.NVarChar(255)
+
+  /// NoAction: sessions are deleted explicitly (logout, deactivation, password change).
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
 }
 
 /// Append-only change journal. Deliberately WITHOUT foreign keys (actorId,

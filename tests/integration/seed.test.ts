@@ -1,42 +1,43 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { arbitrationDate } from "@/domain/derived";
 import { todayDateOnly } from "@/domain/dates";
-import { createPrismaClient } from "@/server/prisma";
+import { createAuditedPrismaClient } from "@/server/prisma";
 import { seed } from "../../prisma/seed";
+import { raw, resetDatabase } from "./helpers";
 import { testDatabaseUrl } from "./test-db";
 
-const prisma = createPrismaClient(testDatabaseUrl());
+const audited = createAuditedPrismaClient(testDatabaseUrl());
 
 async function counts() {
   return {
-    sites: await prisma.site.count(),
-    externalIds: await prisma.siteExternalId.count(),
-    leases: await prisma.lease.count(),
-    serviceContracts: await prisma.serviceContract.count(),
-    technicals: await prisma.siteTechnical.count(),
-    buildingWorks: await prisma.buildingWork.count(),
-    icpes: await prisma.siteIcpe.count(),
-    icpeHeadings: await prisma.icpeHeading.count(),
-    energyProfiles: await prisma.siteEnergyProfile.count(),
-    annualMetrics: await prisma.annualMetric.count(),
-    users: await prisma.user.count(),
+    sites: await raw.site.count(),
+    externalIds: await raw.siteExternalId.count(),
+    leases: await raw.lease.count(),
+    serviceContracts: await raw.serviceContract.count(),
+    technicals: await raw.siteTechnical.count(),
+    buildingWorks: await raw.buildingWork.count(),
+    icpes: await raw.siteIcpe.count(),
+    icpeHeadings: await raw.icpeHeading.count(),
+    energyProfiles: await raw.siteEnergyProfile.count(),
+    annualMetrics: await raw.annualMetric.count(),
+    users: await raw.user.count(),
   };
 }
 
-beforeAll(async () => {
-  await prisma.equipment.deleteMany();
-  await prisma.sitePlan.deleteMany();
-  await prisma.site.deleteMany();
-  await prisma.user.deleteMany();
+beforeAll(resetDatabase);
+afterAll(async () => {
+  await audited.$disconnect();
+  await raw.$disconnect();
 });
-afterAll(() => prisma.$disconnect());
 
 describe("seed", () => {
-  it("is idempotent: two runs give the same counts", async () => {
-    await seed(prisma);
+  it("is idempotent: two runs give the same counts and no new audit line", async () => {
+    await seed(audited);
     const first = await counts();
-    await seed(prisma);
+    const auditAfterFirst = await raw.auditLog.count();
+    await seed(audited);
     expect(await counts()).toEqual(first);
+    expect(await raw.auditLog.count()).toBe(auditAfterFirst);
 
     expect(first.sites).toBe(10);
     expect(first.users).toBe(0);
@@ -45,8 +46,15 @@ describe("seed", () => {
     expect(first.icpeHeadings).toBeGreaterThan(0);
   });
 
+  it("is audited: one CREATE line per created record, source system", async () => {
+    const total = Object.values(await counts()).reduce((a, b) => a + b, 0);
+    const lines = await raw.auditLog.groupBy({ by: ["action", "source"], _count: true });
+    expect(lines).toEqual([{ action: "CREATE", source: "system", _count: total }]);
+    expect(await raw.auditLog.count({ where: { entityType: "Site", siteId: { not: null } } })).toBe(10);
+  });
+
   it("covers the required profiles", async () => {
-    const sites = await prisma.site.findMany({ include: { lease: true, technical: true }, orderBy: { code: "asc" } });
+    const sites = await raw.site.findMany({ include: { lease: true, technical: true }, orderBy: { code: "asc" } });
     expect(sites.map((s) => s.code)).toEqual(Array.from({ length: 10 }, (_, i) => `DEMO-${String(i + 1).padStart(3, "0")}`));
     expect(sites.every((s) => s.name.startsWith("Entrepôt Démo "))).toBe(true);
     expect(sites.some((s) => s.isActive === false)).toBe(true);
@@ -59,7 +67,6 @@ describe("seed", () => {
     expect(arbitrations.some((d) => d < today)).toBe(true);
     expect(arbitrations.some((d) => d >= today && d < sixMonths)).toBe(true);
 
-    // Metropolitan France bounding box.
     for (const s of sites.filter((x) => x.latitude !== null)) {
       expect(s.latitude!.toNumber()).toBeGreaterThan(41);
       expect(s.latitude!.toNumber()).toBeLessThan(51.2);

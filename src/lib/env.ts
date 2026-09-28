@@ -11,6 +11,26 @@ function requiredString() {
   });
 }
 
+/** Boolean variable written as `true` / `false` (case-insensitive). */
+function booleanString() {
+  return z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(z.enum(["true", "false"], { error: "doit valoir « true » ou « false »" }))
+    .transform((value) => value === "true");
+}
+
+/** Positive integer variable with a default and an upper bound. */
+function positiveInt(defaultValue: number, max: number) {
+  return z.coerce
+    .number({ error: "doit être un nombre entier" })
+    .int("doit être un nombre entier")
+    .min(1, "doit être supérieur ou égal à 1")
+    .max(max, `doit être inférieur ou égal à ${max}`)
+    .default(defaultValue);
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: requiredString()
@@ -19,10 +39,18 @@ const envSchema = z.object({
   APP_URL: requiredString()
     .min(1, "variable manquante")
     .pipe(z.url({ error: "doit être une URL valide (ex. http://localhost:3000)" })),
+  /** `Secure` cookie + `__Host-` prefix. Default: true in production, false otherwise. */
+  COOKIE_SECURE: booleanString().optional(),
+  /** Session inactivity timeout, in minutes. */
+  SESSION_IDLE_MINUTES: positiveInt(240, 7 * 24 * 60),
+  /** Absolute session lifetime, in hours. */
+  SESSION_ABSOLUTE_HOURS: positiveInt(12, 30 * 24),
+  /** Read the client IP from X-Forwarded-For (only behind a trusted reverse proxy). */
+  TRUST_PROXY: booleanString().default(false),
 });
 
 /** Validated, typed server environment. */
-export type Env = z.infer<typeof envSchema>;
+export type Env = Omit<z.infer<typeof envSchema>, "COOKIE_SECURE"> & { COOKIE_SECURE: boolean };
 
 /** Raised when one or more environment variables are missing or invalid. */
 export class EnvValidationError extends Error {
@@ -52,7 +80,10 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     Object.entries(source).map(([key, value]) => [key, value === "" ? undefined : value]),
   );
   const result = envSchema.safeParse(cleaned);
-  if (result.success) return result.data;
+  if (result.success) {
+    const data = result.data;
+    return { ...data, COOKIE_SECURE: data.COOKIE_SECURE ?? data.NODE_ENV === "production" };
+  }
 
   const variables: string[] = [];
   const details: string[] = [];

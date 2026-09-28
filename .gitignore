@@ -24,3 +24,4 @@ blob-report/
 
 # prisma client (pnpm db:generate / postinstall)
 /generated/
+/tests/e2e/.auth/

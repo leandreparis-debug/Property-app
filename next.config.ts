@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
+  // Native argon2 binding: loaded by Node, never bundled.
+  serverExternalPackages: ["@node-rs/argon2"],
+  // Embedded common-password list, read from disk at runtime.
+  outputFileTracingIncludes: { "/**": ["./src/server/auth/common-passwords.txt"] },
+  experimental: {
+    // forbidden() → app/forbidden.tsx (« Accès refusé », HTTP 403).
+    authInterrupts: true,
+  },
   // Keep the dev badge away from the navigation rail (bottom-left).
   devIndicators: { position: "bottom-right" },
   async headers() {

@@ -19,8 +19,38 @@ function errorOf(fn: () => unknown): EnvValidationError {
 }
 
 describe("parseEnv", () => {
-  it("accepts a valid configuration", () => {
-    expect(parseEnv(valid)).toEqual(valid);
+  it("accepts a valid configuration and applies session defaults", () => {
+    expect(parseEnv(valid)).toEqual({
+      ...valid,
+      COOKIE_SECURE: false,
+      SESSION_IDLE_MINUTES: 240,
+      SESSION_ABSOLUTE_HOURS: 12,
+      TRUST_PROXY: false,
+    });
+  });
+
+  it("defaults COOKIE_SECURE to true in production only", () => {
+    expect(parseEnv({ ...valid, NODE_ENV: "production" }).COOKIE_SECURE).toBe(true);
+    expect(parseEnv({ ...valid, NODE_ENV: "development" }).COOKIE_SECURE).toBe(false);
+    expect(parseEnv({ ...valid, NODE_ENV: "production", COOKIE_SECURE: "false" }).COOKIE_SECURE).toBe(false);
+    expect(parseEnv({ ...valid, COOKIE_SECURE: "TRUE" }).COOKIE_SECURE).toBe(true);
+  });
+
+  it("parses session durations and TRUST_PROXY", () => {
+    const env = parseEnv({ ...valid, SESSION_IDLE_MINUTES: "30", SESSION_ABSOLUTE_HOURS: "8", TRUST_PROXY: "true" });
+    expect(env).toMatchObject({ SESSION_IDLE_MINUTES: 30, SESSION_ABSOLUTE_HOURS: 8, TRUST_PROXY: true });
+  });
+
+  it.each([
+    ["COOKIE_SECURE", "yes"],
+    ["TRUST_PROXY", "1"],
+    ["SESSION_IDLE_MINUTES", "0"],
+    ["SESSION_IDLE_MINUTES", "1.5"],
+    ["SESSION_ABSOLUTE_HOURS", "abc"],
+  ])("rejects %s=%s, naming the variable", (name, value) => {
+    const error = errorOf(() => parseEnv({ ...valid, [name]: value }));
+    expect(error.variables).toEqual([name]);
+    expect(error.message).toContain(name);
   });
 
   it("defaults NODE_ENV to development", () => {

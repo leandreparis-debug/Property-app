@@ -1,19 +1,24 @@
 import type { ReactNode } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { SessionUser } from "@/server/auth/session";
 import { CommandBar } from "./CommandBar";
 import { NavRail } from "./NavRail";
+import { UserMenu } from "./UserMenu";
 
 /** Props of {@link AppShell}. */
 export interface AppShellProps {
   /** Page content, rendered in `<main>` under the rail and the command bar. */
   children: ReactNode;
+  /** Authenticated user (navigation entries and user menu depend on it). */
+  user: SessionUser;
 }
 
 /**
- * Application shell: skip link, navigation rail, floating command bar and the
- * main area. Pages render their own `MapStage` or content inside `<main>`.
+ * Application shell (authenticated area): skip link, navigation rail with the
+ * user menu, floating command bar and the main area. Pages render their own
+ * `MapStage` or content inside `<main>`.
  */
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, user }: AppShellProps) {
   return (
     <TooltipProvider>
       <a
@@ -22,7 +27,10 @@ export function AppShell({ children }: AppShellProps) {
       >
         Aller au contenu
       </a>
-      <NavRail />
+      <NavRail
+        role={user.role}
+        footer={<UserMenu name={user.name} email={user.email} role={user.role} />}
+      />
       <CommandBar />
       <main id="main" tabIndex={-1} className="relative min-h-dvh outline-none">
         {children}
