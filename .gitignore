@@ -34,3 +34,6 @@ blob-report/
 /probe-output/
 /vigie-offline-bundle-*/
 /sites.json
+
+# local screenshots (pnpm run skill / manual captures)
+/captures/
