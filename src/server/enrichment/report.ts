@@ -1,6 +1,7 @@
 import "server-only";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { APP_NAME } from "@/config/app";
 import { toCsv } from "../import/report";
 import type { CheckLine, EnrichmentPlan, ProposalLine, ProposalOutcome } from "./plan";
 
@@ -34,7 +35,7 @@ export const OUTCOME_LABELS: Readonly<Record<ProposalOutcome, string>> = {
   applied: "appliqué",
   unchanged: "inchangé",
   divergence: "divergence (non appliqué)",
-  preserved: "préservé (modifié dans Vigie)",
+  preserved: `préservé (modifié dans ${APP_NAME})`,
   low_confidence: "non appliqué (confiance insuffisante)",
   incomplete_pair: "non appliqué (latitude et longitude vont ensemble)",
 };
@@ -57,7 +58,7 @@ export function changesCsv(lines: readonly ProposalLine[]): string {
 
 /** `checks.csv`: informative comparisons (areas, ICPE headings). */
 export function checksCsv(checks: readonly CheckLine[]): string {
-  return toCsv(["code", "contrôle", "valeur Vigie", "valeur publique", "message", "source"], checks.map((c) => [c.code, c.check, c.vigie, c.publicValue, c.message, c.provider]));
+  return toCsv(["code", "contrôle", `valeur ${APP_NAME}`, "valeur publique", "message", "source"], checks.map((c) => [c.code, c.check, c.vigie, c.publicValue, c.message, c.provider]));
 }
 
 /** Writes the report files. */

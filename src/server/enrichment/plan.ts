@@ -14,6 +14,7 @@
  * Latitude and longitude go together: both must be empty, both proposed and
  * both applicable; `coordinatesSource` then becomes « enrichment ».
  */
+import { APP_NAME } from "@/config/app";
 import type { EnrichmentFile, EnrichmentTarget, Footprint, Proposal, ProviderResult } from "@/domain/enrichment-format";
 import type { PreservationIndex } from "../import/plan";
 import { sameValue } from "../import/plan";
@@ -225,7 +226,7 @@ export function siteChecks(state: EnrichmentSiteState, providers: Record<string,
         vigie: [...vigieCodes].sort().join(", ") || null,
         publicValue: [...publicCodes].sort().join(", ") || null,
         message: [
-          missingInVigie.length ? `absentes de Vigie : ${missingInVigie.join(", ")}` : null,
+          missingInVigie.length ? `absentes de ${APP_NAME} : ${missingInVigie.join(", ")}` : null,
           missingInPublic.length ? `absentes de Géorisques : ${missingInPublic.join(", ")}` : null,
         ].filter(Boolean).join(" ; ") + ` (installation ${match.id ?? "?"})`,
         provider: "georisques",

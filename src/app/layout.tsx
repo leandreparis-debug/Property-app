@@ -2,12 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { APP_DESCRIPTION, APP_NAME } from "@/config/app";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Vigie", template: "%s · Vigie" },
-  description: "Référentiel des entrepôts logistiques — Carrefour Property",
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
   robots: { index: false, follow: false },
 };
 

@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/status/StatusBadge";
 import { StatusDot } from "@/components/status/StatusDot";
 import { StatusLegend } from "@/components/status/StatusLegend";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/config/app";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getEnv } from "@/lib/env";
@@ -111,7 +112,7 @@ export default function DesignSystemPage() {
         <p className="text-xs font-medium tracking-wider text-text-muted uppercase">
           Développement uniquement
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Système de design Vigie</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Système de design {APP_NAME}</h1>
         <p className="max-w-2xl text-sm text-text-muted">
           Tokens, typographie, composants et formats. Les couleurs vert, ambre et rouge sont
           réservées au statut de conformité et toujours accompagnées d&apos;un libellé.

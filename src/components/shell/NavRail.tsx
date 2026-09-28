@@ -7,6 +7,7 @@ import { NAV_ITEMS, isNavItemActive, navItemsFor, type NavItem } from "@/config/
 import type { UserRole } from "@/domain/enums";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { AppMonogram } from "./AppMonogram";
 
 /** Props of {@link NavRail}. */
 export interface NavRailProps {
@@ -40,12 +41,7 @@ export function NavRail({ items = NAV_ITEMS, role, footer, className }: NavRailP
         className,
       )}
     >
-      <div
-        aria-hidden="true"
-        className="mb-2 flex size-9 items-center justify-center rounded-md border border-border-strong bg-surface-2 text-sm font-semibold tracking-tight text-text"
-      >
-        A
-      </div>
+      <AppMonogram className="mb-2" />
       <ul className="flex flex-col items-center gap-1">
         {visible.map((item) => {
           const active = isNavItemActive(pathname, item.href);

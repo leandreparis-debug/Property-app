@@ -2,6 +2,7 @@
  * Row normalisation: one spreadsheet row → one {@link SiteDraft}, plus its
  * anomalies. Pure function (no database access).
  */
+import { APP_NAME } from "@/config/app";
 import type { BuildingWorkKind, ExternalSystem } from "@/domain/enums";
 import { departmentFromPostalCode, resolveDepartment, resolveRegion } from "@/domain/geo";
 import { metricValueSchema } from "@/domain/metrics";
@@ -82,7 +83,7 @@ function parseCountry(value: CellValue): ParseResult<string> {
   const code = COUNTRIES[key] ?? (/^[a-z]{2}$/.test(key) ? key.toUpperCase() : undefined);
   if (!code) return { value: null, issue: { severity: "warning", kind: "invalid_country", message: `Pays non reconnu : « ${t.value} ».` } };
   if (code !== "FR") {
-    return { value: code, issue: { severity: "warning", kind: "foreign_country", message: `Pays « ${code} » : Vigie ne couvre que la France métropolitaine.` } };
+    return { value: code, issue: { severity: "warning", kind: "foreign_country", message: `Pays « ${code} » : ${APP_NAME} ne couvre que la France métropolitaine.` } };
   }
   return { value: code };
 }
