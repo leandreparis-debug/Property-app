@@ -4,6 +4,8 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { APP_DESCRIPTION, APP_NAME } from "@/config/app";
 import { cn } from "@/lib/utils";
+// Brand typeface of the logo, self-hosted (no request to the internet).
+import "@fontsource/unbounded/600.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

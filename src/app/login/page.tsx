@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppMonogram } from "@/components/shell/AppMonogram";
+import { VigieLogo } from "@/components/brand/VigieLogo";
 import { MapStage } from "@/components/shell/MapStage";
-import { APP_NAME, APP_TAGLINE } from "@/config/app";
+import { APP_TAGLINE } from "@/config/app";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { safeRedirectPath } from "@/server/auth/safe-redirect";
 import { LoginForm } from "./LoginForm";
@@ -19,10 +19,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       overlay={
         <main className="absolute inset-0 z-10 flex items-center justify-center px-4">
           <section aria-labelledby="login-title" className="glass w-full max-w-sm rounded-lg p-8 shadow-panel">
-            <header className="mb-7 flex flex-col gap-1.5">
-              <AppMonogram size="md" className="mb-3" />
-              <h1 id="login-title" className="text-2xl font-semibold tracking-tight text-text">
-                {APP_NAME}
+            <header className="mb-7 flex flex-col items-center gap-3 text-center">
+              <h1 id="login-title">
+                <VigieLogo variant="vertical" size={64} />
               </h1>
               <p className="text-sm text-text-muted">{APP_TAGLINE}</p>
             </header>

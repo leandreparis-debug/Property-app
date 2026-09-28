@@ -7,7 +7,7 @@ import { NAV_ITEMS, isNavItemActive, navItemsFor, type NavItem } from "@/config/
 import type { UserRole } from "@/domain/enums";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { AppMonogram } from "./AppMonogram";
+import { VigieIcon } from "@/components/brand/VigieLogo";
 
 /** Props of {@link NavRail}. */
 export interface NavRailProps {
@@ -41,7 +41,7 @@ export function NavRail({ items = NAV_ITEMS, role, footer, className }: NavRailP
         className,
       )}
     >
-      <AppMonogram className="mb-2" />
+      <VigieIcon size={36} decorative className="mb-2" />
       <ul className="flex flex-col items-center gap-1">
         {visible.map((item) => {
           const active = isNavItemActive(pathname, item.href);

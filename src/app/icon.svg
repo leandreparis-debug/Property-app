@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" data-monogram="V"><rect width="32" height="32" rx="7" fill="#131923"/><path d="M8 7h3.6L16 20.6 20.4 7H24l-6.3 18h-3.4L8 7Z" fill="#E6EAF2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Vigie">
+  <title>Vigie</title>
+  <defs><clipPath id="vigie-clip"><rect width="200" height="200" rx="50"/></clipPath></defs>
+  <rect width="200" height="200" rx="50" fill="#141A21"/>
+  <g clip-path="url(#vigie-clip)">
+    <polygon points="86,64 86,90 -20,76 -20,14" fill="#7CC8E0" fill-opacity="0.7"/>
+    <polygon points="114,64 114,90 220,76 220,14" fill="#7CC8E0" fill-opacity="0.7"/>
+    <polygon points="80,62 120,62 100,38" fill="#EEF1F3"/>
+    <rect x="86" y="62" width="28" height="28" fill="#7CC8E0"/>
+    <polygon points="80,96 120,96 132,202 68,202" fill="#EEF1F3"/>
+  </g>
+</svg>
