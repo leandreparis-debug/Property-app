@@ -203,7 +203,7 @@ export async function buildBundle(options: BuildOptions): Promise<BuildResult> {
     warnings.push(`Taille ${formatBytes(manifest.totalSize)} au-delà de l'objectif de ${formatBytes(MAP_DEFAULTS.targetBundleBytes)} : réduire --maxzoom ou --ortho-radius.`);
   }
   await rename(partial, root);
-  log(`Paquet prêt : ${root} (${formatBytes(manifest.totalSize)}, ${manifest.files.length} fichiers, ${http.networkCalls} appel(s) réseau)`);
+  log(`Paquet prêt : ${root} (${formatBytes(manifest.totalSize)}, ${manifest.files.length} fichiers, ${http.networkCalls} appel(s) ${fixtures ? "simulé(s) — aucun accès réseau" : "réseau"})`);
   for (const w of warnings) log(`⚠ ${w}`);
   return { root, totalSize: manifest.totalSize, enrichment, warnings };
 }

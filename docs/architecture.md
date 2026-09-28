@@ -9,7 +9,9 @@
 2. **La base de données est la source de vérité.** Le tableur n'est qu'une source d'import (étape 4). Toute donnée affichée provient de SQL Server.
 3. **Fichiers sur disque, métadonnées en base.** Tous les fichiers écrits par l'application vivent sous `STORAGE_ROOT` (`src/server/storage.ts` refuse tout chemin qui en sortirait). Plans, photos et documents sont stockés sur le système de fichiers du serveur ; la base conserve leurs métadonnées (chemin, type, taille, empreinte, auteur, date).
 4. **Audit systématique.** Chaque modification de donnée est tracée : qui, quand, quoi, valeur avant et après (étape 9).
-5. **Sécurité par défaut.** En-têtes de sécurité sur toutes les réponses, CSP à nonce par requête (pas de `'unsafe-inline'` pour les scripts), variables d'environnement validées au démarrage, aucun secret dans le code.
+5. **Seul `tools/` joint internet.** Le code qui appelle des services publics vit exclusivement dans `tools/offline-bundle/`, exécuté sur un poste connecté. Il n'est jamais importé par l'application (test dédié) et n'entre pas dans le build. Le serveur ne reçoit que des paquets vérifiés par somme de contrôle (voir [`docs/offline-bundle.md`](offline-bundle.md)).
+6. **L'enrichissement ne remplit que les champs vides.** Une valeur publique différente d'une valeur existante est une **divergence** : listée dans le rapport, jamais appliquée. Un champ vidé volontairement dans l'interface est préservé. Les données publiques sans champ métier vont dans `site_public_data`.
+7. **Sécurité par défaut.** En-têtes de sécurité sur toutes les réponses, CSP à nonce par requête (pas de `'unsafe-inline'` pour les scripts), variables d'environnement validées au démarrage, aucun secret dans le code.
 
 ## Stack
 
@@ -43,7 +45,10 @@
 | `src/domain/` | Règles métier pures : listes de valeurs (zod), catalogue d'indicateurs, calculs dérivés, dates | Aucun accès base ni réseau, importable côté client comme côté serveur |
 | `src/server/` | Accès à la base (`db`, fabrique Prisma, sonde de santé) | `import "server-only"` : jamais importé côté client |
 | `src/server/import/` | Import du tableur : fonctions pures (analyse, en-têtes, correspondance, contrôles, plan) et un seul module d'écriture (`writer.ts`) | Écrit toujours via `runWithAuditContext({ source: "import", batchId })` |
+| `src/server/enrichment/` | Application d'un `enrichment.json` : plan pur (`plan.ts`), lecture de l'état, un seul module d'écriture, rapport ; export des sites | Écrit via `runWithAuditContext({ source: "enrichment", batchId })` ; ne remplit que les champs vides |
+| `src/server/map/`, `src/server/http/range.ts` | Installation du paquet cartographique (vérification SHA-256, bascule atomique, retour arrière) ; service des fichiers par plages d'octets (`/api/map-assets`) | Fichiers uniquement sous `STORAGE_ROOT/map/` |
 | `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
+| `tools/offline-bundle/` | Outil de préparation du paquet hors ligne (poste connecté) : client HTTP partagé, fournisseurs, carte, manifeste | **Seul code autorisé à joindre internet.** Jamais importé par `src/`, exclu du build, mais couvert par le typecheck, le lint et les tests |
 | `generated/prisma/` | Client Prisma généré | Hors de `src/` : n'est pas analysé par `check:offline` (ses commentaires contiennent des liens de documentation, jamais chargés) |
 
 ## Authentification et audit
@@ -70,7 +75,7 @@ Détails et justifications : [`docs/security.md`](security.md).
 2. **Modèle de données** : Prisma, schéma SQL Server, migrations, jeu de démonstration, vérification de la base dans `/api/health` *(terminée, voir `docs/data-model.md`)*.
 3. **Authentification, rôles et journal d'audit automatique** *(terminée, voir `docs/security.md`)*.
 4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import *(terminée, voir `docs/import.md`)*.
-5. **Enrichissement et ressources carto** : géocodage hors ligne, tuiles et styles servis localement.
+5. **Enrichissement et ressources carto** : paquet hors ligne préparé sur un poste connecté (données publiques, fond de carte, orthophotos), installé et appliqué sur le serveur *(terminée, voir `docs/offline-bundle.md`)*.
 6. **Carte nationale** : MapLibre, calcul du statut de conformité.
 7. **Filtres et supervision**.
 8. **Fiche entrepôt**.

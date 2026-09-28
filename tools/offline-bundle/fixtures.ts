@@ -136,10 +136,21 @@ function centroidOfGeom(json: string | null): LonLat | null {
 
 type Answer = { status: number; body: unknown };
 
-function geocodeSearch(q: string): Answer {
+const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Commune of a query: by postal code, else by city name (like the real service). */
+function communeOfQuery(q: string): [string, (typeof FIXTURE_COMMUNES)[string]] | null {
   const postcode = /\b(\d{5})\b/.exec(q)?.[1];
-  const commune = postcode ? FIXTURE_COMMUNES[postcode] : undefined;
-  if (!postcode || !commune) return { status: 200, body: { type: "FeatureCollection", features: [] } };
+  if (postcode && FIXTURE_COMMUNES[postcode]) return [postcode, FIXTURE_COMMUNES[postcode]];
+  const folded = fold(q);
+  const byName = Object.entries(FIXTURE_COMMUNES).find(([, c]) => new RegExp(`\\b${fold(c.city).replace(/[-']/g, ".")}\\b`).test(folded));
+  return byName ?? null;
+}
+
+function geocodeSearch(q: string): Answer {
+  const found = communeOfQuery(q);
+  if (!found) return { status: 200, body: { type: "FeatureCollection", features: [] } };
+  const [postcode, commune] = found;
   const hasNumber = /^\s*\d+/.test(q);
   const point = jitter(commune.lonLat, q);
   const template = loadFixture("geocode-search.json");

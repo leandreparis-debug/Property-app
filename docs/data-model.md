@@ -16,6 +16,7 @@ erDiagram
     Site ||--o| SiteEnergyProfile : "énergie (1-1)"
     Site ||--o{ AnnualMetric : "indicateurs annuels"
     Site ||--o| SiteGeometry : "emprise (1-1)"
+    Site ||--o{ SitePublicData : "données publiques"
     Site ||--o{ SitePlan : "plans"
     Site ||--o{ Equipment : "équipements"
     Site ||--o{ Document : "documents"
@@ -32,6 +33,7 @@ erDiagram
         nvarchar name
         decimal latitude "9,6"
         decimal longitude "9,6"
+        nvarchar commune_insee_code "5, enrichissement"
         int version "concurrence optimiste"
         datetime archived_at "archivage logique"
     }
@@ -48,6 +50,13 @@ erDiagram
         nvarchar metric "catalogue"
         decimal value "18,4"
         nvarchar source "CHECK"
+    }
+    SitePublicData {
+        nvarchar site_id FK
+        nvarchar provider "UK (site, provider, key)"
+        nvarchar key
+        nvarchar value_json "JSON"
+        nvarchar batch_id
     }
     AuditLog {
         bigint id PK "auto-incrément"
@@ -74,7 +83,7 @@ erDiagram
 
 | Table (modèle) | Cardinalité | Rôle |
 |---|---|---|
-| `sites` (`Site`) | — | Identité, organisation, adresse et coordonnées de l'entrepôt. Racine de toutes les données métier. `code` = ENTREPOT. |
+| `sites` (`Site`) | — | Identité, organisation, adresse et coordonnées de l'entrepôt. Racine de toutes les données métier. `code` = ENTREPOT. `commune_insee_code` (5 caractères, Corse `2A`/`2B`) et `coordinates_source` (`import`, `manual`, `enrichment`) sont renseignés par l'enrichissement lorsqu'ils sont vides. |
 | `site_external_ids` (`SiteExternalId`) | 0..n par site, **plusieurs par système possibles** | Identifiants dans les autres systèmes (`QLIK_SENSE`, `AL_CODE`, `RAMSES`). Unicité sur (système, valeur) : un identifiant n'appartient qu'à un site. Un site peut avoir plusieurs clés Qlik (l'unicité (site, système) a été supprimée à l'étape 4). |
 | `leases` (`Lease`) | 0..1 par site | Le bail : dates, préavis, négociation, franchise, loyers contractuels. Un bail correspond à un seul entrepôt. La date d'arbitrage n'est pas stockée. |
 | `service_contracts` (`ServiceContract`) | 0..1 par site | Contrat de prestation logistique. |
@@ -84,7 +93,8 @@ erDiagram
 | `icpe_headings` (`IcpeHeading`) | 0..n par site | Rubriques ICPE normalisées (code, régime, libellé). |
 | `site_energy_profiles` (`SiteEnergyProfile`) | 0..1 par site | Année et consommations de référence, OPERAT, refacturation de la gestion technique. |
 | `annual_metrics` (`AnnualMetric`) | 0..n par site | **Cœur de la normalisation** : une ligne par (site, année, indicateur). Remplace les colonnes « XXX 2021 … 2026 ». Catalogue dans `src/domain/metrics.ts`. |
-| `site_geometries` (`SiteGeometry`) | 0..1 par site | Emprise du bâtiment en GeoJSON (étape 10). |
+| `site_geometries` (`SiteGeometry`) | 0..1 par site | Emprise du bâtiment en GeoJSON, hauteur (`height_m`), référence de l'objet source (`source_ref`, ex. `BDTOPO_V3:batiment/<cleabs>`), date de récupération (`fetched_at`) et origine (`source` : `import`, `manual`, `enrichment`). Remplie par l'enrichissement (étape 5), affichée en 3D à l'étape 10. |
+| `site_public_data` (`SitePublicData`) | 0..n par site, unique sur (site, fournisseur, clé) | Données publiques **informatives** qui ne correspondent à aucun champ métier : risques de la commune, zonage sismique, radon, installations classées voisines, parcelles, zones d'urbanisme, SIREN candidats. Valeur JSON (`value_json`), date de récupération et lot. Table **auditée**, remplacée par couple (fournisseur, clé) à chaque enrichissement (voir `docs/offline-bundle.md`). |
 | `site_plans` (`SitePlan`) | 0..n par site | Plan (image stockée dans `documents`) et son calage géographique (étape 10). |
 | `equipments` (`Equipment`) | 0..n par site | Équipements positionnés sur un plan ou par coordonnées. Type issu du catalogue `EquipmentType`. |
 | `documents` (`Document`) | 0..n par site | **Métadonnées** d'un fichier stocké sur disque (`storage_path` relatif, type MIME, taille, SHA-256). |

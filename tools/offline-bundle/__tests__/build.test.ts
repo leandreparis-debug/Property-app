@@ -130,7 +130,7 @@ describe("buildBundle --fixtures", () => {
     expect(manifest.sources.every((s) => s.licence && s.attribution)).toBe(true);
     const enrichment = enrichmentFileSchema.parse(JSON.parse(readFileSync(join(result.root, "enrichment.json"), "utf8")));
     expect(enrichment.sites.map((s) => s.code)).toEqual(["S-1", "S-2", "S-3"]);
-    expect(logs.some((l) => l.includes("0 appel(s) réseau") || l.includes("appel(s) réseau"))).toBe(true);
+    expect(logs.some((l) => l.includes("simulé(s) — aucun accès réseau"))).toBe(true);
     expect(readdirSync(dir).some((f) => f.endsWith(".partial"))).toBe(false);
     // Same day again: refused rather than overwritten.
     await expect(buildBundle({ sitesFile: writeSites(), outDir: dir, fixtures: true, workDir: join(dir, "work"), now, log: () => {} })).rejects.toThrow(/existe déjà/);

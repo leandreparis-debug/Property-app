@@ -128,6 +128,11 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm user:set-active` | Active ou désactive un compte |
 | `pnpm import:spreadsheet` | Importe le tableur `.xlsx` (administrateur ; `--dry-run` d'abord) — voir « Import du tableur » |
 | `pnpm sample:build` | Régénère le fichier de test fictif `samples/vigie-sample.xlsx` |
+| `pnpm enrichment:export-sites` | Exporte code, nom, adresse et coordonnées des sites actifs pour le poste connecté (administrateur) |
+| `pnpm bundle:probe` | **Poste connecté** : enregistre les réponses brutes des services publics pour quelques sites (`probe-output/`) |
+| `pnpm bundle:build` | **Poste connecté** : prépare `vigie-offline-bundle-AAAAMMJJ/` (enrichissement, fond de carte, orthophotos) ; `--fixtures` fonctionne sans réseau |
+| `pnpm map:install` | Vérifie un paquet et installe sa carte dans `STORAGE_ROOT/map/` (`--rollback` : version précédente) |
+| `pnpm enrichment:apply` | Applique `enrichment.json` : ne remplit que les champs vides, liste les divergences (`--dry-run` d'abord) |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
 ## Import du tableur
@@ -152,6 +157,21 @@ pnpm import:spreadsheet --file referentiel.xlsx --actor admin@vigie.local
 pnpm import:spreadsheet --file samples/vigie-sample.xlsx --actor admin@vigie.local --dry-run
 ```
 
+## Paquet hors ligne (enrichissement et carte)
+
+Le serveur ne joint jamais internet. Les données publiques et la carte sont préparées sur un poste connecté par `tools/offline-bundle/`, puis installées. Procédure complète, données qui sortent du réseau, licences, taille, retour arrière : [`docs/offline-bundle.md`](docs/offline-bundle.md).
+
+```bash
+# Serveur : exporter les sites (code, nom, adresse, coordonnées uniquement)
+pnpm enrichment:export-sites --out sites.json --actor admin@vigie.local
+# Poste connecté (pmtiles requis pour la carte) — ou --fixtures pour un essai sans réseau
+pnpm bundle:build --sites sites.json --out .
+# Serveur : installer la carte, puis simuler et appliquer l'enrichissement
+pnpm map:install --bundle vigie-offline-bundle-AAAAMMJJ --actor admin@vigie.local
+pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --actor admin@vigie.local --dry-run
+pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --actor admin@vigie.local
+```
+
 ## Variables d'environnement
 
 Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête immédiatement si l'une d'elles manque ou est invalide, avec un message qui la nomme.
@@ -165,7 +185,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `SESSION_IDLE_MINUTES` | Expiration après inactivité, en minutes (défaut 240) |
 | `SESSION_ABSOLUTE_HOURS` | Durée maximale d'une session, en heures (défaut 12) |
 | `TRUST_PROXY` | `true` uniquement derrière un reverse proxy qui renseigne `X-Forwarded-For` (défaut `false`) |
-| `STORAGE_ROOT` | Dossier racine des fichiers écrits par l'application (rapports d'import, documents). Par défaut `./storage` hors production ; **obligatoire en production**. Tous les chemins sont résolus sous cette racine. |
+| `STORAGE_ROOT` | Dossier racine des fichiers écrits par l'application (rapports d'import et d'enrichissement, carte installée `map/`, documents). Par défaut `./storage` hors production ; **obligatoire en production**. Tous les chemins sont résolus sous cette racine. |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 
 ## Arborescence
@@ -182,6 +202,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   └── seed.ts               # 10 sites de démonstration fictifs
 ├── generated/prisma/         # client Prisma généré (non commité)
 ├── samples/vigie-sample.xlsx # tableur de test fictif (pnpm sample:build)
+├── tools/offline-bundle/     # SEUL code autorisé à joindre internet (poste connecté) : pnpm bundle:*
 ├── storage/                  # STORAGE_ROOT en développement : rapports d'import… (non commité)
 ├── docs/
 │   ├── architecture.md       # principes, stack, découpage en 12 étapes
@@ -189,6 +210,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── source-mapping.md     # colonne du tableur → table.champ
 │   ├── import.md             # procédure d'import, anomalies, décisions
 │   ├── security.md           # sessions, rôles, audit
+│   ├── offline-bundle.md     # paquet hors ligne : procédure, données sortantes, licences
 │   └── design-system.md      # tokens, règles des couleurs de statut, accessibilité
 ├── scripts/
 │   ├── check-no-external.ts  # garde anti-dépendance externe
@@ -200,6 +222,9 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── user-set-active.ts
 │   ├── import-spreadsheet.ts # pnpm import:spreadsheet
 │   ├── build-sample-spreadsheet.ts # pnpm sample:build
+│   ├── enrichment-export-sites.ts  # pnpm enrichment:export-sites
+│   ├── enrichment-apply.ts   # pnpm enrichment:apply
+│   ├── map-install.ts        # pnpm map:install
 │   └── lib/                  # cli.ts (arguments, saisie masquée), sample-spreadsheet.ts
 ├── src/
 │   ├── app/                  # routes (App Router)
@@ -214,6 +239,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   │   ├── api/health/       # sonde de vie (publique)
 │   │   ├── api/auth/logout/  # déconnexion (POST)
 │   │   ├── api/me/           # utilisateur courant (protégée)
+│   │   ├── api/map-assets/   # carte installée : fichiers par plages d'octets + status (protégée)
 │   │   └── not-found.tsx
 │   ├── components/
 │   │   ├── ui/               # composants shadcn/ui, adaptés aux tokens
