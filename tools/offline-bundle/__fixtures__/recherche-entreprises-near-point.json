@@ -1,0 +1,41 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "results": [
+    {
+      "siren": "000000001",
+      "nom_complet": "LOGISTIQUE FICTIVE",
+      "nom_raison_sociale": "LOGISTIQUE FICTIVE",
+      "activite_principale": "52.10B",
+      "matching_etablissements": [
+        {
+          "siret": "00000000100012",
+          "activite_principale": "52.10B",
+          "latitude": "45.7002261",
+          "longitude": "4.9504502",
+          "adresse": "12 RUE DE L'EXEMPLE"
+        }
+      ]
+    },
+    {
+      "siren": "000000002",
+      "nom_complet": "TRANSPORTS IMAGINAIRES",
+      "activite_principale": "49.41A",
+      "matching_etablissements": [
+        {
+          "siret": "00000000200017",
+          "activite_principale": "49.41A",
+          "latitude": "45.7005426",
+          "longitude": "4.9484565"
+        }
+      ]
+    }
+  ],
+  "total_results": 2,
+  "page": 1,
+  "per_page": 25,
+  "total_pages": 1
+}

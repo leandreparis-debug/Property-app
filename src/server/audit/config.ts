@@ -23,6 +23,7 @@ export const AUDITED_MODELS: ReadonlySet<string> = new Set([
   "Equipment",
   "Document",
   "User",
+  "SitePublicData",
 ]);
 
 /** Models explicitly not audited (documentation and tests). */

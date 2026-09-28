@@ -28,3 +28,9 @@ blob-report/
 
 # application files (reports, documents): STORAGE_ROOT
 /storage/
+
+# offline bundle (tools/offline-bundle): working files, probe output, bundles, site exports
+/.bundle-work/
+/probe-output/
+/vigie-offline-bundle-*/
+/sites.json

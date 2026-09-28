@@ -33,6 +33,11 @@
     "user:set-active": "tsx --conditions=react-server scripts/user-set-active.ts",
     "import:spreadsheet": "tsx --conditions=react-server scripts/import-spreadsheet.ts",
     "sample:build": "tsx scripts/build-sample-spreadsheet.ts",
+    "enrichment:export-sites": "tsx --conditions=react-server scripts/enrichment-export-sites.ts",
+    "enrichment:apply": "tsx --conditions=react-server scripts/enrichment-apply.ts",
+    "map:install": "tsx --conditions=react-server scripts/map-install.ts",
+    "bundle:probe": "tsx tools/offline-bundle/cli.ts probe",
+    "bundle:build": "tsx tools/offline-bundle/cli.ts build",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm check:offline && pnpm build",
     "postinstall": "prisma generate"
   },

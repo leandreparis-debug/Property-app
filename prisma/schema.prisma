@@ -73,6 +73,8 @@ model Site {
   /// its year is stored on 1 January with precision `year`.
   activityStartDatePrecision String?   @map("activity_start_date_precision") @db.NVarChar(8)
   adminFileReference         String?   @map("admin_file_reference") @db.NVarChar(500)
+  /// INSEE code of the commune (e.g. 69290), from the public-data enrichment.
+  communeInseeCode           String?   @map("commune_insee_code") @db.NVarChar(5)
 
   /// Optimistic concurrency token (step 9).
   version    Int       @default(1)
@@ -94,6 +96,7 @@ model Site {
   plans           SitePlan[]
   equipments      Equipment[]
   documents       Document[]
+  publicData      SitePublicData[]
 
   @@index([region])
   @@index([departmentCode])
@@ -329,13 +332,19 @@ model AnnualMetric {
 
 /// Building footprint (GeoJSON, WGS84).
 model SiteGeometry {
-  id               String   @id @default(cuid()) @db.NVarChar(30)
-  siteId           String   @unique @map("site_id") @db.NVarChar(30)
-  footprintGeoJson String?  @map("footprint_geojson") @db.NVarChar(Max)
+  id               String    @id @default(cuid()) @db.NVarChar(30)
+  siteId           String    @unique @map("site_id") @db.NVarChar(30)
+  footprintGeoJson String?   @map("footprint_geojson") @db.NVarChar(Max)
   /// import | manual | enrichment (DataSource).
-  source           String?  @db.NVarChar(20)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  source           String?   @db.NVarChar(20)
+  /// Building height in metres (BD TOPO), if known.
+  heightM          Decimal?  @map("height_m") @db.Decimal(8, 2)
+  /// Identifier of the source object (e.g. BD TOPO « cleabs »).
+  sourceRef        String?   @map("source_ref") @db.NVarChar(100)
+  /// When the source data was fetched.
+  fetchedAt        DateTime? @map("fetched_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -524,4 +533,27 @@ model ImportBatch {
 
   @@index([startedAt])
   @@map("import_batches")
+}
+
+/// Informative public data about a site (risks, zoning, cadastre, company
+/// candidates…) that does not belong to a business field. One row per
+/// (site, provider, key); the value is JSON. Audited.
+model SitePublicData {
+  id        String    @id @default(cuid()) @db.NVarChar(30)
+  siteId    String    @map("site_id") @db.NVarChar(30)
+  /// Provider name (geocoding, georisques, cadastre…).
+  provider  String    @db.NVarChar(40)
+  /// Data key within the provider (e.g. « seismic_zone »).
+  key       String    @db.NVarChar(80)
+  valueJson String    @map("value_json") @db.NVarChar(Max)
+  fetchedAt DateTime? @map("fetched_at")
+  /// Enrichment batch that last wrote the value.
+  batchId   String?   @map("batch_id") @db.NVarChar(30)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, provider, key])
+  @@map("site_public_data")
 }
