@@ -106,20 +106,26 @@ export function formatEnergy(kwh: NumericInput): string {
   return `${value}${NBSP}kWh`;
 }
 
+/** Options of {@link formatPercent}. */
+export interface PercentOptions extends DecimalOptions {
+  /** Show the sign (« +3,2 % »). Default `true`; `false` for ratios (« 12,5 % »). */
+  signed?: boolean;
+}
+
 /**
- * Formats a signed percentage. The input is expressed in percentage points
- * (3.2 means 3.2 %): « +3,2 % », « −1,5 % », « 0,0 % ».
+ * Formats a percentage. The input is expressed in percentage points
+ * (3.2 means 3.2 %): signed by default (« +3,2 % », « -1,5 % », « 0,0 % »).
  * @param value - Percentage points.
- * @param options - `decimals`: number of decimals (default 1).
+ * @param options - `decimals` (default 1), `signed` (default `true`).
  * @returns The formatted string, or « — ».
  */
-export function formatPercent(value: NumericInput, options: DecimalOptions = {}): string {
+export function formatPercent(value: NumericInput, options: PercentOptions = {}): string {
   const n = toFiniteNumber(value);
   if (n === null) return EMPTY_VALUE;
   const decimals = options.decimals ?? 1;
   return new Intl.NumberFormat(LOCALE, {
     style: "percent",
-    signDisplay: "exceptZero",
+    signDisplay: options.signed === false ? "auto" : "exceptZero",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(normaliseZero(n) / 100);

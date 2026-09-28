@@ -19,27 +19,55 @@ L'application fonctionne **sans aucune dépendance internet à l'exécution** : 
 ```bash
 cp .env.example .env        # puis changer le mot de passe si besoin (dans les deux variables)
 corepack enable
-pnpm install
+pnpm install                # génère aussi le client Prisma (postinstall)
 pnpm db:up                  # démarre SQL Server, attend le healthcheck, crée la base « atlas »
+pnpm db:migrate             # applique les migrations
+pnpm db:seed                # 10 sites de démonstration fictifs (idempotent)
 pnpm dev                    # http://localhost:3000
 ```
 
-Vérifier que la base existe :
+Vérifier la base (`db:sql` charge `.env` et lance sqlcmd dans le conteneur) :
 
 ```bash
-set -a; source .env; set +a
-docker compose exec db /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" \
-  -Q "SELECT name FROM sys.databases WHERE name = 'atlas'"
+pnpm db:sql -Q "SELECT COUNT(*) FROM sites; SELECT COUNT(*) FROM annual_metrics;"
+pnpm db:sql                 # session sqlcmd interactive sur la base atlas
 ```
 
-Tests de bout en bout (première fois : installer Chromium pour Playwright) :
+Tests de bout en bout (première fois : installer Chromium pour Playwright ; la base doit tourner) :
 
 ```bash
 pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors production), `/api/health`.
+Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors production), `/api/health` (état de l'application et de la base ; HTTP 503 si la base est injoignable).
+
+## Base de données
+
+- Schéma : `prisma/schema.prisma` ; documentation : [`docs/data-model.md`](docs/data-model.md) ; correspondance avec le tableur : [`docs/source-mapping.md`](docs/source-mapping.md).
+- Prisma 7 : générateur `prisma-client` (client généré dans `generated/prisma/`, non commité) et adaptateur `@prisma/adapter-mssql`. La configuration de la CLI est dans `prisma.config.ts`.
+- Tout accès à la base vit sous `src/server/` (`import "server-only"`). Le singleton est `db` dans `src/server/db.ts`.
+
+### Faire évoluer le schéma
+
+1. Modifier `prisma/schema.prisma`.
+2. `pnpm db:migrate --name description_courte` : crée la migration dans `prisma/migrations/`, l'applique en local et vérifie l'absence de dérive.
+   Pour relire ou compléter le SQL avant de l'appliquer (contrainte `CHECK`, par exemple), utiliser `pnpm db:migrate --create-only --name …`, modifier le fichier, puis relancer `pnpm db:migrate`.
+3. `pnpm db:generate` si le client n'a pas été régénéré.
+4. Commiter le schéma **et** le dossier de migration.
+5. Sur un serveur (recette, production) : `pnpm db:deploy`, qui applique les migrations en attente sans jamais réinitialiser.
+
+> Les contraintes `CHECK` (`users.role`, `audit_logs.action`, `audit_logs.source`, `annual_metrics.source`) sont écrites à la main dans la migration initiale : toute modification de ces listes demande une nouvelle migration, en plus de `src/domain/enums.ts`.
+
+`pnpm db:reset` (développement uniquement) supprime la base, rejoue les migrations puis lance le seed. Il demande de taper le nom de la base pour confirmer (`--yes` pour ne pas demander). Il refuse de s'exécuter si `NODE_ENV=production`.
+
+### Base de test (intégration)
+
+`pnpm test:integration` travaille sur une base **distincte**, `atlas_test`, sur le même serveur. Le `globalSetup` la réinitialise à chaque lancement avec `prisma migrate reset --force` (elle est créée si elle n'existe pas, puis toutes les migrations sont rejouées). Aucune préparation manuelle n'est nécessaire, à part `pnpm db:up`.
+
+- La chaîne de connexion est dérivée de `DATABASE_URL` en remplaçant `database=…` par `database=atlas_test`. On peut la forcer avec `TEST_DATABASE_URL`.
+- Par sécurité, le setup refuse toute base dont le nom ne se termine pas par `_test`.
+- Prisma 7 bloque `migrate reset` lorsqu'il détecte un agent IA (Claude Code, Cursor…) et demande le consentement explicite de l'utilisateur. Lancée par un humain ou par la CI, la commande fonctionne normalement.
 
 ## Scripts
 
@@ -52,10 +80,18 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm typecheck` | Vérification TypeScript (`tsc --noEmit`) |
 | `pnpm test` | Tests unitaires Vitest |
 | `pnpm test:watch` | Vitest en mode watch |
-| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production |
+| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner |
+| `pnpm test:integration` | Tests d'intégration Vitest sur la base `atlas_test` (recréée à chaque lancement) |
 | `pnpm check:offline` | Échoue si une URL `http(s)://` externe apparaît dans `src/` ou `public/` |
 | `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente de la base `atlas` |
 | `pnpm db:down` | Arrête SQL Server (le volume `atlas-mssql-data` est conservé) |
+| `pnpm db:generate` | Génère le client Prisma dans `generated/prisma/` (lancé aussi par `pnpm install`) |
+| `pnpm db:migrate` | `prisma migrate dev` : crée ou applique les migrations en développement |
+| `pnpm db:deploy` | `prisma migrate deploy` : applique les migrations en attente (serveurs) |
+| `pnpm db:reset` | Développement uniquement, avec confirmation : recrée la base, rejoue les migrations, lance le seed |
+| `pnpm db:seed` | Charge les 10 sites de démonstration fictifs (idempotent) |
+| `pnpm db:studio` | Ouvre Prisma Studio (navigateur local) |
+| `pnpm db:sql` | sqlcmd dans le conteneur, `.env` chargé automatiquement (`-Q "…"` pour une requête, sans argument pour une session interactive) |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
 ## Variables d'environnement
@@ -67,6 +103,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `MSSQL_SA_PASSWORD` | Mot de passe `sa` du conteneur (utilisé par Docker uniquement) |
 | `DATABASE_URL` | Doit commencer par `sqlserver://` |
 | `APP_URL` | URL valide |
+| `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 
 ## Arborescence
 
@@ -75,12 +112,22 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 ├── .env.example              # modèle de configuration (le .env n'est jamais commité)
 ├── .nvmrc                    # Node 22
 ├── docker-compose.yml        # SQL Server 2022 + job d'initialisation de la base
+├── prisma.config.ts          # configuration de la CLI Prisma 7
+├── prisma/
+│   ├── schema.prisma         # modèle de données
+│   ├── migrations/           # migrations SQL (commitées)
+│   └── seed.ts               # 10 sites de démonstration fictifs
+├── generated/prisma/         # client Prisma généré (non commité)
 ├── docs/
 │   ├── architecture.md       # principes, stack, découpage en 12 étapes
+│   ├── data-model.md         # diagramme, rôle des tables, règles, modules futurs
+│   ├── source-mapping.md     # colonne du tableur → table.champ
 │   └── design-system.md      # tokens, règles des couleurs de statut, accessibilité
 ├── scripts/
 │   ├── check-no-external.ts  # garde anti-dépendance externe
-│   └── db-up.sh              # démarrage de la base (pnpm db:up)
+│   ├── db-up.sh              # démarrage de la base (pnpm db:up)
+│   ├── db-sql.sh             # sqlcmd avec .env chargé (pnpm db:sql)
+│   └── db-reset.ts           # réinitialisation confirmée (pnpm db:reset)
 ├── src/
 │   ├── app/                  # routes (App Router)
 │   │   ├── globals.css       # tokens de design (@theme) + mapping shadcn
@@ -97,12 +144,16 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   │   ├── status/           # StatusDot, StatusBadge, StatusLegend
 │   │   └── empty/            # EmptyState
 │   ├── config/navigation.ts  # entrées du rail
+│   ├── domain/               # règles métier pures : enums (zod), catalogue d'indicateurs, calculs dérivés, dates
 │   ├── lib/                  # env, format, status, csp, utils
+│   ├── server/               # accès base (server-only) : db (singleton), prisma (fabrique), health
 │   ├── instrumentation.ts    # validation de l'environnement au démarrage
 │   └── middleware.ts         # nonce + Content-Security-Policy
 ├── tests/
 │   ├── unit/                 # Vitest + Testing Library
+│   ├── integration/          # Vitest sur SQL Server (base atlas_test)
 │   └── e2e/                  # Playwright
 ├── vitest.config.ts
+├── vitest.integration.config.ts
 └── playwright.config.ts
 ```

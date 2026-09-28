@@ -21,3 +21,6 @@ blob-report/
 # misc
 .DS_Store
 *.log
+
+# prisma client (pnpm db:generate / postinstall)
+/generated/

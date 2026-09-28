@@ -1,9 +1,11 @@
 import { fileURLToPath } from "node:url";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+/**
+ * Integration tests against a real SQL Server database (`atlas_test`),
+ * recreated from the migrations by global-setup. Requires `pnpm db:up`.
+ */
 export default defineConfig({
-  plugins: [react()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -11,10 +13,11 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["tests/unit/**/*.test.{ts,tsx}"],
-    exclude: ["tests/integration/**", "tests/e2e/**", "node_modules/**"],
+    include: ["tests/integration/**/*.test.ts"],
     environment: "node",
-    setupFiles: ["./tests/unit/setup.ts"],
-    restoreMocks: true,
+    globalSetup: ["./tests/integration/global-setup.ts"],
+    fileParallelism: false,
+    testTimeout: 60_000,
+    hookTimeout: 180_000,
   },
 });

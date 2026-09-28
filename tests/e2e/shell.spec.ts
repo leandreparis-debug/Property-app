@@ -164,11 +164,12 @@ test("le nonce CSP change à chaque requête et figure sur les scripts", async (
   expect(first.html).toContain(`nonce="${first.nonce}"`);
 });
 
-test("/api/health renvoie le statut et la version", async ({ request }) => {
+test("/api/health renvoie le statut, la version et l'état de la base", async ({ request }) => {
   const response = await request.get("/api/health");
   expect(response.status()).toBe(200);
+  expect(response.headers()["cache-control"]).toContain("no-store");
   const body = await response.json();
-  expect(body).toMatchObject({ status: "ok", version: expect.any(String) });
+  expect(body).toMatchObject({ status: "ok", version: expect.any(String), database: "ok" });
   expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
 });
 

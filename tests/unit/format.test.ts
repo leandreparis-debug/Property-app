@@ -119,6 +119,10 @@ describe("formatPercent", () => {
   it("supports decimals", () => {
     expect(formatPercent(12.345, { decimals: 2 })).toBe(`+12,35${NBSP}%`);
   });
+  it("can omit the sign for ratios", () => {
+    expect(formatPercent(12.5, { signed: false })).toBe(`12,5${NBSP}%`);
+    expect(formatPercent(-2, { signed: false })).toBe(`-2,0${NBSP}%`);
+  });
   it("handles very large values", () => {
     expect(formatPercent(125000)).toBe(`+125${NNBSP}000,0${NBSP}%`);
   });

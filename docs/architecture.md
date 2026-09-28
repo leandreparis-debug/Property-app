@@ -22,7 +22,7 @@
 | Geist (paquet npm `geist`) | Polices auto-hébergées, servies par l'application. |
 | lucide-react | Icônes embarquées dans le bundle, sans police d'icônes externe. |
 | zod | Validation des variables d'environnement, puis des imports et formulaires. |
-| Prisma + SQL Server (étape 2) | SQL Server est la base standard de la DSI ; Prisma apporte schéma typé et migrations. |
+| Prisma 7 + SQL Server | SQL Server est la base standard de la DSI ; Prisma apporte schéma typé et migrations. Générateur `prisma-client` et adaptateur `@prisma/adapter-mssql` (pilote `mssql`/`tedious`, sans moteur binaire à l'exécution). |
 | MapLibre GL (étape 6) | Carte vectorielle open source, fonctionnant avec des tuiles servies localement. |
 | Vitest + Testing Library | Tests unitaires rapides, compatibles ESM et TypeScript. |
 | Playwright (Chromium) | Tests e2e réalistes, dont le contrôle « zéro requête externe » et les en-têtes. |
@@ -36,6 +36,15 @@
 - `upgrade-insecure-requests` n'est pas utilisé : le serveur interne peut être servi en HTTP, et cette directive casserait le chargement des ressources.
 - En développement uniquement, `'unsafe-eval'` est ajouté à `script-src`, car l'outillage React en a besoin.
 
+## Organisation du code
+
+| Dossier | Contenu | Règle |
+|---|---|---|
+| `src/domain/` | Règles métier pures : listes de valeurs (zod), catalogue d'indicateurs, calculs dérivés, dates | Aucun accès base ni réseau, importable côté client comme côté serveur |
+| `src/server/` | Accès à la base (`db`, fabrique Prisma, sonde de santé) | `import "server-only"` : jamais importé côté client |
+| `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
+| `generated/prisma/` | Client Prisma généré | Hors de `src/` : n'est pas analysé par `check:offline` (ses commentaires contiennent des liens de documentation, jamais chargés) |
+
 ## Coque de l'application
 
 `AppShell` (dans le layout racine) contient le lien d'évitement, `NavRail` (rail de navigation) et `CommandBar` (barre de recherche et palette Ctrl+K). Chaque page rend son contenu dans `<main>` :
@@ -44,8 +53,8 @@
 
 ## Découpage en 12 étapes
 
-1. **Initialisation** : projet, système de design, coque, Docker, chaîne qualité *(cette étape)*.
-2. **Modèle de données** : Prisma, schéma SQL Server, migrations, vérification de la base dans `/api/health`.
+1. **Initialisation** : projet, système de design, coque, Docker, chaîne qualité *(terminée)*.
+2. **Modèle de données** : Prisma, schéma SQL Server, migrations, jeu de démonstration, vérification de la base dans `/api/health` *(terminée, voir `docs/data-model.md`)*.
 3. **Authentification et rôles**.
 4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import.
 5. **Enrichissement et ressources carto** : géocodage hors ligne, tuiles et styles servis localement.

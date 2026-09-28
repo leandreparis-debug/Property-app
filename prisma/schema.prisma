@@ -1,0 +1,496 @@
+// Atlas — domain model (V1).
+//
+// SQL Server connector constraints (see docs/data-model.md):
+//   * no Prisma enums      → String @db.NVarChar(n), allowed values in src/domain/enums.ts (zod);
+//   * no Json type         → JSON serialized in NVarChar(Max) columns suffixed `Json`;
+//   * no scalar lists      → child tables;
+//   * no multiple cascade paths → onDelete/onUpdate NoAction on the secondary relations
+//     (Equipment.plan, SitePlan.document), documented below.
+//
+// Naming: models PascalCase singular, tables snake_case plural (@@map), columns snake_case (@map).
+// Business fields are optional: the source spreadsheet is incomplete.
+// Derived values (per m², year-over-year, ratios, arbitration date) are never stored.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  moduleFormat    = "esm"
+  runtime         = "nodejs"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Site and its 1-1 extensions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A logistics warehouse. Root of every business table.
+model Site {
+  id                       String   @id @default(cuid()) @db.NVarChar(30)
+  /// Spreadsheet column ENTREPOT.
+  code                     String   @unique @db.NVarChar(50)
+  name                     String   @db.NVarChar(200)
+  /// Spreadsheet column N°.
+  legacyNumber             String?  @map("legacy_number") @db.NVarChar(50)
+  portfolio                String?  @db.NVarChar(100)
+  occupyingBu              String?  @map("occupying_bu") @db.NVarChar(100)
+  buBasin                  String?  @map("bu_basin") @db.NVarChar(100)
+  country                  String?  @default("FR") @db.NVarChar(2)
+  /// DLR.
+  regionalDirector         String?  @map("regional_director") @db.NVarChar(150)
+  /// RTR.
+  regionalTechnicalManager String?  @map("regional_technical_manager") @db.NVarChar(150)
+  propertyManager          String?  @map("property_manager") @db.NVarChar(150)
+  occupancyStatus          String?  @map("occupancy_status") @db.NVarChar(100)
+  wallsOwner               String?  @map("walls_owner") @db.NVarChar(200)
+  sciOnAsset               String?  @map("sci_on_asset") @db.NVarChar(200)
+  status                   String?  @db.NVarChar(100)
+  isActive                 Boolean? @map("is_active")
+  operatingMode            String?  @map("operating_mode") @db.NVarChar(100)
+  logisticsOperator        String?  @map("logistics_operator") @db.NVarChar(200)
+
+  addressLine    String? @map("address_line") @db.NVarChar(300)
+  postalCode     String? @map("postal_code") @db.NVarChar(10)
+  city           String? @db.NVarChar(150)
+  departmentCode String? @map("department_code") @db.NVarChar(3)
+  region         String? @db.NVarChar(100)
+
+  latitude          Decimal? @db.Decimal(9, 6)
+  longitude         Decimal? @db.Decimal(9, 6)
+  /// import | manual | enrichment (DataSource).
+  coordinatesSource String?  @map("coordinates_source") @db.NVarChar(20)
+
+  distributionSector      String?   @map("distribution_sector") @db.NVarChar(150)
+  typology                String?   @db.NVarChar(150)
+  targetActivity          String?   @map("target_activity") @db.NVarChar(150)
+  storesServedDescription String?   @map("stores_served_description") @db.NVarChar(Max)
+  storesServedCount       Int?      @map("stores_served_count")
+  activityStartDate       DateTime? @map("activity_start_date") @db.Date
+  adminFileReference      String?   @map("admin_file_reference") @db.NVarChar(500)
+
+  /// Optimistic concurrency token (step 9).
+  version    Int       @default(1)
+  /// Logical archiving: the application archives, it does not delete.
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  externalIds     SiteExternalId[]
+  lease           Lease?
+  serviceContract ServiceContract?
+  technical       SiteTechnical?
+  buildingWorks   BuildingWork[]
+  icpe            SiteIcpe?
+  icpeHeadings    IcpeHeading[]
+  energyProfile   SiteEnergyProfile?
+  annualMetrics   AnnualMetric[]
+  geometry        SiteGeometry?
+  plans           SitePlan[]
+  equipments      Equipment[]
+  documents       Document[]
+
+  @@index([region])
+  @@index([departmentCode])
+  @@index([portfolio])
+  @@index([isActive])
+  @@map("sites")
+}
+
+/// Identifier of a site in another information system.
+model SiteExternalId {
+  id        String   @id @default(cuid()) @db.NVarChar(30)
+  siteId    String   @map("site_id") @db.NVarChar(30)
+  /// QLIK_SENSE | AL_CODE | RAMSES (ExternalSystem).
+  system    String   @db.NVarChar(20)
+  value     String   @db.NVarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([system, value])
+  @@unique([siteId, system])
+  @@map("site_external_ids")
+}
+
+/// The lease of a site (one lease ↔ one warehouse). The arbitration date is computed.
+model Lease {
+  id     String @id @default(cuid()) @db.NVarChar(30)
+  siteId String @unique @map("site_id") @db.NVarChar(30)
+
+  /// CODE BAIL — unique when present (filtered unique index).
+  code                 String?   @db.NVarChar(50)
+  holdingEntity        String?   @map("holding_entity") @db.NVarChar(200)
+  initialEffectiveDate DateTime? @map("initial_effective_date") @db.Date
+  lastAmendmentDate    DateTime? @map("last_amendment_date") @db.Date
+  endDate              DateTime? @map("end_date") @db.Date
+  nextExitDate         DateTime? @map("next_exit_date") @db.Date
+
+  currentTerms      String? @map("current_terms") @db.NVarChar(Max)
+  initialRentFree   String? @map("initial_rent_free") @db.NVarChar(500)
+  documentReference String? @map("document_reference") @db.NVarChar(500)
+
+  noticePeriodMonths Int?      @map("notice_period_months")
+  /// Original DUREE DE PREAVIS text, kept for traceability.
+  noticePeriodRaw    String?   @map("notice_period_raw") @db.NVarChar(200)
+  noticeDate         DateTime? @map("notice_date") @db.Date
+
+  negotiationProgress     String?  @map("negotiation_progress") @db.NVarChar(Max)
+  news                    String?  @db.NVarChar(Max)
+  renewalConditionsSigned Boolean? @map("renewal_conditions_signed")
+
+  rentFreeAmount     Decimal? @map("rent_free_amount") @db.Decimal(14, 2)
+  rentFreeMonths     Decimal? @map("rent_free_months") @db.Decimal(6, 2)
+  additionalDuration String?  @map("additional_duration") @db.NVarChar(200)
+
+  economicRentPerSqm Decimal? @map("economic_rent_per_sqm") @db.Decimal(14, 2)
+  /// VLM — valeur locative de marché.
+  marketRentValue    Decimal? @map("market_rent_value") @db.Decimal(14, 2)
+  officePricePerSqm  Decimal? @map("office_price_per_sqm") @db.Decimal(14, 2)
+  indexation         String?  @db.NVarChar(500)
+  rentReview         String?  @map("rent_review") @db.NVarChar(500)
+  rentComments       String?  @map("rent_comments") @db.NVarChar(Max)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([code], map: "leases_code_key", where: raw("[code] IS NOT NULL"))
+  @@map("leases")
+}
+
+/// Logistics service contract of a site.
+model ServiceContract {
+  id                   String    @id @default(cuid()) @db.NVarChar(30)
+  siteId               String    @unique @map("site_id") @db.NVarChar(30)
+  effectiveDate        DateTime? @map("effective_date") @db.Date
+  hasRealEstateClause  Boolean?  @map("has_real_estate_clause")
+  durationRaw          String?   @map("duration_raw") @db.NVarChar(200)
+  endDate              DateTime? @map("end_date") @db.Date
+  renewal              String?   @db.NVarChar(500)
+  notice               String?   @db.NVarChar(500)
+  seniority            String?   @db.NVarChar(200)
+  firstTerminationDate DateTime? @map("first_termination_date") @db.Date
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("service_contracts")
+}
+
+/// Building characteristics, surfaces (m²) and capacities.
+model SiteTechnical {
+  id              String   @id @default(cuid()) @db.NVarChar(30)
+  siteId          String   @unique @map("site_id") @db.NVarChar(30)
+  buildingQuality String?  @map("building_quality") @db.NVarChar(100)
+  heightM         Decimal? @map("height_m") @db.Decimal(6, 2)
+
+  leaseWarehouseArea        Decimal? @map("lease_warehouse_area") @db.Decimal(12, 2)
+  landArea                  Decimal? @map("land_area") @db.Decimal(12, 2)
+  totalWarehouseArea        Decimal? @map("total_warehouse_area") @db.Decimal(12, 2)
+  surveyedTotalArea         Decimal? @map("surveyed_total_area") @db.Decimal(12, 2)
+  temperatureControlledArea Decimal? @map("temperature_controlled_area") @db.Decimal(12, 2)
+  dryArea                   Decimal? @map("dry_area") @db.Decimal(12, 2)
+  packagingArea             Decimal? @map("packaging_area") @db.Decimal(12, 2)
+  chargingRoomArea          Decimal? @map("charging_room_area") @db.Decimal(12, 2)
+  technicalRoomsArea        Decimal? @map("technical_rooms_area") @db.Decimal(12, 2)
+  /// BLS — bureaux et locaux sociaux.
+  socialOfficeArea          Decimal? @map("social_office_area") @db.Decimal(12, 2)
+  guardHouseArea            Decimal? @map("guard_house_area") @db.Decimal(12, 2)
+
+  carSpaces         Int?    @map("car_spaces")
+  truckSpaces       Int?    @map("truck_spaces")
+  dockCount         Int?    @map("dock_count")
+  cellCount         Int?    @map("cell_count")
+  retentionBasin    String? @map("retention_basin") @db.NVarChar(500)
+  extensionCapacity String? @map("extension_capacity") @db.NVarChar(500)
+
+  technicalSpecifics String? @map("technical_specifics") @db.NVarChar(Max)
+  certification      String? @db.NVarChar(200)
+  evCharging         String? @map("ev_charging") @db.NVarChar(200)
+  photovoltaic       String? @db.NVarChar(200)
+  plansReference     String? @map("plans_reference") @db.NVarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_technicals")
+}
+
+/// Construction, rehabilitation or extension works. Future anchor of the
+/// « Dommage Ouvrage » module.
+model BuildingWork {
+  id          String    @id @default(cuid()) @db.NVarChar(30)
+  siteId      String    @map("site_id") @db.NVarChar(30)
+  /// CONSTRUCTION | REHABILITATION | EXTENSION (BuildingWorkKind).
+  kind        String    @db.NVarChar(20)
+  date        DateTime? @db.Date
+  description String?   @db.NVarChar(Max)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, kind])
+  @@map("building_works")
+}
+
+/// ICPE (installation classée) information of a site.
+model SiteIcpe {
+  id                 String   @id @default(cuid()) @db.NVarChar(30)
+  siteId             String   @unique @map("site_id") @db.NVarChar(30)
+  holder             String?  @db.NVarChar(200)
+  /// Original PRINCIPALES RUBRIQUES ICPE text.
+  headingsRaw        String?  @map("headings_raw") @db.NVarChar(Max)
+  georisquesUrl      String?  @map("georisques_url") @db.NVarChar(1000)
+  documentsReference String?  @map("documents_reference") @db.NVarChar(1000)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_icpes")
+}
+
+/// One ICPE heading (rubrique) of a site, e.g. 1510.
+model IcpeHeading {
+  id        String   @id @default(cuid()) @db.NVarChar(30)
+  siteId    String   @map("site_id") @db.NVarChar(30)
+  code      String   @db.NVarChar(20)
+  /// A | E | D | DC | NC | UNKNOWN (IcpeRegime).
+  regime    String?  @db.NVarChar(10)
+  label     String?  @db.NVarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@index([code])
+  @@map("icpe_headings")
+}
+
+/// Energy reference data of a site. Yearly consumptions live in AnnualMetric.
+model SiteEnergyProfile {
+  id                              String   @id @default(cuid()) @db.NVarChar(30)
+  siteId                          String   @unique @map("site_id") @db.NVarChar(30)
+  referenceYear                   Int?     @map("reference_year")
+  referenceElectricityKwh         Decimal? @map("reference_electricity_kwh") @db.Decimal(18, 4)
+  referenceGasKwh                 Decimal? @map("reference_gas_kwh") @db.Decimal(18, 4)
+  operatCertificates              String?  @map("operat_certificates") @db.NVarChar(1000)
+  technicalManagementRebilled     Boolean? @map("technical_management_rebilled")
+  technicalManagementRebillDetail String?  @map("technical_management_rebill_detail") @db.NVarChar(Max)
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_energy_profiles")
+}
+
+/// One yearly value of a catalogued metric (src/domain/metrics.ts).
+/// Replaces the spreadsheet's « XXX 2021 … 2026 » columns.
+model AnnualMetric {
+  id        String   @id @default(cuid()) @db.NVarChar(30)
+  siteId    String   @map("site_id") @db.NVarChar(30)
+  year      Int
+  /// Metric code from the catalogue (MetricCode).
+  metric    String   @db.NVarChar(40)
+  value     Decimal? @db.Decimal(18, 4)
+  /// import | manual | enrichment (DataSource) — CHECK constraint.
+  source    String   @default("import") @db.NVarChar(20)
+  note      String?  @db.NVarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, year, metric])
+  @@index([metric, year])
+  @@map("annual_metrics")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Geometry, plans and equipment (step 10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Building footprint (GeoJSON, WGS84).
+model SiteGeometry {
+  id               String   @id @default(cuid()) @db.NVarChar(30)
+  siteId           String   @unique @map("site_id") @db.NVarChar(30)
+  footprintGeoJson String?  @map("footprint_geojson") @db.NVarChar(Max)
+  /// import | manual | enrichment (DataSource).
+  source           String?  @db.NVarChar(20)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_geometries")
+}
+
+/// A site plan (image document) and its georeferencing calibration.
+model SitePlan {
+  id                String    @id @default(cuid()) @db.NVarChar(30)
+  siteId            String    @map("site_id") @db.NVarChar(30)
+  documentId        String?   @map("document_id") @db.NVarChar(30)
+  imageWidth        Int?      @map("image_width")
+  imageHeight       Int?      @map("image_height")
+  controlPointsJson String?   @map("control_points_json") @db.NVarChar(Max)
+  transformJson     String?   @map("transform_json") @db.NVarChar(Max)
+  calibratedAt      DateTime? @map("calibrated_at")
+  calibratedById    String?   @map("calibrated_by_id") @db.NVarChar(30)
+  isCurrent         Boolean   @default(false) @map("is_current")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  site         Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  /// NoAction: Document is itself cascaded from Site (multiple cascade paths).
+  document     Document?   @relation(fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  calibratedBy User?       @relation("PlanCalibratedBy", fields: [calibratedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipments   Equipment[]
+
+  @@index([siteId])
+  @@index([documentId])
+  @@map("site_plans")
+}
+
+/// A piece of equipment located on a site. Future anchor of the N100 and
+/// regulatory-control modules.
+model Equipment {
+  id          String    @id @default(cuid()) @db.NVarChar(30)
+  siteId      String    @map("site_id") @db.NVarChar(30)
+  planId      String?   @map("plan_id") @db.NVarChar(30)
+  /// Equipment type code (EquipmentType).
+  type        String    @db.NVarChar(40)
+  label       String?   @db.NVarChar(200)
+  reference   String?   @db.NVarChar(100)
+  planX       Decimal?  @map("plan_x") @db.Decimal(12, 4)
+  planY       Decimal?  @map("plan_y") @db.Decimal(12, 4)
+  latitude    Decimal?  @db.Decimal(9, 6)
+  longitude   Decimal?  @db.Decimal(9, 6)
+  level       String?   @db.NVarChar(50)
+  installedAt DateTime? @map("installed_at") @db.Date
+  notes       String?   @db.NVarChar(Max)
+  archivedAt  DateTime? @map("archived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  site Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  /// NoAction: SitePlan is itself cascaded from Site (multiple cascade paths).
+  plan SitePlan? @relation(fields: [planId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([siteId, type])
+  @@index([planId])
+  @@map("equipments")
+}
+
+/// File metadata. The file itself is stored on disk at `storagePath`.
+model Document {
+  id           String   @id @default(cuid()) @db.NVarChar(30)
+  siteId       String   @map("site_id") @db.NVarChar(30)
+  /// LEASE | PLAN | ADMIN | ICPE | … (DocumentCategory).
+  category     String   @db.NVarChar(30)
+  title        String?  @db.NVarChar(300)
+  /// Path relative to the storage root, never an URL.
+  storagePath  String   @map("storage_path") @db.NVarChar(1000)
+  mimeType     String?  @map("mime_type") @db.NVarChar(150)
+  sizeBytes    BigInt?  @map("size_bytes")
+  sha256       String?  @db.Char(64)
+  uploadedById String?  @map("uploaded_by_id") @db.NVarChar(30)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  site       Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  uploadedBy User?      @relation("DocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plans      SitePlan[]
+
+  @@index([siteId, category])
+  @@index([sha256])
+  @@map("documents")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Users, audit, imports
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Application user. Authentication logic arrives at step 3.
+model User {
+  id                String    @id @default(cuid()) @db.NVarChar(30)
+  /// Stored lower-case.
+  email             String    @unique @db.NVarChar(254)
+  name              String?   @db.NVarChar(150)
+  /// admin | editor | viewer (UserRole) — CHECK constraint.
+  role              String    @default("viewer") @db.NVarChar(20)
+  passwordHash      String?   @map("password_hash") @db.NVarChar(255)
+  isActive          Boolean   @default(true) @map("is_active")
+  failedLoginCount  Int       @default(0) @map("failed_login_count")
+  lockedUntil       DateTime? @map("locked_until")
+  lastLoginAt       DateTime? @map("last_login_at")
+  passwordChangedAt DateTime? @map("password_changed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  calibratedPlans   SitePlan[]    @relation("PlanCalibratedBy")
+  uploadedDocuments Document[]    @relation("DocumentUploadedBy")
+  importBatches     ImportBatch[] @relation("ImportBatchActor")
+
+  @@map("users")
+}
+
+/// Append-only change journal. Deliberately WITHOUT foreign keys (actorId,
+/// siteId, entityId, batchId): history must survive deletions.
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+  actorId     String?  @map("actor_id") @db.NVarChar(30)
+  /// CREATE | UPDATE | DELETE | IMPORT | ENRICH | LOGIN | LOGIN_FAILED | LOGOUT — CHECK constraint.
+  action      String   @db.NVarChar(20)
+  /// ui | import | enrichment | system — CHECK constraint.
+  source      String   @db.NVarChar(20)
+  entityType  String   @map("entity_type") @db.NVarChar(50)
+  entityId    String   @map("entity_id") @db.NVarChar(50)
+  siteId      String?  @map("site_id") @db.NVarChar(30)
+  field       String?  @db.NVarChar(100)
+  /// JSON-serialized previous value.
+  beforeValue String?  @map("before_value") @db.NVarChar(Max)
+  /// JSON-serialized new value.
+  afterValue  String?  @map("after_value") @db.NVarChar(Max)
+  batchId     String?  @map("batch_id") @db.NVarChar(30)
+
+  @@index([entityType, entityId])
+  @@index([siteId])
+  @@index([occurredAt])
+  @@index([batchId])
+  @@map("audit_logs")
+}
+
+/// One run of the spreadsheet import (step 4) or of the public-data enrichment (step 5).
+model ImportBatch {
+  id         String    @id @default(cuid()) @db.NVarChar(30)
+  /// SPREADSHEET | ENRICHMENT (ImportBatchKind).
+  kind       String    @db.NVarChar(20)
+  fileName   String?   @map("file_name") @db.NVarChar(300)
+  sha256     String?   @db.Char(64)
+  /// RUNNING | SUCCEEDED | FAILED | PARTIAL (ImportBatchStatus).
+  status     String    @default("RUNNING") @db.NVarChar(20)
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  statsJson  String?   @map("stats_json") @db.NVarChar(Max)
+  reportPath String?   @map("report_path") @db.NVarChar(1000)
+  actorId    String?   @map("actor_id") @db.NVarChar(30)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  actor User? @relation("ImportBatchActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([startedAt])
+  @@map("import_batches")
+}
