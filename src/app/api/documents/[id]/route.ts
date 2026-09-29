@@ -1,0 +1,74 @@
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { basename, extname } from "node:path";
+import { Readable } from "node:stream";
+import { NextResponse } from "next/server";
+import { jsonError, withApiAuth } from "@/server/auth/api";
+import { db } from "@/server/db";
+import { attachmentDisposition } from "@/server/http/content-disposition";
+import { resolveStoragePath, StoragePathError } from "@/server/storage";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+type Context = { params: Promise<{ id: string }> };
+
+const ID = /^[A-Za-z0-9_-]{1,30}$/;
+const notFound = () => jsonError(404, "Document introuvable.");
+
+/** Download name: the title, with the stored file's extension when the title has none. */
+function downloadName(title: string | null, storagePath: string): string {
+  const stored = basename(storagePath);
+  if (!title?.trim()) return stored;
+  const ext = extname(stored);
+  return ext && !title.toLowerCase().endsWith(ext.toLowerCase()) ? `${title.trim()}${ext}` : title.trim();
+}
+
+/**
+ * GET /api/documents/[id] — streams a stored document (`site:read`).
+ *
+ * The path stored in the database is resolved UNDER `STORAGE_ROOT` (any
+ * escape is refused); `Content-Type` comes from the database, never sniffed;
+ * `Content-Disposition: attachment` with an RFC 5987 name; `nosniff`;
+ * `private, no-store`. A document whose file is missing on disk is a logged 404.
+ */
+export const GET = withApiAuth<Context>(
+  async (_request, { params }) => {
+    const { id } = await params;
+    if (!ID.test(id)) return notFound();
+    const doc = await db.document.findUnique({ where: { id }, select: { id: true, siteId: true, title: true, storagePath: true, mimeType: true } });
+    if (!doc) return notFound();
+
+    let path: string;
+    try {
+      path = resolveStoragePath(...doc.storagePath.split(/[\\/]+/).filter(Boolean));
+    } catch (error) {
+      if (!(error instanceof StoragePathError)) throw error;
+      console.warn(`[vigie] document ${doc.id} : chemin refusé hors du dossier de stockage.`);
+      return notFound();
+    }
+
+    let size: number;
+    try {
+      const info = await stat(path);
+      if (!info.isFile()) throw new Error("not a file");
+      size = info.size;
+    } catch {
+      console.warn(`[vigie] document ${doc.id} (site ${doc.siteId}) : fichier absent du stockage.`);
+      return notFound();
+    }
+
+    const stream = Readable.toWeb(createReadStream(path)) as ReadableStream<Uint8Array>;
+    return new NextResponse(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": doc.mimeType || "application/octet-stream",
+        "Content-Length": String(size),
+        "Content-Disposition": attachmentDisposition(downloadName(doc.title, doc.storagePath)),
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  },
+  { permission: "site:read" },
+);

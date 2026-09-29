@@ -71,10 +71,39 @@
 | Action | Lecteur (`viewer`) | Éditeur (`editor`) | Administrateur (`admin`) |
 |---|:-:|:-:|:-:|
 | `site:read`, `export:read` | ✓ | ✓ | ✓ |
+| `finance:read` | ✓ | ✓ | ✓ |
 | `site:write`, `equipment:write`, `document:upload`, `plan:calibrate` | | ✓ | ✓ |
 | `import:run`, `enrichment:apply`, `user:manage`, `audit:read`, `settings:manage` | | | ✓ |
 
-Un rôle inconnu n'accorde rien. `assertCan()` lève `ForbiddenError`. La matrice est testée de façon exhaustive (33 couples rôle × action).
+Un rôle inconnu n'accorde rien. `assertCan()` lève `ForbiddenError`. La matrice est testée de façon exhaustive (36 couples rôle × action).
+
+### Données financières (`finance:read`)
+
+`finance:read` protège sur la fiche entrepôt :
+- l'onglet Financier ;
+- les conditions financières du bail (champs `financial: true` du registre) ;
+- le loyer et le coût d'occupation de la vue d'ensemble.
+
+Sans cette permission, la page rend « Accès restreint » **à la place** de ces données, qui ne sont donc jamais envoyées au navigateur.
+
+La permission est accordée **rôle par rôle** dans `PERMISSIONS`. La retirer à un rôle, c'est supprimer `"finance:read"` de sa ligne, puis mettre à jour la matrice attendue du test.
+
+### Téléchargement des documents (`GET /api/documents/[id]`)
+
+- **Protection** : `withApiAuth` avec `site:read`. Sans session : 401 JSON.
+- **Identifiant** : filtré (`[A-Za-z0-9_-]{1,30}`) avant toute requête.
+- **Chemin** : le chemin stocké en base (`storage_path`, relatif) est résolu par `resolveStoragePath` **sous `STORAGE_ROOT`**. Un chemin absolu, un `..` ou toute évasion est refusé : 404, journalisé comme « chemin refusé ».
+- **Fichier absent** : un fichier manquant sur le disque donne un 404 journalisé (« fichier absent du stockage »), sans détail technique pour le client.
+- **Réponse** :
+  - envoi en flux (`createReadStream`), avec `Content-Length` ;
+  - `Content-Type` issu de la base (sinon `application/octet-stream`), jamais deviné ;
+  - `Content-Disposition: attachment`, avec un nom ASCII de repli et le nom exact encodé selon la RFC 5987 (`filename*=UTF-8''…`). Guillemets, séparateurs de chemin et caractères de contrôle sont retirés (`src/server/http/content-disposition.ts`) ;
+  - `X-Content-Type-Options: nosniff` et `Cache-Control: private, no-store`.
+
+Les **liens externes** affichés par la fiche (Géorisques, GED…) sont ouverts par le navigateur de l'utilisateur, jamais par le serveur :
+- seuls `http:` et `https:` deviennent des liens ;
+- ils portent `rel="noopener noreferrer"` ;
+- les chemins réseau ne deviennent jamais des liens `file://`.
 
 ## Requêtes intersites et redirections ouvertes
 - **Server Actions** (connexion) : vérification d'origine intégrée à Next.js.

@@ -53,6 +53,8 @@ Cas limites (couverts par les tests) :
 
 Le score est la somme des poids des champs renseignés, divisée par la somme des poids (30), arrondie à l'entier.
 
+Chaque champ clé cite, dans sa propriété `fields`, les clés du **registre des champs** (`src/domain/fields/`, par exemple « Lease.endDate ») qui le portent. La fiche entrepôt y lit la section et la colonne d'origine du tableur de chaque champ manquant. Un test vérifie que ces clés existent.
+
 | Groupe | Champ | Poids | Renseigné si |
 |---|---|---|---|
 | Identité | Nom | 1 | non vide et différent du code |

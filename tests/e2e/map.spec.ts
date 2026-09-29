@@ -67,7 +67,7 @@ test.describe("carte nationale", () => {
     expect(await page.evaluate(() => window.__vigieMap?.selectedCode)).toBe(target.code);
     await peek.getByRole("link", { name: "Ouvrir la fiche" }).click();
     await expect(page).toHaveURL(`${ORIGIN}/sites/${target.id}`);
-    await expect(page.getByRole("heading", { name: "Fiche entrepôt — disponible prochainement" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: target.name })).toBeVisible();
   });
 
   test("la pastille des sites non localisés liste le bon nombre de sites", async ({ page }) => {

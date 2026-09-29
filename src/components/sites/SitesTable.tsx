@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { formatSurface } from "@/lib/format";
 import { STATUS_META } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { siteSheetHref } from "@/domain/site-sheet/navigation";
 import { replaceQuery } from "./url";
 
 /** Columns of the table. */
@@ -95,9 +96,9 @@ export function SitesTable() {
                 key={e.id}
                 tabIndex={0}
                 data-code={e.code}
-                onClick={() => router.push(`/sites/${e.id}`)}
+                onClick={() => router.push(siteSheetHref(e.id, params.toString()))}
                 onKeyDown={(ev) => {
-                  if (ev.key === "Enter" && ev.target === ev.currentTarget) router.push(`/sites/${e.id}`);
+                  if (ev.key === "Enter" && ev.target === ev.currentTarget) router.push(siteSheetHref(e.id, params.toString()));
                 }}
                 className="h-9 cursor-pointer outline-none hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent [&>td]:border-b [&>td]:border-border [&>td]:px-3 [&>td]:whitespace-nowrap"
               >

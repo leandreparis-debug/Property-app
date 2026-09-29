@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ACTIONS, assertCan, can, ForbiddenError, PERMISSIONS, type Action } from "@/server/auth/permissions";
 import { navItemsFor } from "@/config/navigation";
@@ -6,6 +7,7 @@ import { navItemsFor } from "@/config/navigation";
 const EXPECTED: Record<Action, { viewer: boolean; editor: boolean; admin: boolean }> = {
   "site:read": { viewer: true, editor: true, admin: true },
   "export:read": { viewer: true, editor: true, admin: true },
+  "finance:read": { viewer: true, editor: true, admin: true },
   "site:write": { viewer: false, editor: true, admin: true },
   "equipment:write": { viewer: false, editor: true, admin: true },
   "document:upload": { viewer: false, editor: true, admin: true },
@@ -23,7 +25,7 @@ const cases = ROLES.flatMap((role) => ACTIONS.map((action) => [role, action, EXP
 describe("permission matrix", () => {
   it("covers every action", () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([...ACTIONS].sort());
-    expect(cases).toHaveLength(33);
+    expect(cases).toHaveLength(36);
   });
 
   it.each(cases)("%s × %s → %s", (role, action, allowed) => {
@@ -62,5 +64,13 @@ describe("navigation by role", () => {
     expect(navItemsFor("admin").map((i) => i.label)).toContain("Administration");
     expect(navItemsFor("editor").map((i) => i.label)).not.toContain("Administration");
     expect(navItemsFor("viewer").map((i) => i.label)).toEqual(["Carte", "Sites", "Supervision"]);
+  });
+});
+
+describe("finance:read", () => {
+  it("is granted to the three roles, role by role (withdrawing it is one line of the matrix)", () => {
+    for (const role of ROLES) expect(PERMISSIONS[role].has("finance:read")).toBe(true);
+    const source = readFileSync(new URL("../../src/server/auth/permissions.ts", import.meta.url), "utf8");
+    for (const role of ROLES) expect(source).toMatch(new RegExp(`^\\s*${role}: new Set<Action>\\(\\[.*"finance:read"\\]\\),$`, "m"));
   });
 });

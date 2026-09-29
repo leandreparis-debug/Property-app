@@ -237,3 +237,63 @@
   outline: 2px solid var(--color-accent);
   outline-offset: -2px;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Print (site sheet): white paper, black text. The tokens are redefined so
+ * every component follows; the rail, the command bar, the map preview and
+ * the buttons are hidden; every tab panel is expanded with its title (see
+ * SiteTabs). Status stays written in words.
+ * ───────────────────────────────────────────────────────────────────────── */
+@media print {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface-1: #ffffff;
+    --color-surface-2: #f3f4f6;
+    --color-surface-3: #e5e7eb;
+    --color-border: #d1d5db;
+    --color-border-strong: #9ca3af;
+    --color-text: #000000;
+    --color-text-muted: #374151;
+    --color-text-subtle: #4b5563;
+    --color-accent: #1d3fbf;
+    --shadow-panel: none;
+    --glass-opacity: 100%;
+  }
+
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  html {
+    color-scheme: light;
+    background: #ffffff;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000;
+  }
+
+  [data-slot="nav-rail"],
+  [data-slot="command-bar"],
+  [data-slot="tooltip-content"],
+  [data-slot="site-preview"],
+  main button,
+  a[href="#main"] {
+    display: none !important;
+  }
+
+  .glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  table {
+    break-inside: auto;
+  }
+
+  tr,
+  dl > div {
+    break-inside: avoid;
+  }
+}

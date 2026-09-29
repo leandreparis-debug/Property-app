@@ -162,6 +162,32 @@ Tous les champs métier sont facultatifs, sauf `sites.code` et `sites.name`, car
 
 La suppression d'un site fonctionne malgré ces `NO ACTION` : SQL Server applique toutes les cascades de l'instruction avant de vérifier les contraintes, et le plan, ses équipements et ses documents disparaissent tous avec le site. Un test d'intégration le vérifie. Pour supprimer un plan ou un document **isolément**, il faut d'abord détacher les équipements ou plans qui le référencent.
 
+## Registre des champs (`src/domain/fields/`)
+
+Le registre décrit **chaque champ affichable** de `Site` et de ses extensions 1-1 : `Lease`, `ServiceContract`, `SiteTechnical`, `SiteIcpe`, `SiteEnergyProfile`. La fiche entrepôt, la liste des champs manquants et la complétude y lisent leurs libellés, sections, formats et colonnes d'origine.
+
+| Fichier | Rôle |
+|---|---|
+| `types.ts` | Vocabulaire : entités, sections (avec leur titre), types de rendu, `FieldDefinition`, `fieldId()` (« Lease.endDate ») |
+| `registry.ts` | `FIELD_REGISTRY` : une entrée par champ, avec `entity`, `key`, `labelFr`, `helpFr?`, `section`, `type`, `unit?`, `decimals?`, `order`, `financial`, `sourceColumn?` (colonne de `docs/source-mapping.md`), `precisionKey?`, `options?` |
+| `excluded.ts` | `EXCLUDED_FIELDS` : champs non affichés, chacun avec une justification d'une ligne (identifiants, horodatages techniques, clé étrangère `siteId`, `version`, `archivedAt`, précision de date) |
+| `render.ts` | `formatFieldValue(def, valeur)` : texte formaté selon le type ; une valeur absente donne « — », et l'interface ajoute « Non renseigné » pour les lecteurs d'écran |
+| `links.ts` | `safeExternalUrl` (http/https seulement) et `detectReference` (lien, chemin réseau, chemin local, oui/non, texte) |
+
+État actuel : **99 champs** au registre (dont 9 financiers) et **26 exclusions** justifiées.
+
+Un test unitaire (`tests/unit/field-registry.test.ts`) lit les métadonnées Prisma (`Prisma.<Modèle>ScalarFieldEnum`). Il vérifie que :
+- chaque champ scalaire est au registre ou dans les exclusions ;
+- aucun champ n'est les deux ;
+- les clés sont uniques ;
+- chaque colonne d'origine existe dans `docs/source-mapping.md` ;
+- la complétude ne référence que des clés du registre.
+
+**Ajouter un champ** :
+1. **Modèle** : ajouter la colonne dans `prisma/schema.prisma`, puis `pnpm db:migrate`.
+2. **Registre** : ajouter l'entrée dans la bonne section de `registry.ts`, avec son type, son libellé, sa colonne d'origine et `financial: true` si c'est une donnée financière. Si le champ ne doit pas être affiché, l'ajouter plutôt à `excluded.ts` avec sa justification. Sans l'une ou l'autre, le test de couverture échoue.
+3. **Complétude** (facultatif) : pour que le champ compte dans le score, ajouter une entrée à `COMPLETENESS_FIELDS` (`src/domain/compliance/completeness.ts`). Sa propriété `fields` cite les clés du registre (« Lease.endDate »), puis mettre à jour le tableau de `docs/compliance-rules.md`.
+
 ## Rattachement des modules futurs
 
 Ces modules s'ajouteront **par de nouvelles tables** qui référencent les tables existantes, et par de nouvelles valeurs de listes gérées côté application. Aucune colonne existante n'est à modifier.

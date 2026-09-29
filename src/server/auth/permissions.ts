@@ -4,6 +4,7 @@ import type { UserRole } from "@/domain/enums";
 export const ACTIONS = [
   "site:read",
   "export:read",
+  "finance:read",
   "site:write",
   "equipment:write",
   "document:upload",
@@ -22,11 +23,17 @@ const VIEWER: readonly Action[] = ["site:read", "export:read"];
 const EDITOR: readonly Action[] = [...VIEWER, "site:write", "equipment:write", "document:upload", "plan:calibrate"];
 const ADMIN: readonly Action[] = [...EDITOR, "import:run", "enrichment:apply", "user:manage", "audit:read", "settings:manage"];
 
-/** The single source of truth: role → allowed actions. */
+/**
+ * The single source of truth: role → allowed actions.
+ *
+ * `finance:read` (lease financial terms, Financial tab, rent and occupancy
+ * cost) is granted role by role, on purpose: withdrawing it from a role is
+ * removing `"finance:read"` from that role's line.
+ */
 export const PERMISSIONS: Readonly<Record<UserRole, ReadonlySet<Action>>> = {
-  viewer: new Set(VIEWER),
-  editor: new Set(EDITOR),
-  admin: new Set(ADMIN),
+  viewer: new Set<Action>([...VIEWER, "finance:read"]),
+  editor: new Set<Action>([...EDITOR, "finance:read"]),
+  admin: new Set<Action>([...ADMIN, "finance:read"]),
 };
 
 /** Raised when the current user lacks a permission. Maps to HTTP 403. */

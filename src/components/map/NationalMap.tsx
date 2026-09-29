@@ -39,10 +39,15 @@ export interface NationalMapProps {
   /** Expose `window.__vigieMap` (never in a production deployment). */
   exposeTestHook: boolean;
   /**
-   * `full` (home page) or `compact` (supervision): fixed national view, no
-   * control, no hover, no SitePeek; a click opens the main map on the site.
+   * - `full` (home page);
+   * - `compact` (supervision): fixed national view, no control, no hover, no
+   *   SitePeek; a click opens the main map on the site;
+   * - `site` (site sheet preview): centred on one site (zoom 16, pitch 55),
+   *   only its point and footprint, no control; a click opens the main map.
    */
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "site";
+  /** For the `site` variant: the site shown and its position (lon, lat). */
+  site?: { code: string; center: [number, number] };
 }
 
 declare global {
@@ -69,6 +74,8 @@ export const REFRAME = {
   pitchZoomOut: 0.5,
   durationMs: 900,
 } as const;
+/** Camera of the site preview (`site` variant). */
+export const SITE_PREVIEW = { zoom: 16, pitch: 55 } as const;
 /** Minimum delay between two halo frames (~15 fps). */
 const HALO_FRAME_MS = 66;
 
@@ -115,8 +122,10 @@ function boundsOf(points: readonly [number, number][]): maplibregl.LngLatBounds 
  * installed, otherwise the local fallback style. The sites come from the
  * shared site index, FILTERED by the URL filters; the selection is `?site=`.
  */
-export default function NationalMap({ footprints, assets, isAdmin, exposeTestHook, variant = "full" }: NationalMapProps) {
-  const compact = variant === "compact";
+export default function NationalMap({ footprints, assets, isAdmin, exposeTestHook, variant = "full", site }: NationalMapProps) {
+  // Every non-full variant is static: no control, no hover, no SitePeek.
+  const compact = variant !== "full";
+  const preview = variant === "site" ? site : undefined;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef(new Map<number, maplibregl.Marker>());
@@ -140,8 +149,11 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
   const selectedRef = useRef<string | null>(selectedCode);
 
   // All sites (lookups, legend totals) and the filtered ones (drawn).
+  // The site preview draws its own site only, whatever the filters.
+  const previewCode = preview?.code;
+  const shown = useMemo(() => (previewCode ? entries.filter((e) => e.code === previewCode) : filtered), [previewCode, entries, filtered]);
   const all = useMemo(() => mapDataFromIndex(entries, footprints, evaluatedOn), [entries, footprints, evaluatedOn]);
-  const data = useMemo(() => mapDataFromIndex(filtered, footprints, evaluatedOn), [filtered, footprints, evaluatedOn]);
+  const data = useMemo(() => mapDataFromIndex(shown, footprints, evaluatedOn), [shown, footprints, evaluatedOn]);
   const dataRef = useRef(data);
   dataRef.current = data;
   const sitesByCode = useMemo(() => new Map(all.points.features.map((f) => [f.properties.code, f])), [all]);
@@ -224,9 +236,9 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
         map = new maplibregl.Map({
           container,
           style,
-          bounds: FRANCE_BOUNDS,
-          fitBoundsOptions: { padding: compact ? 16 : 48 },
-          pitch: INITIAL_VIEW.pitch,
+          ...(preview
+            ? { center: preview.center, zoom: SITE_PREVIEW.zoom, pitch: SITE_PREVIEW.pitch }
+            : { bounds: FRANCE_BOUNDS, fitBoundsOptions: { padding: compact ? 16 : 48 }, pitch: INITIAL_VIEW.pitch }),
           bearing: INITIAL_VIEW.bearing,
           maxBounds: MAX_BOUNDS,
           minZoom: compact ? 3 : 4,
@@ -259,6 +271,15 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
         m.addSource(FOOTPRINTS_SOURCE, footprintsSource(dataRef.current.footprints));
         for (const layer of SITE_LAYERS) m.addLayer(layer);
         setLoaded(true);
+        // Site preview: its site is highlighted, no halo animation, any click opens the main map.
+        if (preview) {
+          const id = dataRef.current.points.features[0]?.properties.id;
+          m.setFilter(LAYER.selected, ["==", ["get", "code"], preview.code]);
+          if (id) m.setFeatureState({ source: FOOTPRINTS_SOURCE, id }, { selected: true });
+          m.on("click", () => onPointClick.current(preview.code));
+          m.getCanvas().style.cursor = "pointer";
+          return;
+        }
 
         // Pulsing halo of the critical sites: throttled to ~15 fps (a pulse
         // needs no more) and paused in a hidden tab — every paint change
@@ -337,7 +358,7 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
         if (!compact) setHover({ id, x: e.point.x, y: e.point.y });
       });
       m.on("mouseleave", LAYER.points, () => {
-        m.getCanvas().style.cursor = "";
+        m.getCanvas().style.cursor = preview ? "pointer" : "";
         setHover(null);
       });
       m.on("mouseenter", LAYER.clusters, () => (m.getCanvas().style.cursor = "pointer"));
@@ -345,6 +366,7 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
 
       // Click: point → selection (or main map); cluster → zoom to its extent.
       m.on("click", LAYER.points, (e) => {
+        if (preview) return; // handled by the whole-map click
         const code = e.features?.[0]?.properties?.code as string | undefined;
         if (code) onPointClick.current(code);
       });

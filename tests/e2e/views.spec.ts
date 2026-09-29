@@ -137,7 +137,8 @@ test.describe("liste des sites", () => {
     const first = await rows.first().getAttribute("data-code");
     const id = entries.find((e) => e.code === first)!.id;
     await rows.first().click();
-    await expect(page).toHaveURL(`${ORIGIN}/sites/${id}`);
+    // The sheet keeps the list context (filters and sort) for previous / next.
+    await expect(page).toHaveURL(`${ORIGIN}/sites/${id}?sort=-area`);
   });
 
   test("un filtre posé sur la carte est conservé en passant par le rail", async ({ page }) => {

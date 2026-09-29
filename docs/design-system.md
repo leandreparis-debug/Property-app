@@ -167,6 +167,58 @@ La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôl
 - rafraîchissement toutes les 5 minutes ;
 - Échap, la sortie du plein écran ou « Quitter » en sortent.
 
+## Graphiques (`src/components/charts/`)
+
+Tous les graphiques sont en **SVG écrit à la main**, sans bibliothèque. Ils sont rendus côté serveur ; seul le bouton « Voir les données » s'exécute dans le navigateur. Chacun a un **titre** et un **équivalent accessible** (tableau ou liste).
+
+Couleurs :
+- `accent` pour la série principale ;
+- tons neutres (`text-muted` en pointillés, `border-strong`…) pour les autres.
+
+Les couleurs de statut restent réservées au statut. Seule exception : le contour du jalon d'arbitrage de la frise, **uniquement** quand une règle de bail est déclenchée.
+
+**`TrendChart`** : courbe par année.
+- Points, axe de **toutes** les années de l'intervalle (une année manquante reste visible), graduations « rondes » (`niceTicks`).
+- Valeurs au survol, en CSS seul (`group-hover`).
+- Légende.
+- Une année manquante **coupe la courbe** : jamais d'interpolation.
+- « Voir les données » affiche le tableau. Replié, il reste lisible par les lecteurs d'écran (`sr-only`) et il est toujours imprimé.
+
+**`LeaseTimeline`** (frise du bail) :
+- jalons sur un axe du temps, étiquettes réparties sur quatre couloirs ;
+- « Aujourd'hui » en `accent`, pointillé ;
+- jalons dépassés atténués (opacité 0,45) ;
+- jalon d'arbitrage entouré de la couleur du statut seulement si une règle de bail est déclenchée ;
+- jalons absents omis ; sans jalon, un `EmptyState` compact ;
+- la liste des jalons est donnée en texte : visible en grand format, `sr-only` sinon, imprimée dans tous les cas.
+
+**`BreakdownBar`** (barre de répartition) :
+- barre horizontale en nuances neutres, purement décorative (`aria-hidden`) ;
+- sa légende (valeur et part) porte l'information.
+
+Elle sert à la répartition des surfaces de l'onglet Technique.
+
+**Dimensions** : `viewBox` larges (880 à 1 120 unités), pour un rendu proche de 1:1 dans la fiche et un texte qui garde sa taille.
+
+## Fiche entrepôt
+
+- **Valeurs** en `<dl>` (`FieldList`) ; les nombres en `numeric`.
+- **Valeur absente** : « — » visible (`aria-hidden`), « Non renseigné » pour les lecteurs d'écran.
+- **Provenance** : infobulle au survol et au focus clavier (valeur focusable), et icône neutre « source publique » (globe) pour les valeurs issues de l'enrichissement.
+- **Évolutions N-1** : flèche et signe, en `text-muted`, jamais en couleur de statut.
+- **Barre de complétude** de l'en-tête : neutre (`text-muted` sur `surface-3`).
+- **Tableaux d'indicateurs** : en-têtes et première colonne collants. Le conteneur défilant est `relative`, pour que les textes `sr-only` (en position absolue) restent dans son débordement.
+
+## Impression
+
+La feuille `@media print` est à la fin de `globals.css`.
+- **Couleurs** : les tokens sont redéfinis (fond `#fff`, texte `#000`, `accent` plus foncé), ce qui convertit tous les composants sans règle dédiée.
+- **Éléments masqués** : rail, barre de commande, infobulles, aperçu cartographique, boutons de `main`.
+- **Contenu déroulé** : chaque panneau d'onglet porte `print:block` et un titre `h2` visible à l'impression seulement.
+- **Tableaux** : complets (`print:max-h-none`, `print:overflow-visible`).
+- **Statut** : écrit en toutes lettres.
+- **En-tête** : `data-slot="print-header"`.
+
 ## Accessibilité
 
 - **Contraste AA** : `text` et `text-muted` dépassent 4,5:1 sur toutes les surfaces ; `accent` dépasse 4,5:1 en texte sur les panneaux et comme fond de bouton (texte `bg`). `text-subtle` (≈ 3,2:1) est réservé aux textes désactivés, aux grands textes (≥ 24 px) et aux éléments non textuels. Ces seuils sont vérifiés par `tests/unit/design-tokens.test.ts`.
