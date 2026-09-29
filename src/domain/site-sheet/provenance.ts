@@ -11,6 +11,8 @@ export interface FieldProvenance {
   /** Display name (or e-mail) of the author, when known. */
   actorName: string | null;
   batchId: string | null;
+  /** Reason given with a manual change, if any. */
+  comment?: string | null;
 }
 
 /** Short French date: « 28 sept. 2026 ». */

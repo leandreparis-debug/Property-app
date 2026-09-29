@@ -7,7 +7,7 @@ describe("audit context", () => {
     const b = await import("@/server/audit/context");
     expect(a).not.toBe(b);
     const seen = await a.runWithAuditContext({ actorId: "u1", source: "ui" }, async () => b.getAuditContext());
-    expect(seen).toEqual({ actorId: "u1", source: "ui", batchId: null });
+    expect(seen).toEqual({ actorId: "u1", source: "ui", batchId: null, comment: null });
   });
 
   it("awaits lazy thenables inside the context", async () => {
@@ -23,6 +23,6 @@ describe("audit context", () => {
     const inner = await runWithAuditContext({ actorId: "outer", source: "ui" }, () =>
       runWithAuditContext({ actorId: null, source: "import", batchId: "b1" }, async () => getAuditContext()),
     );
-    expect(inner).toEqual({ actorId: null, source: "import", batchId: "b1" });
+    expect(inner).toEqual({ actorId: null, source: "import", batchId: "b1", comment: null });
   });
 });

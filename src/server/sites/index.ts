@@ -71,3 +71,18 @@ export async function getFootprints(): Promise<FootprintRecord[]> {
   });
   return footprintsFromRows(rows.map((r) => ({ id: r.siteId, code: r.site.code, geometry: { footprintGeoJson: r.footprintGeoJson, heightM: r.heightM } })));
 }
+
+/** An archived site (list reserved to administrators). */
+export interface ArchivedSite {
+  id: string;
+  code: string;
+  name: string;
+  city: string | null;
+  archivedAt: Date;
+}
+
+/** Archived sites, most recently archived first (`/sites?archived=1`, administrators). */
+export async function getArchivedSites(): Promise<ArchivedSite[]> {
+  const rows = await db.site.findMany({ where: { archivedAt: { not: null } }, select: { id: true, code: true, name: true, city: true, archivedAt: true }, orderBy: { archivedAt: "desc" } });
+  return rows.map((r) => ({ ...r, archivedAt: r.archivedAt! }));
+}

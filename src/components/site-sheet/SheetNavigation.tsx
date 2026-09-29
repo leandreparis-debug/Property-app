@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Map as MapIcon, Pencil, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Map as MapIcon, Printer } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { listContextQuery, siteNeighbours, siteSheetHref } from "@/domain/site-sheet/navigation";
 import { parseSort, sortEntries } from "@/domain/sites-table";
 import { filterQuery } from "@/domain/filters/url";
 import { useSiteFilters } from "@/components/filters/use-site-filters";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArchiveControls } from "@/components/editing/ArchiveControls";
 
 /** « Sites › {nom} »: back to the list with its filters and sort. */
 export function SheetBreadcrumb({ name }: { name: string }) {
@@ -97,38 +97,26 @@ export function SiblingNavigation({ siteId }: { siteId: string }) {
   );
 }
 
-/** « Voir sur la carte », « Modifier » (disabled, hidden for readers), « Imprimer ». */
-export function SheetActions({ code, canEdit }: { code: string; canEdit: boolean }) {
+/** « Voir sur la carte », « Imprimer » and, for administrators, « Plus d'actions » (archiving). */
+export function SheetActions({ code, siteId, name, canArchive, archived }: { code: string; siteId: string; name: string; canArchive: boolean; archived: boolean }) {
   const params = useSearchParams();
   const filters = filterQuery(params.toString());
   const mapHref = `/?${[filters, `site=${encodeURIComponent(code)}`].filter(Boolean).join("&")}`;
   return (
     <div className="flex flex-wrap items-center gap-2 print:hidden" data-slot="sheet-actions">
-      <Button asChild variant="secondary" size="sm">
-        <Link href={mapHref}>
-          <MapIcon aria-hidden="true" />
-          Voir sur la carte
-        </Link>
-      </Button>
-      {canEdit && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {/* A disabled button receives no pointer event: the wrapper carries the tooltip. */}
-            <span tabIndex={0} className="rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-ring" data-slot="edit-disabled">
-              <Button variant="secondary" size="sm" disabled>
-                <Pencil aria-hidden="true" />
-                Modifier
-                <span className="sr-only"> — disponible prochainement</span>
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>Disponible prochainement</TooltipContent>
-        </Tooltip>
+      {!archived && (
+        <Button asChild variant="secondary" size="sm">
+          <Link href={mapHref}>
+            <MapIcon aria-hidden="true" />
+            Voir sur la carte
+          </Link>
+        </Button>
       )}
       <Button variant="secondary" size="sm" onClick={() => window.print()}>
         <Printer aria-hidden="true" />
         Imprimer
       </Button>
+      {canArchive && <ArchiveControls siteId={siteId} name={name} archived={archived} />}
     </div>
   );
 }

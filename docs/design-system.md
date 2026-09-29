@@ -209,6 +209,24 @@ Elle sert à la répartition des surfaces de l'onglet Technique.
 - **Barre de complétude** de l'en-tête : neutre (`text-muted` sur `surface-3`).
 - **Tableaux d'indicateurs** : en-têtes et première colonne collants. Le conteneur défilant est `relative`, pour que les textes `sr-only` (en position absolue) restent dans son débordement.
 
+## Formulaires d'édition (`src/components/editing/`)
+
+- **Champs** :
+  - chaque champ a un `<label>` associé ;
+  - l'unité apparaît en suffixe dans le champ (et dans le nom accessible) ;
+  - les nombres sont en `numeric`.
+- **Erreur** :
+  - bordure en tirets, et message en texte à côté du champ, relié par `aria-describedby` ;
+  - `aria-invalid` sur le champ ;
+  - résumé en `role="alert"` et focus sur le premier champ en erreur ;
+  - jamais de couleur de statut : `destructive` vaut la couleur du texte.
+- **Section en cours d'édition** : bordure `accent`.
+- **Avertissements** : panneau neutre (`surface-2`), avec « Enregistrer quand même ».
+- **Notifications** : en bas à droite (`role="status"`, verre), fermées après 6 s.
+- **Dialogues** (conflit, historique, suppression, archivage, nouveau site) : `Dialog` de Radix, avec un titre et une description.
+- **Clavier** : Ctrl+Entrée enregistre, Échap annule ; une confirmation est demandée avant d'abandonner des changements.
+- **Frise du bail** : les étiquettes trop proches se répartissent sur deux rangées, au-dessus et au-dessous de l'axe (`layoutMilestoneLabels`, fonction pure testée). Un trait de rappel relie une étiquette décalée à son jalon.
+
 ## Impression
 
 La feuille `@media print` est à la fin de `globals.css`.

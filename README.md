@@ -111,7 +111,7 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm typecheck` | Vérification TypeScript (`tsc --noEmit`) |
 | `pnpm test` | Tests unitaires Vitest |
 | `pnpm test:watch` | Vitest en mode watch |
-| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner. Le `globalSetup` crée (ou réinitialise) deux comptes de test, `e2e-admin@vigie.local` et `e2e-viewer@vigie.local`, dans la base de `.env` |
+| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner. Le `globalSetup` crée (ou réinitialise) trois comptes de test (`e2e-admin@vigie.local`, `e2e-editor@vigie.local`, `e2e-viewer@vigie.local`) dans la base de `.env`. Les tests d'édition ne travaillent que sur des sites qu'ils créent (codes `E2E-…`), supprimés en fin de suite |
 | `pnpm test:integration` | Tests d'intégration Vitest sur la base `vigie_test` (recréée à chaque lancement) |
 | `pnpm check:offline` | Échoue si une URL `http(s)://` externe apparaît dans `src/` ou `public/` |
 | `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente de la base `vigie` |
@@ -122,6 +122,7 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm db:reset` | Développement uniquement, avec confirmation : recrée la base, rejoue les migrations, lance le seed |
 | `pnpm db:seed` | Charge les 10 sites de démonstration fictifs (idempotent) |
 | `pnpm db:studio` | Ouvre Prisma Studio (navigateur local) |
+| `pnpm fields:lengths` | Régénère `src/domain/fields/column-lengths.ts` (longueurs des colonnes texte, pour la validation des formulaires) après une modification du schéma |
 | `pnpm db:sql` | sqlcmd dans le conteneur, `.env` chargé automatiquement (`-Q "…"` pour une requête, sans argument pour une session interactive) |
 | `pnpm user:create` | Crée un compte (voir « Comptes utilisateurs ») |
 | `pnpm user:reset-password` | Change le mot de passe d'un compte |
@@ -181,6 +182,14 @@ pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --act
 | Supervision | `/supervision` | Indicateurs pour les comités, anomalies, répartitions, mode présentation (`present=1`) |
 
 Les trois vues partagent les mêmes **filtres**, conservés dans l'URL : un lien copié restitue exactement la même vue. **Ctrl+K** ouvre la recherche universelle (sites, lieux, actions). Voir [`docs/filters-and-search.md`](docs/filters-and-search.md).
+
+## Fiche entrepôt et édition
+
+`/sites/[id]` présente toutes les données d'un site ([`docs/site-sheet.md`](docs/site-sheet.md)) et permet de les **modifier section par section**, selon les droits :
+- **éditeurs et administrateurs** : champs, séries annuelles, rubriques ICPE, travaux, identifiants externes, documents, création de sites ;
+- **administrateurs** : en plus, archivage et désarchivage.
+
+Chaque modification est validée côté serveur, tracée dans le journal d'audit (auteur, ancienne et nouvelle valeur, motif facultatif) et protégée des conflits champ par champ. Une valeur saisie dans l'interface n'est plus écrasée par l'import du tableur. Voir [`docs/editing.md`](docs/editing.md).
 
 ## Carte nationale
 

@@ -158,6 +158,7 @@ type PendingAuditRow = {
   beforeValue: string | null;
   afterValue: string | null;
   batchId: string | null;
+  comment: string | null;
 };
 
 /** Transaction being audited: its client and the audit rows not yet inserted. */
@@ -166,7 +167,7 @@ interface AuditTransaction {
   pending: PendingAuditRow[];
 }
 
-/** Rows per INSERT (11 parameters each; SQL Server allows 2 100 per statement). */
+/** Rows per INSERT (12 parameters each; SQL Server allows 2 100 per statement). */
 const AUDIT_FLUSH_CHUNK = 150;
 
 /**
@@ -189,6 +190,7 @@ function writeAuditLines(store: AuditTransaction, context: AuditContext, lines: 
       beforeValue: line.before ?? null,
       afterValue: line.after ?? null,
       batchId: context.batchId ?? null,
+      comment: context.comment ?? null,
     });
   }
 }

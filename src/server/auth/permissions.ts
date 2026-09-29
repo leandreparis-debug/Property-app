@@ -6,6 +6,7 @@ export const ACTIONS = [
   "export:read",
   "finance:read",
   "site:write",
+  "site:archive",
   "equipment:write",
   "document:upload",
   "plan:calibrate",
@@ -21,7 +22,7 @@ export type Action = (typeof ACTIONS)[number];
 
 const VIEWER: readonly Action[] = ["site:read", "export:read"];
 const EDITOR: readonly Action[] = [...VIEWER, "site:write", "equipment:write", "document:upload", "plan:calibrate"];
-const ADMIN: readonly Action[] = [...EDITOR, "import:run", "enrichment:apply", "user:manage", "audit:read", "settings:manage"];
+const ADMIN: readonly Action[] = [...EDITOR, "site:archive", "import:run", "enrichment:apply", "user:manage", "audit:read", "settings:manage"];
 
 /**
  * The single source of truth: role → allowed actions.

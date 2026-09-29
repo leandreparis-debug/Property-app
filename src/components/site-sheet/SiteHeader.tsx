@@ -7,6 +7,7 @@ import { resolveDepartment } from "@/domain/geo";
 import { EMPTY_VALUE, formatDate, formatSurface } from "@/lib/format";
 import { STATUS_META } from "@/lib/status";
 import type { SiteDetail } from "@/server/sites/detail";
+import { ArchiveControls } from "@/components/editing/ArchiveControls";
 import { EmptyValue } from "./FieldList";
 import { ReasonList } from "./panels";
 import { SheetActions, SheetBreadcrumb, SiblingNavigation } from "./SheetNavigation";
@@ -25,7 +26,7 @@ function Landmark({ label, value }: { label: string; value: ReactNode }) {
  * with every reason, archived / inactive banners, landmarks, actions and
  * previous / next navigation. `preview` is the map preview (top right).
  */
-export function SiteHeader({ detail, canEdit, preview, printedOn }: { detail: SiteDetail; canEdit: boolean; preview: ReactNode; printedOn: Date }) {
+export function SiteHeader({ detail, canArchive, preview, printedOn }: { detail: SiteDetail; canArchive: boolean; preview: ReactNode; printedOn: Date }) {
   const { site, evaluation } = detail;
   const department = resolveDepartment(site.departmentCode);
   const status = evaluation.status;
@@ -41,8 +42,13 @@ export function SiteHeader({ detail, canEdit, preview, printedOn }: { detail: Si
 
       {site.archivedAt && (
         <div role="note" data-slot="archived-banner" className="flex items-center gap-2 rounded-md border border-border-strong bg-surface-2 px-3 py-2 text-sm">
-          <Archive className="size-4 text-text-muted" aria-hidden="true" />
-          Site archivé le {formatDate(site.archivedAt)} : la fiche est conservée en lecture seule.
+          <Archive className="size-4 shrink-0 text-text-muted" aria-hidden="true" />
+          Site archivé le {formatDate(site.archivedAt)} : il n&apos;apparaît plus sur la carte, dans la liste ni dans la recherche ; la fiche est en lecture seule.
+          {canArchive && (
+            <span className="ml-auto print:hidden">
+              <ArchiveControls siteId={site.id} name={site.name} archived variant="button" />
+            </span>
+          )}
         </div>
       )}
       {site.isActive === false && (
@@ -106,7 +112,7 @@ export function SiteHeader({ detail, canEdit, preview, printedOn }: { detail: Si
             </div>
           </dl>
 
-          <SheetActions code={site.code} canEdit={canEdit} />
+          <SheetActions code={site.code} siteId={site.id} name={site.name} canArchive={canArchive} archived={site.archivedAt !== null} />
         </div>
         {preview}
       </div>

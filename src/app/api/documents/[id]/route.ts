@@ -5,6 +5,7 @@ import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 import { jsonError, withApiAuth } from "@/server/auth/api";
 import { db } from "@/server/db";
+import { deleteDocument, UploadError } from "@/server/documents/store";
 import { attachmentDisposition } from "@/server/http/content-disposition";
 import { resolveStoragePath, StoragePathError } from "@/server/storage";
 
@@ -71,4 +72,31 @@ export const GET = withApiAuth<Context>(
     });
   },
   { permission: "site:read" },
+);
+
+/**
+ * DELETE /api/documents/[id] — deletes a document (`document:upload`,
+ * same-origin). JSON body `{ comment? }` (optional reason). The row deletion
+ * is audited; the file moves to STORAGE_ROOT/trash/documents/, never erased.
+ */
+export const DELETE = withApiAuth<Context>(
+  async (request, { params, user }) => {
+    const { id } = await params;
+    if (!ID.test(id)) return notFound();
+    let comment: string | null = null;
+    try {
+      const body = (await request.json()) as { comment?: unknown };
+      comment = typeof body.comment === "string" ? body.comment.slice(0, 500) : null;
+    } catch {
+      // No body: no reason.
+    }
+    try {
+      await deleteDocument(user, id, comment);
+      return new NextResponse(null, { status: 204 });
+    } catch (e) {
+      if (e instanceof UploadError) return NextResponse.json({ error: e.message }, { status: e.status, headers: { "Cache-Control": "no-store" } });
+      throw e;
+    }
+  },
+  { permission: "document:upload" },
 );

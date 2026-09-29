@@ -1,6 +1,6 @@
 # Fiche entrepôt (`/sites/[id]`)
 
-La fiche présente **toutes** les données d'un site, en **lecture seule** (l'édition arrive à l'étape 9). Elle est rendue côté serveur (`requireUser`). Seuls les onglets, la copie des chemins, les infobulles, l'aperçu cartographique et la navigation précédent / suivant s'exécutent dans le navigateur.
+La fiche présente **toutes** les données d'un site. Depuis l'étape 9, ces données se **modifient en place**, section par section, selon les droits de l'utilisateur ([`docs/editing.md`](editing.md)). Elle est rendue côté serveur (`requireUser`). Seuls les onglets, la copie des chemins, les infobulles, l'aperçu cartographique et la navigation précédent / suivant s'exécutent dans le navigateur.
 
 ## Structure
 
@@ -36,8 +36,10 @@ Un identifiant mal formé (hors `[A-Za-z0-9_-]{1,30}`) répond 404 sans aucune r
 - **Repères** : ville, département, région, portefeuille, BU occupante, typologie, surface de référence, complétude (barre neutre).
 - **Actions** :
   - « Voir sur la carte » : `/?site=CODE` avec les filtres ;
-  - « Modifier » : désactivé, avec l'infobulle « Disponible prochainement » ; absent sans `site:write` ;
-  - « Imprimer ».
+  - « Imprimer » ;
+  - « Plus d'actions » (administrateurs) : « Archiver le site » ou « Désarchiver ».
+
+  Chaque section porte son propre bouton « Modifier » (étape 9).
 - **Précédent / suivant** : navigation dans la liste **filtrée et triée**, dans le même ordre que `/sites`. Raccourcis `[` et `]`, inactifs dans un champ de saisie ou une boîte de dialogue.
 
 L'URL de la fiche porte le contexte de la liste (`listContextQuery` : filtres et `sort`, jamais `site`, `present` ni `tab`). Les liens de `/sites` le transmettent.
@@ -65,7 +67,7 @@ L'URL de la fiche porte le contexte de la liste (`listContextQuery` : filtres et
 | Énergie | Profil énergétique, tableau des consommations, graphique électricité et gaz au m², graphique de l'eau |
 | Technique | Surfaces et barre de répartition, capacités, caractéristiques, historique des travaux, emprise |
 | ICPE et risques | Champs ICPE (dont le lien Géorisques), rubriques et régime en toutes lettres, données publiques |
-| Documents | Documents par catégorie (téléchargement), références du tableur avec leur type détecté |
+| Documents | Ajout (dépôt ou bouton), documents par catégorie (téléchargement, suppression), références du tableur avec leur type détecté |
 
 **Champs manquants** : les champs pondérés de la complétude non renseignés.
 - Regroupés par section du registre et triés par poids.
@@ -99,7 +101,8 @@ Les valeurs des indicateurs annuels portent aussi leur provenance.
 Calculé à la lecture (`occupancyCostSeries`) : loyer + charges + taxe foncière + taxe sur les bureaux + taxe sur les parkings + assurances.
 - Il n'est calculé que pour les années où le **loyer est renseigné**.
 - `TAXES_TOTAL` n'y entre pas, pour éviter un double compte.
-- Si une composante manque, l'année est marquée partielle : « partiel : charges non renseignées ».
+- Seule l'absence d'une **composante principale** (loyer, charges, taxe foncière, assurances) marque l'année comme partielle : « partiel : charges non renseignées ».
+- La taxe sur les bureaux (Île-de-France) et la taxe sur les parkings ne concernent que certains sites. Absentes, elles comptent pour zéro et l'infobulle indique « non applicable ou non renseignée ».
 - L'infobulle de la cellule donne la composition.
 - Valeur au m² sur la surface de référence.
 
@@ -133,10 +136,13 @@ Les données de `site_public_data` sont groupées par fournisseur. Chaque groupe
 
 ## Permission `finance:read`
 
-Sans `finance:read`, les éléments suivants sont remplacés par « Accès restreint » :
+Sans `finance:read`, les éléments suivants sont remplacés par « Accès restreint » ou masqués :
 - l'onglet Financier ;
 - la section « Conditions financières du bail » (champs `financial` du registre) ;
-- les indicateurs loyer et coût d'occupation de la vue d'ensemble.
+- les indicateurs loyer et coût d'occupation de la vue d'ensemble ;
+- la ligne « Chiffre d'affaires marchandise » de l'onglet Exploitation (`financial: true` dans le catalogue des indicateurs).
+
+Ces données ne sont pas non plus modifiables sans `finance:read`.
 
 Ces données ne sont alors **pas rendues du tout** : elles ne partent pas vers le navigateur.
 

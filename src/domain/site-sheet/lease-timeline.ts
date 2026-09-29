@@ -85,3 +85,46 @@ export function timelineRange(milestones: readonly LeaseMilestone[], today: Date
   const margin = Math.max((max - min) * 0.04, 60 * 86_400_000);
   return [min - margin, max + margin];
 }
+
+/** Placement of one milestone label. */
+export interface LabelPlacement {
+  /** 0: row above the axis, 1: row below. */
+  row: 0 | 1;
+  /** Horizontal centre of the label (may differ from the milestone: a leader line joins them). */
+  x: number;
+}
+
+/**
+ * Places milestone labels on two rows (above / below the axis) so that labels
+ * of the same row are at least `minGap` apart. Greedy, left to right: each
+ * label goes to the row where it needs the smallest shift (row above on a
+ * tie); a label is shifted to the right only when both rows are taken, then
+ * the rows are pulled back inside `[minX, maxX]` from the right.
+ *
+ * @param xs - Milestone positions, ascending.
+ * @param minGap - Minimum distance between two label centres of one row.
+ * @param bounds - Allowed range of label centres.
+ * @returns One placement per milestone, in the same order.
+ */
+export function layoutMilestoneLabels(xs: readonly number[], minGap: number, bounds: { minX: number; maxX: number }): LabelPlacement[] {
+  const last: [number, number] = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+  const out: LabelPlacement[] = xs.map((x) => {
+    const wanted = Math.max(x, bounds.minX);
+    const above: LabelPlacement = { row: 0, x: Math.max(wanted, last[0] + minGap) };
+    const below: LabelPlacement = { row: 1, x: Math.max(wanted, last[1] + minGap) };
+    const best = below.x < above.x ? below : above;
+    last[best.row] = best.x;
+    return best;
+  });
+  // Pull each row back inside the right bound, keeping the spacing.
+  for (const row of [0, 1] as const) {
+    let limit = bounds.maxX;
+    for (let i = out.length - 1; i >= 0; i--) {
+      const p = out[i]!;
+      if (p.row !== row) continue;
+      p.x = Math.min(p.x, limit);
+      limit = p.x - minGap;
+    }
+  }
+  return out;
+}

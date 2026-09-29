@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { Polygon } from "geojson";
 import { detectReference, safeExternalUrl } from "@/domain/fields";
 import { geodesicArea } from "@/domain/geo/area";
-import { leaseMilestones, timelineRange } from "@/domain/site-sheet/lease-timeline";
+import { layoutMilestoneLabels, leaseMilestones, timelineRange } from "@/domain/site-sheet/lease-timeline";
 import { listContextQuery, parseTab, siteNeighbours, siteSheetHref } from "@/domain/site-sheet/navigation";
-import { occupancyCostSeries, partialMention } from "@/domain/site-sheet/occupancy-cost";
+import { OPTIONAL_MISSING_LABEL, occupancyCostSeries, partialMention } from "@/domain/site-sheet/occupancy-cost";
 import { resolveProvenanceLabel } from "@/domain/site-sheet/provenance";
 import { flattenPairs, formatPublicData, groupPublicData } from "@/domain/site-sheet/public-data";
 import { surfaceBreakdown } from "@/domain/site-sheet/surfaces";
@@ -33,6 +33,16 @@ describe("occupancy cost", () => {
     expect(partialMention(y!)).toBe("partiel : charges non renseignées");
     const [z] = occupancyCostSeries(rows([["RENT", 2025, 1000], ["CHARGES", 2025, 1], ["OFFICE_TAX", 2025, 0], ["PARKING_TAX", 2025, 0], ["INSURANCE", 2025, 1]]), 10);
     expect(partialMention(z!)).toBe("partiel : taxe foncière non renseignée");
+  });
+
+  it("office and parking taxes are optional: missing → 0, not partial, tooltip wording", () => {
+    const [y] = occupancyCostSeries(rows([["RENT", 2024, 1000], ["CHARGES", 2024, 200], ["PROPERTY_TAX", 2024, 100], ["INSURANCE", 2024, 50]]), 100);
+    expect(y).toMatchObject({ total: 1350, perSqm: 13.5, partial: false, missing: [] });
+    expect(partialMention(y!)).toBeNull();
+    expect(y!.components.filter((c) => c.value === null).map((c) => [c.code, c.optional])).toEqual([["OFFICE_TAX", true], ["PARKING_TAX", true]]);
+    expect(OPTIONAL_MISSING_LABEL).toBe("non applicable ou non renseignée");
+    const [z] = occupancyCostSeries(rows([["RENT", 2024, 1000]]), null);
+    expect(partialMention(z!)).toBe("partiel : charges, taxe foncière et assurances non renseignées");
   });
 
   it("no rent: no occupancy cost for that year (even with other components)", () => {
@@ -257,5 +267,29 @@ describe("surfaces and downloads", () => {
     expect(hostile).not.toMatch(/[\r\n/\\]/);
     expect(hostile.match(/"/g)).toHaveLength(2);
     expect(attachmentDisposition("")).toContain('filename="document"');
+  });
+});
+
+describe("lease timeline label layout", () => {
+  const bounds = { minX: 50, maxX: 1000 };
+  it("far apart labels all stay above, at their milestone", () => {
+    expect(layoutMilestoneLabels([100, 400, 700], 120, bounds)).toEqual([{ row: 0, x: 100 }, { row: 0, x: 400 }, { row: 0, x: 700 }]);
+  });
+  it("two close labels split on the two rows", () => {
+    expect(layoutMilestoneLabels([500, 520], 120, bounds)).toEqual([{ row: 0, x: 500 }, { row: 1, x: 520 }]);
+  });
+  it("a third close label is shifted right on the least busy row, same-row labels never overlap", () => {
+    const p = layoutMilestoneLabels([500, 510, 520, 530], 120, bounds);
+    for (const row of [0, 1]) {
+      const xs = p.filter((q) => q.row === row).map((q) => q.x);
+      for (let i = 1; i < xs.length; i++) expect(xs[i]! - xs[i - 1]!).toBeGreaterThanOrEqual(120);
+    }
+    expect(p.map((q) => q.row)).toEqual([0, 1, 0, 1]);
+  });
+  it("labels are kept inside the bounds", () => {
+    const p = layoutMilestoneLabels([10, 990, 995, 999], 120, bounds);
+    expect(p[0]).toEqual({ row: 0, x: 50 });
+    expect(Math.max(...p.map((q) => q.x))).toBeLessThanOrEqual(1000);
+    expect(p.filter((q) => q.row === 0).map((q) => q.x).at(-1)! - p.filter((q) => q.row === 0).map((q) => q.x).at(-2)!).toBeGreaterThanOrEqual(120);
   });
 });

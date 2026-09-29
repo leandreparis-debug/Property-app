@@ -4,11 +4,14 @@ import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useOpenHistory, type HistoryTarget } from "@/components/editing/HistoryPanel";
 
 /** Provenance of a value, resolved on the server. */
 export interface ProvenanceHint {
   label: string;
   enrichment: boolean;
+  /** Field whose history can be opened (registry fields). */
+  history?: HistoryTarget;
 }
 
 /** Text of the tooltip of an external link. */
@@ -35,26 +38,51 @@ function PublicSourceMark() {
 }
 
 /**
- * A value with its provenance tooltip (hover or keyboard focus). Without
- * provenance, the value is rendered as is.
+ * A value with its provenance tooltip (hover or keyboard focus). When the
+ * field has a history, the tooltip offers « Historique » and activating the
+ * value (click, Entrée, Espace) opens the history panel. Without provenance,
+ * the value is rendered as is.
  */
 export function WithProvenance({ hint, children, className }: { hint: ProvenanceHint | null; children: ReactNode; className?: string }) {
+  const openHistory = useOpenHistory();
   if (!hint) return <span className={className}>{children}</span>;
+  const history = hint.history && openHistory ? () => openHistory(hint.history!) : null;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           tabIndex={0}
+          role={history ? "button" : undefined}
+          aria-haspopup={history ? "dialog" : undefined}
+          onClick={history ?? undefined}
+          onKeyDown={
+            history
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    history();
+                  }
+                }
+              : undefined
+          }
           data-slot="provenance"
           data-provenance={hint.label}
-          className={cn("inline-flex max-w-full items-baseline gap-1 rounded-xs outline-none focus-visible:outline-2 focus-visible:outline-ring", className)}
+          className={cn("inline-flex max-w-full items-baseline gap-1 rounded-xs outline-none focus-visible:outline-2 focus-visible:outline-ring", history && "cursor-pointer", className)}
         >
           <span className="min-w-0">{children}</span>
           {hint.enrichment && <PublicSourceMark />}
+          {history && <span className="sr-only"> — {hint.label} ; ouvrir l&apos;historique</span>}
         </span>
       </TooltipTrigger>
       <TooltipContent side="top" align="start">
-        {hint.label}
+        <span className="flex items-center gap-3">
+          <span>{hint.label}</span>
+          {history && (
+            <button type="button" onClick={history} data-slot="history-link" className="rounded-xs text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+              Historique
+            </button>
+          )}
+        </span>
       </TooltipContent>
     </Tooltip>
   );

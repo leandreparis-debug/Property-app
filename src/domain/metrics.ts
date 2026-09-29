@@ -19,6 +19,11 @@ export interface MetricDefinition {
   readonly unit: MetricUnit;
   /** French label. */
   readonly labelFr: string;
+  /**
+   * Financial data (hidden without `finance:read`, editable only with it).
+   * Defaults to `domain === "FINANCIAL"`.
+   */
+  readonly financial?: boolean;
   /** Whether a per-m² value is meaningful (computed with the reference area). */
   readonly perSqmRelevant: boolean;
   /** Spreadsheet columns feeding the metric (documentation and import). */
@@ -45,7 +50,7 @@ export const METRICS = [
   { code: "GAS", domain: "ENERGY", unit: "kWh", labelFr: "Consommation de gaz", perSqmRelevant: true, sourceColumns: years("", 2020, 2023, " CONSO GAZ EN KWH") },
   { code: "WATER", domain: "ENERGY", unit: "m³", labelFr: "Consommation d'eau", perSqmRelevant: true, sourceColumns: ["2022 EAU", "2023 EAU"], note: "Unité à confirmer (m³ supposé)." },
   { code: "HEADCOUNT_FTE", domain: "ACTIVITY", unit: "ETP", labelFr: "Effectif moyen", perSqmRelevant: false, sourceColumns: ["ETP MOYEN"], note: "Colonne sans année : rattachée à l'année courante par l'import." },
-  { code: "MERCHANDISE_REVENUE", domain: "ACTIVITY", unit: "€", labelFr: "Chiffre d'affaires marchandise", perSqmRelevant: false, sourceColumns: ["CA MARCHANDISE"], note: "Colonne sans année : rattachée à l'année courante par l'import." },
+  { code: "MERCHANDISE_REVENUE", domain: "ACTIVITY", unit: "€", labelFr: "Chiffre d'affaires marchandise", financial: true, perSqmRelevant: false, sourceColumns: ["CA MARCHANDISE"], note: "Colonne sans année : rattachée à l'année courante par l'import." },
   { code: "PARCELS", domain: "ACTIVITY", unit: "colis", labelFr: "Colis annuels", perSqmRelevant: false, sourceColumns: ["NOMBRE DE COLIS ANNUEL"], note: "Colonne sans année : rattachée à l'année courante par l'import." },
 ] as const satisfies readonly MetricDefinition[];
 
@@ -77,6 +82,16 @@ export function getMetric(code: MetricCode): MetricDefinition {
   const metric = BY_CODE.get(code);
   if (!metric) throw new Error(`Indicateur inconnu : ${code}`);
   return metric;
+}
+
+/**
+ * Whether a metric is financial data (`finance:read` required to read or edit it).
+ * Unknown codes count as financial (safe default).
+ * @param code - Metric code.
+ */
+export function isFinancialMetric(code: string): boolean {
+  const metric = BY_CODE.get(code);
+  return metric ? (metric.financial ?? metric.domain === "FINANCIAL") : true;
 }
 
 /**

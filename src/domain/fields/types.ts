@@ -54,6 +54,25 @@ export type FieldType =
   | "enum"
   | "months";
 
+/** Particular input of an editable field (defaults follow the type). */
+export type FieldInput = "department" | "region" | "select" | "coordinates";
+
+/** Validation constraints of an editable field (checked on the client AND the server). */
+export interface FieldConstraints {
+  /** Smallest accepted number. */
+  readonly min?: number;
+  /** Largest accepted number. */
+  readonly max?: number;
+  /** Decimals kept (rounded to the column scale). */
+  readonly scale?: number;
+  /** Whole numbers only. */
+  readonly integer?: boolean;
+  /** Maximum length in characters (from the Prisma column: `null` = MAX). */
+  readonly maxLength?: number | null;
+  /** Allowed values (enumerations, selects). */
+  readonly values?: readonly string[];
+}
+
 /** Definition of one displayable field. */
 export interface FieldDefinition {
   /** Prisma model. */
@@ -74,6 +93,16 @@ export interface FieldDefinition {
   readonly order: number;
   /** Financial data: hidden without the `finance:read` permission. */
   readonly financial: boolean;
+  /**
+   * Editable from the site sheet (white list: a field that is not editable is
+   * REFUSED by the server). False for the import key `Site.code`, fields set
+   * by the system and original spreadsheet texts kept for traceability.
+   */
+  readonly editable: boolean;
+  /** Validation constraints (bounds, scale, length, values). */
+  readonly constraints?: FieldConstraints;
+  /** Particular input (department list, region list, select, coordinates). */
+  readonly input?: FieldInput;
   /** Column of the source spreadsheet (docs/source-mapping.md). */
   readonly sourceColumn?: string;
   /** For `dateWithPrecision`: the field holding the precision (day | month | year). */

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/components/editing/feedback";
 import type { SessionUser } from "@/server/auth/session";
 import { CommandBar } from "./CommandBar";
 import { NavRail } from "./NavRail";
@@ -21,20 +22,22 @@ export interface AppShellProps {
 export function AppShell({ children, user }: AppShellProps) {
   return (
     <TooltipProvider>
-      <a
-        href="#main"
-        className="fixed top-3 left-24 z-50 -translate-y-20 rounded-sm bg-surface-3 px-3 py-2 text-sm text-text shadow-panel focus-visible:translate-y-0"
-      >
-        Aller au contenu
-      </a>
-      <NavRail
-        role={user.role}
-        footer={<UserMenu name={user.name} email={user.email} role={user.role} />}
-      />
-      <CommandBar />
-      <main id="main" tabIndex={-1} className="relative min-h-dvh outline-none">
-        {children}
-      </main>
+      <ToastProvider>
+        <a
+          href="#main"
+          className="fixed top-3 left-24 z-50 -translate-y-20 rounded-sm bg-surface-3 px-3 py-2 text-sm text-text shadow-panel focus-visible:translate-y-0"
+        >
+          Aller au contenu
+        </a>
+        <NavRail
+          role={user.role}
+          footer={<UserMenu name={user.name} email={user.email} role={user.role} />}
+        />
+        <CommandBar />
+        <main id="main" tabIndex={-1} className="relative min-h-dvh outline-none">
+          {children}
+        </main>
+      </ToastProvider>
     </TooltipProvider>
   );
 }

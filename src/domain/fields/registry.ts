@@ -12,13 +12,57 @@
  * (optional, `src/domain/compliance/completeness.ts`). See docs/data-model.md.
  */
 import { DataSource } from "../enums";
-import { fieldId, FIELD_SECTIONS, type FieldDefinition, type FieldEntity, type FieldId, type FieldSection, type FieldType } from "./types";
+import { REGIONS } from "../geo";
+import { COLUMN_LENGTHS } from "./column-lengths";
+import { fieldId, FIELD_SECTIONS, type FieldConstraints, type FieldDefinition, type FieldEntity, type FieldId, type FieldSection, type FieldType } from "./types";
 
-type Entry = Omit<FieldDefinition, "entity" | "section" | "order" | "financial"> & { financial?: boolean };
+type Entry = Omit<FieldDefinition, "entity" | "section" | "order" | "financial" | "editable"> & { financial?: boolean; editable?: boolean };
+
+/** Upper bounds of the DECIMAL columns (exclusive limits rounded down to the scale). */
+const AREA_MAX = 9_999_999_999.99; // Decimal(12,2)
+const MONEY_MAX = 999_999_999_999.99; // Decimal(14,2)
+const METRIC_MAX = 99_999_999_999.9999; // Decimal(18,4), read back exactly below 1e11
+
+/** Constraints implied by the type and the Prisma column, before the explicit ones. */
+function defaultConstraints(entity: FieldEntity, e: Entry): FieldConstraints | undefined {
+  switch (e.type) {
+    case "text":
+    case "longtext":
+    case "url":
+    case "reference":
+      return { maxLength: COLUMN_LENGTHS[`${entity}.${e.key}`] ?? null };
+    case "area":
+      return { min: 0, max: AREA_MAX, scale: 2 };
+    case "money":
+    case "moneyPerSqm":
+      return { min: 0, max: MONEY_MAX, scale: 2 };
+    case "integer":
+      return { min: 0, max: 1_000_000, integer: true };
+    case "months":
+      return { min: 0, max: 600, scale: 2 };
+    case "number":
+      return { min: 0, max: METRIC_MAX, scale: 4 };
+    case "enum":
+      return e.options ? { values: Object.keys(e.options) } : undefined;
+    default:
+      return undefined;
+  }
+}
 
 /** Builds the entries of one section; `order` follows the declaration order. */
 function section(entity: FieldEntity, name: FieldSection, entries: readonly Entry[], financial = false): FieldDefinition[] {
-  return entries.map((e, i) => ({ ...e, entity, section: name, order: (i + 1) * 10, financial: e.financial ?? financial }));
+  return entries.map((e, i) => {
+    const constraints = { ...defaultConstraints(entity, e), ...e.constraints };
+    return {
+      ...e,
+      entity,
+      section: name,
+      order: (i + 1) * 10,
+      financial: e.financial ?? financial,
+      editable: e.editable ?? true,
+      ...(Object.keys(constraints).length ? { constraints } : {}),
+    };
+  });
 }
 
 const t = (key: string, labelFr: string, type: FieldType, sourceColumn?: string, extra: Partial<Entry> = {}): Entry => ({
@@ -33,7 +77,7 @@ const t = (key: string, labelFr: string, type: FieldType, sourceColumn?: string,
 export const FIELD_REGISTRY: readonly FieldDefinition[] = [
   // ── Site ────────────────────────────────────────────────────────────────
   ...section("Site", "identity", [
-    t("code", "Code entrepôt", "text", "ENTREPOT"),
+    t("code", "Code entrepôt", "text", "ENTREPOT", { editable: false, helpFr: "Clé de l'import et de l'adresse de la fiche : non modifiable." }),
     t("name", "Nom", "text", "NOM ENTREPOT"),
     t("legacyNumber", "Numéro historique", "text", "N°"),
     t("status", "Statut (tableur)", "text", "STATUT", { helpFr: "Statut libre saisi dans le tableur, distinct du statut de conformité." }),
@@ -43,7 +87,7 @@ export const FIELD_REGISTRY: readonly FieldDefinition[] = [
     t("distributionSector", "Secteur de distribution", "text", "SECTEUR DE DISTRIBUTION"),
     t("targetActivity", "Activité cible", "text", "ACTIVITE CIBLE"),
     t("activityStartDate", "Entrée en activité", "dateWithPrecision", "ENTREE EN ACTIVITE", { precisionKey: "activityStartDatePrecision" }),
-    t("storesServedCount", "Magasins desservis (nombre)", "integer", "NOMBRE MAGASIN DESSERVIS"),
+    t("storesServedCount", "Magasins desservis (nombre)", "integer", "NOMBRE MAGASIN DESSERVIS", { constraints: { max: 10_000 } }),
     t("storesServedDescription", "Magasins desservis", "longtext", "MAGASINS DESSERVIS"),
     t("adminFileReference", "Dossier administratif", "reference", "DOSSIER ADMINISTRATIF"),
   ]),
@@ -63,13 +107,13 @@ export const FIELD_REGISTRY: readonly FieldDefinition[] = [
     t("addressLine", "Adresse", "text", "ADRESSE"),
     t("postalCode", "Code postal", "text", "ADRESSE"),
     t("city", "Ville", "text", "ADRESSE"),
-    t("departmentCode", "Département", "text", "DEPARTEMENT"),
-    t("region", "Région", "text", "REGION"),
+    t("departmentCode", "Département", "text", "DEPARTEMENT", { input: "department" }),
+    t("region", "Région", "text", "REGION", { input: "region", constraints: { values: REGIONS } }),
     t("country", "Pays", "text", "PAYS"),
     t("communeInseeCode", "Code INSEE de la commune", "text", undefined, { helpFr: "Issu de l'enrichissement par données publiques." }),
-    t("latitude", "Latitude", "number", "LAT", { decimals: 6 }),
-    t("longitude", "Longitude", "number", "LONG", { decimals: 6 }),
-    t("coordinatesSource", "Origine des coordonnées", "enum", undefined, { options: DataSource.labels }),
+    t("latitude", "Latitude", "number", "LAT", { decimals: 6, input: "coordinates", constraints: { min: -90, max: 90, scale: 6 } }),
+    t("longitude", "Longitude", "number", "LONG", { decimals: 6, input: "coordinates", constraints: { min: -180, max: 180, scale: 6 } }),
+    t("coordinatesSource", "Origine des coordonnées", "enum", undefined, { options: DataSource.labels, input: "select", editable: false, helpFr: "Renseignée automatiquement (« Saisie manuelle » dès que les coordonnées sont modifiées ici)." }),
   ]),
 
   // ── Lease ───────────────────────────────────────────────────────────────
@@ -80,8 +124,8 @@ export const FIELD_REGISTRY: readonly FieldDefinition[] = [
     t("lastAmendmentDate", "Date d'effet du dernier avenant", "date", "DATE D'EFFET DERNIER AVENANT"),
     t("endDate", "Date de fin de bail", "date", "DATE DE FIN DE BAIL"),
     t("nextExitDate", "Prochaine date de sortie", "date", "PROCHAINE DATE DE SORTIE"),
-    t("noticePeriodMonths", "Durée de préavis", "months", "DUREE DE PREAVIS"),
-    t("noticePeriodRaw", "Durée de préavis (texte d'origine)", "text", "DUREE DE PREAVIS"),
+    t("noticePeriodMonths", "Durée de préavis", "months", "DUREE DE PREAVIS", { constraints: { integer: true, scale: 0 } }),
+    t("noticePeriodRaw", "Durée de préavis (texte d'origine)", "text", "DUREE DE PREAVIS", { editable: false }),
     t("noticeDate", "Date de préavis", "date", "DATE DE PREAVIS"),
     t("renewalConditionsSigned", "Conditions de renouvellement signées", "boolean", "CONDITIONS RENOUVELLEMENT SIGNEES"),
     t("additionalDuration", "Durée supplémentaire", "text", "DUREE SUPPLEMENTAIRE"),
@@ -134,7 +178,7 @@ export const FIELD_REGISTRY: readonly FieldDefinition[] = [
     t("guardHouseArea", "Poste de garde", "area", "POSTE DE GARDE"),
   ]),
   ...section("SiteTechnical", "technical_capacities", [
-    t("heightM", "Hauteur", "number", "HAUTEUR (M)", { unit: "m" }),
+    t("heightM", "Hauteur", "number", "HAUTEUR (M)", { unit: "m", constraints: { max: 9_999.99, scale: 2 } }),
     t("dockCount", "Quais", "integer", "NOMBRE DE QUAIS"),
     t("cellCount", "Cellules", "integer", "NOMBRE CELLULES"),
     t("carSpaces", "Places véhicules légers", "integer", "NOMBRE DE PLACE VL"),
@@ -154,14 +198,14 @@ export const FIELD_REGISTRY: readonly FieldDefinition[] = [
   // ── ICPE ───────────────────────────────────────────────────────────────
   ...section("SiteIcpe", "icpe", [
     t("holder", "Détenteur ICPE", "text", "PORTEUR DE L'ICPE"),
-    t("headingsRaw", "Rubriques (texte d'origine)", "longtext", "PRINCIPALES RUBRIQUES ICPE"),
+    t("headingsRaw", "Rubriques (texte d'origine)", "longtext", "PRINCIPALES RUBRIQUES ICPE", { editable: false, helpFr: "Texte du tableur conservé ; les rubriques se modifient dans la liste ci-dessous." }),
     t("georisquesUrl", "Fiche Géorisques", "url", "Lien Géorisques"),
     t("documentsReference", "Documents administratifs ICPE", "reference", "DOCUMENTS ADMINISTRATIFS ICPE"),
   ]),
 
   // ── Energy ─────────────────────────────────────────────────────────────
   ...section("SiteEnergyProfile", "energy", [
-    t("referenceYear", "Année de référence", "integer", "ANNEE DE REFERENCE"),
+    t("referenceYear", "Année de référence", "integer", "ANNEE DE REFERENCE", { constraints: { min: 1900, max: 2100 } }),
     t("referenceElectricityKwh", "Électricité de l'année de référence", "number", "ANNEE DE REFERENCE CONSO ELEC EN KWH", { unit: "kWh" }),
     t("referenceGasKwh", "Gaz de l'année de référence", "number", "ANNEE DE REFERENCE CONSO GAZ EN KWH", { unit: "kWh" }),
     t("operatCertificates", "Certificats OPERAT", "reference", "CERTIFICATS OPERAT"),

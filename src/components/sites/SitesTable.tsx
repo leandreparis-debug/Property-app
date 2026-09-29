@@ -59,7 +59,7 @@ export function SitesTable() {
   const mapHref = (code: string) => `/?${[filterPart, `site=${encodeURIComponent(code)}`].filter(Boolean).join("&")}`;
 
   return (
-    <div className="flex h-[calc(100dvh-8.5rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface-1">
+    <div className="flex h-[calc(100dvh-11.5rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface-1">
       <div className="min-h-0 flex-1 overflow-auto" data-slot="sites-table-scroll">
         <table className="w-full min-w-[1280px] border-separate border-spacing-0 text-sm" data-slot="sites-table">
           <caption className="sr-only">Liste des sites, triée par {COLUMNS.find((c) => c.key === sort.key)?.label.toLowerCase()} ({sort.direction === "asc" ? "croissant" : "décroissant"})</caption>

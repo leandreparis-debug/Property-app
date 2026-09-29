@@ -4,9 +4,15 @@ import { BreakdownBar, LeaseTimeline, TrendChart } from "@/components/charts";
 import { EmptyState } from "@/components/empty/EmptyState";
 import { StatusDot } from "@/components/status/StatusDot";
 import { missingKeyFields, type ComplianceSite } from "@/domain/compliance";
-import { BuildingWorkKind, DocumentCategory } from "@/domain/enums";
-import { detectReference, getField, isFilledValue, REFERENCE_KIND_LABELS, sectionTitle, type FieldDefinition, type FieldEntity, type FieldId } from "@/domain/fields";
-import { metricsByDomain, type MetricCode, type MetricDomain } from "@/domain/metrics";
+import { BuildingWorkKind, DocumentCategory, ExternalSystem, IcpeRegime } from "@/domain/enums";
+import { detectReference, fieldsOfSection, getField, isFilledValue, REFERENCE_KIND_LABELS, sectionTitle, type FieldDefinition, type FieldEntity, type FieldId, type FieldSection } from "@/domain/fields";
+import { toWire } from "@/domain/fields/wire";
+import { SectionEditor } from "@/components/editing/SectionEditor";
+import { MetricEditor } from "@/components/editing/MetricEditor";
+import { ListEditor } from "@/components/editing/ListEditor";
+import { DeleteDocumentButton, DocumentUploader } from "@/components/editing/DocumentControls";
+import { SECTION_ENTITY } from "@/server/sites/edit";
+import { isFinancialMetric, metricsByDomain, type MetricCode, type MetricDomain } from "@/domain/metrics";
 import { leaseMilestones } from "@/domain/site-sheet/lease-timeline";
 import { surfaceBreakdown } from "@/domain/site-sheet/surfaces";
 import { decennialEstimate } from "@/domain/site-sheet/works";
@@ -29,6 +35,12 @@ export interface SheetContext {
   hint: (entity: FieldEntity, entityId: string | null | undefined, field: string) => ProvenanceHint | null;
   /** Provenance of a yearly metric value. */
   metricHint: (code: string, year: number) => ProvenanceHint | null;
+  /** The user may edit this section (`site:write`, plus `finance:read` for financial data; never an archived site). */
+  canEditSection: (section: FieldSection) => boolean;
+  /** `site:write` on a non-archived site (lists, non-financial metrics). */
+  canWrite: boolean;
+  /** `document:upload` on a non-archived site. */
+  canUpload: boolean;
 }
 
 /** Record of each registry entity. */
@@ -45,18 +57,43 @@ function recordOf(ctx: SheetContext, entity: FieldEntity): (Record<string, unkno
   return (map[entity] as (Record<string, unknown> & { id: string }) | null) ?? null;
 }
 
+/** Provenance of a registry field, with the target of its history. */
+function fieldHint(ctx: SheetContext, def: FieldDefinition, recordId: string | null | undefined): ProvenanceHint | null {
+  const hint = ctx.hint(def.entity, recordId, def.key);
+  return hint ? { ...hint, history: { entity: def.entity, field: def.key, labelFr: def.labelFr } } : null;
+}
+
 function items(ctx: SheetContext, entity: FieldEntity, section: Parameters<typeof sectionItems>[0], keep?: (def: FieldDefinition) => boolean): FieldItem[] {
   const record = recordOf(ctx, entity);
-  const all = sectionItems(section, record, (def) => ctx.hint(def.entity, record?.id, def.key));
+  const all = sectionItems(section, record, (def) => fieldHint(ctx, def, record?.id));
   return keep ? all.filter((i) => keep(i.def)) : all;
+}
+
+/**
+ * A registry section of the sheet, editable in place when allowed: the
+ * read-only value list, and the form generated from the registry.
+ */
+function Editable({ ctx, section, title, keep, columns = 2, empty }: { ctx: SheetContext; section: FieldSection; title: string; keep?: (def: FieldDefinition) => boolean; columns?: 1 | 2; empty?: ReactNode }) {
+  const entity = SECTION_ENTITY[section];
+  const record = recordOf(ctx, entity);
+  const fields = fieldsOfSection(section).filter((d) => !keep || keep(d));
+  const initial = Object.fromEntries(fields.map((d) => [d.key, toWire(d, record?.[d.key], d.precisionKey ? record?.[d.precisionKey] : undefined)]));
+  return (
+    <SectionEditor siteId={ctx.detail.site.id} section={section} title={title} fields={fields} initial={initial} canEdit={ctx.canEditSection(section)}>
+      {record || !empty ? <FieldList items={items(ctx, entity, section, keep)} columns={columns} /> : empty}
+    </SectionEditor>
+  );
 }
 
 function itemOf(ctx: SheetContext, id: FieldId): FieldItem {
   const def = getField(id);
   const record = recordOf(ctx, def.entity);
   const value = record?.[def.key];
-  return { def, value, hint: isFilledValue(value) ? ctx.hint(def.entity, record?.id, def.key) : null };
+  return { def, value, hint: isFilledValue(value) ? fieldHint(ctx, def, record?.id) : null };
 }
+
+const IS_OPERATOR = (d: FieldDefinition) => d.key === "operatingMode" || d.key === "logisticsOperator";
+const NOT_OPERATOR = (d: FieldDefinition) => !IS_OPERATOR(d);
 
 /** « Accès restreint » (no `finance:read`). */
 export function RestrictedFinance({ compact = false }: { compact?: boolean }) {
@@ -170,7 +207,6 @@ export function OverviewPanel(ctx: SheetContext) {
   const occupancy = detail.occupancyCost.at(-1);
   const energy = energyPerSqm(detail);
   const milestones = leaseMilestones(detail.lease, today, detail.evaluation.reasons);
-  const organization = items(ctx, "Site", "organization", (d) => d.key !== "operatingMode" && d.key !== "logisticsOperator");
   return (
     <div className="space-y-5">
       <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -210,16 +246,13 @@ export function OverviewPanel(ctx: SheetContext) {
         </SheetSection>
       </div>
 
-      <SheetSection title={sectionTitle("identity")} id="overview-identity">
-        <FieldList items={items(ctx, "Site", "identity")} />
+      <Editable ctx={ctx} section="identity" title={sectionTitle("identity")} />
+      <SheetSection title="Identifiants externes" id="overview-external-ids">
+        <ExternalIdsList ctx={ctx} />
       </SheetSection>
       <div className="grid gap-5 lg:grid-cols-2">
-        <SheetSection title="Organisation" id="overview-organization">
-          <FieldList items={organization} columns={1} />
-        </SheetSection>
-        <SheetSection title={sectionTitle("location")} id="overview-location">
-          <FieldList items={items(ctx, "Site", "location")} columns={1} />
-        </SheetSection>
+        <Editable ctx={ctx} section="organization" title="Organisation" keep={NOT_OPERATOR} columns={1} />
+        <Editable ctx={ctx} section="location" title={sectionTitle("location")} columns={1} />
       </div>
     </div>
   );
@@ -236,12 +269,14 @@ export function LeasePanel(ctx: SheetContext) {
       <SheetSection title="Frise du bail" id="lease-timeline">
         <LeaseTimeline milestones={leaseMilestones(detail.lease, today, detail.evaluation.reasons)} today={today} status={detail.evaluation.status} size="large" />
       </SheetSection>
-      <SheetSection title={sectionTitle("lease")} id="lease-fields">
-        {detail.lease ? <FieldList items={items(ctx, "Lease", "lease")} /> : <p className="text-sm text-text-muted">Aucun bail enregistré pour ce site.</p>}
-      </SheetSection>
-      <SheetSection title={sectionTitle("lease_financial")} id="lease-financial">
-        {canFinance ? <FieldList items={items(ctx, "Lease", "lease_financial")} /> : <RestrictedFinance compact />}
-      </SheetSection>
+      <Editable ctx={ctx} section="lease" title={sectionTitle("lease")} empty={<p className="text-sm text-text-muted">Aucun bail enregistré pour ce site.</p>} />
+      {canFinance ? (
+        <Editable ctx={ctx} section="lease_financial" title={sectionTitle("lease_financial")} empty={<p className="text-sm text-text-muted">Aucun bail enregistré pour ce site.</p>} />
+      ) : (
+        <SheetSection title={sectionTitle("lease_financial")} id="lease-financial">
+          <RestrictedFinance compact />
+        </SheetSection>
+      )}
     </div>
   );
 }
@@ -250,32 +285,48 @@ export function LeasePanel(ctx: SheetContext) {
 // Operations
 // ─────────────────────────────────────────────────────────────────────────────
 
-function metricRows(detail: SiteDetail, domain: MetricDomain) {
-  return metricsByDomain(domain).map((metric) => ({ metric, series: detail.metrics[metric.code as MetricCode] ?? [] }));
+/** Metrics of a domain the user may read (financial ones need `finance:read`). */
+function visibleMetrics(ctx: SheetContext, domain: MetricDomain) {
+  return metricsByDomain(domain).filter((m) => ctx.canFinance || !isFinancialMetric(m.code));
 }
 
-function yearsOf(detail: SiteDetail, domain: MetricDomain, extra: readonly number[] = []): number[] {
+function metricRows(ctx: SheetContext, domain: MetricDomain) {
+  return visibleMetrics(ctx, domain).map((metric) => ({ metric, series: ctx.detail.metrics[metric.code as MetricCode] ?? [] }));
+}
+
+function yearsOf(ctx: SheetContext, domain: MetricDomain, extra: readonly number[] = []): number[] {
   const years = new Set<number>(extra);
-  for (const m of metricsByDomain(domain)) for (const p of detail.metrics[m.code as MetricCode] ?? []) years.add(p.year);
+  for (const m of visibleMetrics(ctx, domain)) for (const p of ctx.detail.metrics[m.code as MetricCode] ?? []) years.add(p.year);
   return [...years].sort((a, b) => a - b);
 }
 
 function MetricBlock({ ctx, domain, caption, occupancy }: { ctx: SheetContext; domain: MetricDomain; caption: string; occupancy?: boolean }) {
-  const years = yearsOf(ctx.detail, domain, occupancy ? ctx.detail.occupancyCost.map((o) => o.year) : []);
-  if (years.length === 0) return <p className="text-sm text-text-muted">Aucun indicateur annuel renseigné.</p>;
-  return <MetricTable caption={caption} rows={metricRows(ctx.detail, domain)} years={years} hintOf={ctx.metricHint} occupancy={occupancy ? ctx.detail.occupancyCost : undefined} />;
+  const years = yearsOf(ctx, domain, occupancy ? ctx.detail.occupancyCost.map((o) => o.year) : []);
+  const metrics = visibleMetrics(ctx, domain);
+  const values: Record<string, number | null> = {};
+  for (const m of metrics) for (const p of ctx.detail.metrics[m.code as MetricCode] ?? []) values[`${m.code}|${p.year}`] = p.value;
+  return (
+    <MetricEditor
+      siteId={ctx.detail.site.id}
+      caption={caption}
+      years={yearsOf(ctx, domain)}
+      values={values}
+      rows={metrics.map((m) => ({ code: m.code, labelFr: m.labelFr, unit: m.unit, editable: ctx.canWrite && (ctx.canFinance || !isFinancialMetric(m.code)) }))}
+    >
+      {years.length === 0 ? (
+        <p className="text-sm text-text-muted">Aucun indicateur annuel renseigné.</p>
+      ) : (
+        <MetricTable caption={caption} rows={metricRows(ctx, domain)} years={years} hintOf={ctx.metricHint} occupancy={occupancy ? ctx.detail.occupancyCost : undefined} />
+      )}
+    </MetricEditor>
+  );
 }
 
 export function OperationsPanel(ctx: SheetContext) {
-  const operator = items(ctx, "Site", "organization", (d) => d.key === "operatingMode" || d.key === "logisticsOperator");
   return (
     <div className="space-y-5">
-      <SheetSection title="Exploitation" id="operations-operator">
-        <FieldList items={operator} />
-      </SheetSection>
-      <SheetSection title={sectionTitle("service_contract")} id="operations-contract">
-        {ctx.detail.serviceContract ? <FieldList items={items(ctx, "ServiceContract", "service_contract")} /> : <p className="text-sm text-text-muted">Aucun contrat de prestation enregistré.</p>}
-      </SheetSection>
+      <Editable ctx={ctx} section="organization" title="Exploitation" keep={IS_OPERATOR} />
+      <Editable ctx={ctx} section="service_contract" title={sectionTitle("service_contract")} empty={<p className="text-sm text-text-muted">Aucun contrat de prestation enregistré.</p>} />
       <SheetSection title="Activité par année" id="operations-activity">
         <MetricBlock ctx={ctx} domain="ACTIVITY" caption="Effectif, chiffre d'affaires marchandise et colis par année" />
       </SheetSection>
@@ -322,9 +373,7 @@ export function EnergyPanel(ctx: SheetContext) {
   const kwh = (v: number) => formatMetricPerSqm("kWh", v);
   return (
     <div className="space-y-5">
-      <SheetSection title={sectionTitle("energy")} id="energy-profile">
-        <FieldList items={items(ctx, "SiteEnergyProfile", "energy")} />
-      </SheetSection>
+      <Editable ctx={ctx} section="energy" title={sectionTitle("energy")} />
       <SheetSection title="Consommations par année" id="energy-table">
         <MetricBlock ctx={ctx} domain="ENERGY" caption="Consommations par année : valeur, valeur au m² et évolution sur un an" />
       </SheetSection>
@@ -348,32 +397,69 @@ export function EnergyPanel(ctx: SheetContext) {
 // Technical
 // ─────────────────────────────────────────────────────────────────────────────
 
-function WorksHistory({ detail, today }: { detail: SiteDetail; today: Date }) {
-  if (detail.buildingWorks.length === 0) return <p className="text-sm text-text-muted">Aucun travaux enregistré.</p>;
+const precisionOptions = { day: "day", month: "month", year: "year" } as const;
+const isoDay = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
+
+/** Building works: chronological list, editable row by row, with the ten-year warranty estimate. */
+function WorksList({ ctx }: { ctx: SheetContext }) {
+  const { detail, today } = ctx;
   return (
-    <ol className="space-y-3" data-slot="works">
-      {detail.buildingWorks.map((w) => {
+    <ListEditor
+      siteId={detail.site.id}
+      kind="buildingWork"
+      caption="Historique des travaux"
+      itemLabel="Travaux"
+      empty="Aucun travaux enregistré."
+      canEdit={ctx.canWrite}
+      fields={[
+        { key: "kind", labelFr: "Type", type: "select", options: BuildingWorkKind.values.map((v) => ({ value: v, label: BuildingWorkKind.label(v) })) },
+        { key: "date", labelFr: "Date", type: "dateWithPrecision" },
+        { key: "description", labelFr: "Description", type: "longtext" },
+      ]}
+      rows={detail.buildingWorks.map((w) => {
         const decennial = decennialEstimate(w, today);
-        const kind = BuildingWorkKind.is(w.kind) ? BuildingWorkKind.label(w.kind) : w.kind;
-        return (
-          <li key={w.id} className="flex gap-3 border-l-2 border-border pl-3 text-sm" data-kind={w.kind}>
-            <div className="min-w-0">
-              <p>
-                <span className="font-medium">{kind}</span>
-                <span className="numeric text-text-muted"> — {w.date ? formatDateWithPrecision(w.date, w.datePrecision as never) : "date inconnue"}</span>
-              </p>
-              {w.description && <p className="whitespace-pre-line text-text-muted">{w.description}</p>}
+        return {
+          id: w.id,
+          values: { kind: w.kind, date: { date: isoDay(w.date), precision: precisionOptions[(w.datePrecision ?? "day") as keyof typeof precisionOptions] ?? "day" }, description: w.description ?? "" },
+          cells: [
+            BuildingWorkKind.is(w.kind) ? BuildingWorkKind.label(w.kind) : w.kind,
+            <span key="d" className="numeric">{w.date ? formatDateWithPrecision(w.date, w.datePrecision as never) : "date inconnue"}</span>,
+            <span key="x" className="block">
+              {w.description && <span className="block whitespace-pre-line text-text-muted">{w.description}</span>}
               {decennial && (
-                <p className="mt-1 text-xs" data-slot="decennial">
+                <span className="mt-1 block text-xs" data-slot="decennial">
                   Fin de garantie décennale estimée : <span className="numeric font-medium">{formatDateWithPrecision(decennial.endDate, decennial.precision)}</span>
                   <span className="text-text-muted"> — estimation à partir de la date de travaux</span>
-                </p>
+                </span>
               )}
-            </div>
-          </li>
-        );
+            </span>,
+          ],
+        };
       })}
-    </ol>
+    />
+  );
+}
+
+/** External ids of the site (Qlik Sense, code AL, RAMSES), editable. */
+function ExternalIdsList({ ctx }: { ctx: SheetContext }) {
+  return (
+    <ListEditor
+      siteId={ctx.detail.site.id}
+      kind="externalId"
+      caption="Identifiants externes"
+      itemLabel="Identifiant"
+      empty="Aucun identifiant externe."
+      canEdit={ctx.canWrite}
+      fields={[
+        { key: "system", labelFr: "Système", type: "select", options: ExternalSystem.values.map((v) => ({ value: v, label: ExternalSystem.label(v) })) },
+        { key: "value", labelFr: "Identifiant", type: "text" },
+      ]}
+      rows={ctx.detail.externalIds.map((e) => ({
+        id: e.id,
+        values: { system: e.system, value: e.value },
+        cells: [ExternalSystem.is(e.system) ? ExternalSystem.label(e.system) : e.system, <span key="v" className="font-mono">{e.value}</span>],
+      }))}
+    />
   );
 }
 
@@ -409,29 +495,22 @@ function Footprint({ detail }: { detail: SiteDetail }) {
 }
 
 export function TechnicalPanel(ctx: SheetContext) {
-  const { detail, today } = ctx;
+  const { detail } = ctx;
   const segments = surfaceBreakdown(detail.technical).map((s) => ({ key: s.key, label: s.labelFr, value: s.area, share: s.share }));
   return (
     <div className="space-y-5">
-      <SheetSection title={sectionTitle("technical_surfaces")} id="technical-surfaces">
-        <FieldList items={items(ctx, "SiteTechnical", "technical_surfaces")} />
-        {segments.length > 0 && (
-          <div className="mt-5">
-            <h4 className="mb-2 text-xs font-medium text-text-muted">Répartition des surfaces renseignées</h4>
-            <BreakdownBar segments={segments} title="Répartition des surfaces" />
-          </div>
-        )}
-      </SheetSection>
+      <Editable ctx={ctx} section="technical_surfaces" title={sectionTitle("technical_surfaces")} />
+      {segments.length > 0 && (
+        <SheetSection title="Répartition des surfaces renseignées" id="technical-breakdown">
+          <BreakdownBar segments={segments} title="Répartition des surfaces" />
+        </SheetSection>
+      )}
       <div className="grid gap-5 lg:grid-cols-2">
-        <SheetSection title={sectionTitle("technical_capacities")} id="technical-capacities">
-          <FieldList items={items(ctx, "SiteTechnical", "technical_capacities")} columns={1} />
-        </SheetSection>
-        <SheetSection title={sectionTitle("technical_misc")} id="technical-misc">
-          <FieldList items={items(ctx, "SiteTechnical", "technical_misc")} columns={1} />
-        </SheetSection>
+        <Editable ctx={ctx} section="technical_capacities" title={sectionTitle("technical_capacities")} columns={1} />
+        <Editable ctx={ctx} section="technical_misc" title={sectionTitle("technical_misc")} columns={1} />
       </div>
       <SheetSection title="Historique des travaux" id="technical-works">
-        <WorksHistory detail={detail} today={today} />
+        <WorksList ctx={ctx} />
       </SheetSection>
       <SheetSection title="Emprise du bâtiment" id="technical-footprint">
         <Footprint detail={detail} />
@@ -443,16 +522,6 @@ export function TechnicalPanel(ctx: SheetContext) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ICPE and risks
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** ICPE regime written out in full. */
-export const ICPE_REGIME_LABELS: Readonly<Record<string, string>> = {
-  A: "Autorisation",
-  E: "Enregistrement",
-  D: "Déclaration",
-  DC: "Déclaration avec contrôle",
-  NC: "Non classé",
-  UNKNOWN: "Non précisé",
-};
 
 function PublicItem({ item }: { item: PublicDataItem }) {
   switch (item.kind) {
@@ -516,33 +585,30 @@ export function IcpePanel(ctx: SheetContext) {
   const { detail } = ctx;
   return (
     <div className="space-y-5">
-      <SheetSection title={sectionTitle("icpe")} id="icpe-fields">
-        <FieldList items={items(ctx, "SiteIcpe", "icpe")} />
-      </SheetSection>
+      <Editable ctx={ctx} section="icpe" title={sectionTitle("icpe")} />
       <SheetSection title="Rubriques ICPE" id="icpe-headings">
-        {detail.icpeHeadings.length === 0 ? (
-          <p className="text-sm text-text-muted">Aucune rubrique enregistrée.</p>
-        ) : (
-          <table className="w-full text-sm" data-slot="icpe-headings">
-            <caption className="sr-only">Rubriques ICPE et régime</caption>
-            <thead>
-              <tr className="text-left text-xs text-text-muted">
-                <th scope="col" className="py-1 pr-4 font-medium">Rubrique</th>
-                <th scope="col" className="py-1 pr-4 font-medium">Régime</th>
-                <th scope="col" className="py-1 font-medium">Libellé</th>
-              </tr>
-            </thead>
-            <tbody>
-              {detail.icpeHeadings.map((h) => (
-                <tr key={h.id} className="border-t border-border">
-                  <th scope="row" className="numeric py-1.5 pr-4 text-left font-medium">{h.code}</th>
-                  <td className="py-1.5 pr-4">{ICPE_REGIME_LABELS[h.regime ?? "UNKNOWN"] ?? h.regime}</td>
-                  <td className="py-1.5 text-text-muted">{h.label ?? <EmptyValue />}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <ListEditor
+          siteId={detail.site.id}
+          kind="icpeHeading"
+          caption="Rubriques ICPE et régime"
+          itemLabel="Rubrique"
+          empty="Aucune rubrique enregistrée."
+          canEdit={ctx.canWrite}
+          fields={[
+            { key: "code", labelFr: "Rubrique", type: "text" },
+            { key: "regime", labelFr: "Régime", type: "select", options: IcpeRegime.values.map((v) => ({ value: v, label: IcpeRegime.label(v) })) },
+            { key: "label", labelFr: "Libellé", type: "text" },
+          ]}
+          rows={detail.icpeHeadings.map((h) => ({
+            id: h.id,
+            values: { code: h.code, regime: h.regime ?? "UNKNOWN", label: h.label ?? "" },
+            cells: [
+              <span key="c" className="numeric">{h.code}</span>,
+              IcpeRegime.is(h.regime ?? "UNKNOWN") ? IcpeRegime.label((h.regime ?? "UNKNOWN") as IcpeRegime) : h.regime,
+              <span key="l" className="text-text-muted">{h.label ?? <EmptyValue />}</span>,
+            ],
+          }))}
+        />
       </SheetSection>
       <section aria-labelledby="icpe-public" className="space-y-3">
         <h3 id="icpe-public" className="text-sm font-semibold">Données publiques</h3>
@@ -608,8 +674,15 @@ export function DocumentsPanel(ctx: SheetContext) {
   const categories = [...byCategory.keys()].sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
   return (
     <div className="space-y-5">
+      {ctx.canUpload && <DocumentUploader siteId={detail.site.id} />}
       {detail.documents.length === 0 ? (
-        <EmptyState icon={FileText} headingLevel="h3" title="Aucun document enregistré" description="L'ajout de documents (bail, plans, dossiers ICPE…) sera disponible dans une prochaine version." className="py-8" />
+        <EmptyState
+          icon={FileText}
+          headingLevel="h3"
+          title="Aucun document enregistré"
+          description={ctx.canUpload ? "Ajouter un bail, des plans ou un dossier ICPE avec le formulaire ci-dessus." : "Les documents ajoutés par les éditeurs apparaîtront ici."}
+          className="py-8"
+        />
       ) : (
         categories.map((category) => (
           <SheetSection key={category} title={DocumentCategory.is(category) ? DocumentCategory.label(category) : category} id={`documents-${category}`}>
@@ -625,6 +698,7 @@ export function DocumentsPanel(ctx: SheetContext) {
                     <Download className="size-4" aria-hidden="true" />
                     Télécharger<span className="sr-only"> {d.title ?? "le document"}</span>
                   </a>
+                  {ctx.canUpload && <DeleteDocumentButton documentId={d.id} title={d.title ?? "Sans titre"} />}
                 </li>
               ))}
             </ul>

@@ -71,7 +71,7 @@ export const IcpeRegime = defineEnum({
   D: "Déclaration",
   DC: "Déclaration avec contrôle périodique",
   NC: "Non classé",
-  UNKNOWN: "Régime inconnu",
+  UNKNOWN: "Non précisé",
 });
 export type IcpeRegime = (typeof IcpeRegime.values)[number];
 

@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { DEFAULT_TAB, parseTab, SITE_TABS, type SiteTab } from "@/domain/site-sheet/navigation";
 import { replaceQuery } from "@/components/sites/url";
+import { useEditGuard } from "@/components/editing/feedback";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,7 +18,9 @@ export function SiteTabs({ panels }: { panels: Readonly<Record<SiteTab, ReactNod
   const active = parseTab(params.get("tab"));
   const refs = useRef(new Map<SiteTab, HTMLButtonElement>());
 
+  const guard = useEditGuard();
   const select = (tab: SiteTab, focus = false) => {
+    if (tab !== active && !guard.confirmLeave()) return;
     const next = new URLSearchParams(window.location.search);
     if (tab === DEFAULT_TAB) next.delete("tab");
     else next.set("tab", tab);

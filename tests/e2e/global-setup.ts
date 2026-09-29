@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { ADMIN, E2E_PASSWORD, VIEWER } from "./fixtures";
+import { ADMIN, E2E_PASSWORD, EDITOR, VIEWER } from "./fixtures";
 
 /** Runs a `pnpm user:*` script, feeding the password twice on stdin. */
 function run(script: string, args: string[], withPassword: boolean): { ok: boolean; output: string } {
@@ -17,11 +17,14 @@ function run(script: string, args: string[], withPassword: boolean): { ok: boole
 }
 
 /**
- * Creates (or resets) the e2e admin and viewer accounts with the CLI scripts,
- * on the database of `.env` — the one the tested server uses.
+ * Creates (or resets) the e2e admin, viewer and editor accounts with the CLI
+ * scripts, on the database of `.env` — the one the tested server uses — after
+ * removing the « E2E-… » sites left by an interrupted run.
  */
 export default function globalSetup(): void {
-  for (const user of [ADMIN, VIEWER]) {
+  // Data left by an interrupted previous run (sites « E2E-… »).
+  execFileSync("pnpm", ["-s", "tsx", "--conditions=react-server", "tests/e2e/lib/cleanup.ts"], { stdio: "ignore" });
+  for (const user of [ADMIN, VIEWER, EDITOR]) {
     const created = run("user:create", ["--email", user.email, "--name", user.name, "--role", user.role], true);
     if (created.ok) continue;
     if (!/existe déjà/.test(created.output)) throw new Error(`user:create a échoué : ${created.output}`);

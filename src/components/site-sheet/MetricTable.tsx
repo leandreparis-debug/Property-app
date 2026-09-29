@@ -1,6 +1,6 @@
 import type { MetricSeriesPoint } from "@/domain/derived";
 import type { MetricDefinition } from "@/domain/metrics";
-import { partialMention, type OccupancyCostYear } from "@/domain/site-sheet/occupancy-cost";
+import { OPTIONAL_MISSING_LABEL, partialMention, type OccupancyCostYear } from "@/domain/site-sheet/occupancy-cost";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { EmptyValue } from "./FieldList";
@@ -110,7 +110,7 @@ export function MetricTable({
                         <InfoTooltip
                           lines={[
                             `Composition ${year} :`,
-                            ...o.components.map((c) => `${c.labelFr} : ${c.value === null ? "non renseigné" : formatCurrency(c.value)}`),
+                            ...o.components.map((c) => `${c.labelFr} : ${c.value !== null ? formatCurrency(c.value) : c.optional ? OPTIONAL_MISSING_LABEL : "non renseigné"}`),
                           ]}
                         >
                           <span className="numeric">{formatCurrency(o.total)}</span>

@@ -81,7 +81,7 @@ describe("getSiteDetail", () => {
     expect(detail.site.code).toBe("FULL-1");
     expect(detail.lease?.code).toBe("BAIL-1");
     expect(typeof detail.lease?.marketRentValue).toBe("number"); // Decimal → number
-    expect(detail.externalIds).toEqual([{ system: "AL_CODE", value: "AL-1" }]);
+    expect(detail.externalIds).toEqual([{ id: expect.any(String), system: "AL_CODE", value: "AL-1" }]);
     expect(detail.icpeHeadings.map((h) => h.code)).toEqual(["1510"]);
     expect(detail.metrics.RENT?.map((p) => [p.year, p.value, p.perSqm])).toEqual([[2024, 500000, 50], [2025, 510000, 51]]);
     expect(detail.metrics.RENT?.[1]?.yearOverYear).toBeCloseTo(2);

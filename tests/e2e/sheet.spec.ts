@@ -62,7 +62,7 @@ test.describe("fiche entrepôt", () => {
 
     const code = page.locator('[data-field="Site.code"] [data-slot="provenance"]');
     await code.hover();
-    await expect(page.getByRole("tooltip")).toContainText(/^Import du tableur — \d{1,2} \S+ \d{4}$/);
+    await expect(page.getByRole("tooltip")).toContainText(/^Import du tableur — \d{1,2} \S+ \d{4}(Historique)?$/);
     await page.mouse.move(0, 0);
     await code.focus();
     await expect(page.getByRole("tooltip")).toContainText("Import du tableur");
@@ -184,17 +184,17 @@ test.describe("fiche entrepôt — lecteur", () => {
     const entry = (await index(page))[0]!;
     await page.goto(`/sites/${entry.id}`);
     await expect(page.getByRole("button", { name: "Imprimer" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Modifier/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Modifier/ })).toHaveCount(0);
   });
 });
 
-test.describe("fiche entrepôt — rôle avec droit d'écriture", () => {
-  test("« Modifier » est désactivé avec l'infobulle « Disponible prochainement »", async ({ page }) => {
+test.describe("fiche entrepôt — administrateur", () => {
+  test("les sections portent un bouton « Modifier » ; « Plus d'actions » propose l'archivage", async ({ page }) => {
     await page.goto("/sites");
     const entry = (await index(page))[0]!;
     await page.goto(`/sites/${entry.id}`);
-    await expect(page.getByRole("button", { name: /Modifier/ })).toBeDisabled();
-    await page.locator('[data-slot="edit-disabled"]').hover();
-    await expect(page.getByRole("tooltip")).toHaveText("Disponible prochainement");
+    await expect(page.locator('[data-section="identity"]').getByRole("button", { name: /^Modifier/ })).toBeVisible();
+    await page.getByRole("button", { name: "Plus d'actions" }).click();
+    await expect(page.getByRole("menuitem", { name: "Archiver le site" })).toBeVisible();
   });
 });

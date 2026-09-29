@@ -59,8 +59,12 @@ export function formatFieldValue(def: Pick<FieldDefinition, "type" | "unit" | "o
     case "dateWithPrecision":
       if (isDateWithPrecision(value)) return formatDateWithPrecision(value.date, value.precision);
       return formatDateWithPrecision(value instanceof Date || typeof value === "string" ? value : null, "day");
-    case "area":
-      return formatSurface(numeric(value));
+    case "area": {
+      // Whole areas without decimals; a typed fraction (« 12 500,5 ») is kept (2 decimals at most).
+      const n = numeric(value);
+      const decimals = n === null || Number.isInteger(n) ? 0 : Number.isInteger(n * 10) ? 1 : 2;
+      return formatSurface(n, { decimals });
+    }
     case "money":
       return formatCurrency(numeric(value));
     case "moneyPerSqm": {

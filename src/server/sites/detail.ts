@@ -50,7 +50,7 @@ function plain<T extends object>(record: T): PlainRecord<T> {
 }
 
 const DETAIL_INCLUDE = {
-  externalIds: { select: { system: true, value: true }, orderBy: [{ system: "asc" }, { value: "asc" }] },
+  externalIds: { select: { id: true, system: true, value: true }, orderBy: [{ system: "asc" }, { value: "asc" }] },
   lease: true,
   serviceContract: true,
   technical: true,
@@ -95,7 +95,7 @@ export interface SiteFootprint {
 /** Everything the site sheet shows. */
 export interface SiteDetail {
   site: SiteScalars;
-  externalIds: { system: string; value: string }[];
+  externalIds: { id: string; system: string; value: string }[];
   lease: PlainRecord<NonNullable<SiteWithRelations["lease"]>> | null;
   serviceContract: PlainRecord<NonNullable<SiteWithRelations["serviceContract"]>> | null;
   technical: PlainRecord<NonNullable<SiteWithRelations["technical"]>> | null;
@@ -219,6 +219,7 @@ interface ProvenanceLine {
   source: string;
   occurred_at: Date;
   batch_id: string | null;
+  comment: string | null;
   actor_name: string | null;
   actor_email: string | null;
 }
@@ -236,10 +237,10 @@ export interface ProvenanceIndex {
  */
 export async function getFieldProvenance(siteId: string): Promise<ProvenanceIndex> {
   const lines = await db.$queryRaw<ProvenanceLine[]>`
-    SELECT last.id, last.entity_type, last.entity_id, last.field, last.source, last.occurred_at, last.batch_id,
+    SELECT last.id, last.entity_type, last.entity_id, last.field, last.source, last.occurred_at, last.batch_id, last.comment,
            u.name AS actor_name, u.email AS actor_email
     FROM (
-      SELECT id, entity_type, entity_id, field, source, occurred_at, batch_id, actor_id,
+      SELECT id, entity_type, entity_id, field, source, occurred_at, batch_id, actor_id, comment,
              ROW_NUMBER() OVER (PARTITION BY entity_type, entity_id, field ORDER BY id DESC) AS rn
       FROM audit_logs
       WHERE site_id = ${siteId} AND action IN ('CREATE', 'UPDATE')
@@ -254,6 +255,7 @@ export async function getFieldProvenance(siteId: string): Promise<ProvenanceInde
       occurredAt: line.occurred_at,
       actorName: line.actor_name ?? line.actor_email,
       batchId: line.batch_id,
+      comment: line.comment,
     });
   }
   return { lines: map };

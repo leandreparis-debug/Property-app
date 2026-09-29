@@ -9,6 +9,7 @@ const EXPECTED: Record<Action, { viewer: boolean; editor: boolean; admin: boolea
   "export:read": { viewer: true, editor: true, admin: true },
   "finance:read": { viewer: true, editor: true, admin: true },
   "site:write": { viewer: false, editor: true, admin: true },
+  "site:archive": { viewer: false, editor: false, admin: true },
   "equipment:write": { viewer: false, editor: true, admin: true },
   "document:upload": { viewer: false, editor: true, admin: true },
   "plan:calibrate": { viewer: false, editor: true, admin: true },
@@ -25,7 +26,7 @@ const cases = ROLES.flatMap((role) => ACTIONS.map((action) => [role, action, EXP
 describe("permission matrix", () => {
   it("covers every action", () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([...ACTIONS].sort());
-    expect(cases).toHaveLength(36);
+    expect(cases).toHaveLength(39);
   });
 
   it.each(cases)("%s × %s → %s", (role, action, allowed) => {

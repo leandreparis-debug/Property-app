@@ -8,8 +8,10 @@ export interface AuditContext {
   actorId: string | null;
   /** Channel of the change. */
   source: AuditSource;
-  /** Import or enrichment batch the change belongs to. */
+  /** Import or enrichment batch, or one manual save, the change belongs to. */
   batchId?: string | null;
+  /** Optional reason given by the user (≤ 500 characters), written on every line. */
+  comment?: string | null;
 }
 
 /**
@@ -36,7 +38,7 @@ const storage = (globalStore[STORAGE_KEY] ??= new AsyncLocalStorage<Readonly<Aud
  * @returns A promise of the result of `fn`.
  */
 export function runWithAuditContext<T>(context: AuditContext, fn: () => T | PromiseLike<T>): Promise<T> {
-  return storage.run(Object.freeze({ batchId: null, ...context }), async () => await fn());
+  return storage.run(Object.freeze({ batchId: null, comment: null, ...context }), async () => await fn());
 }
 
 /**

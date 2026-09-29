@@ -504,6 +504,8 @@ model AuditLog {
   /// JSON-serialized new value.
   afterValue  String?  @map("after_value") @db.NVarChar(Max)
   batchId     String?  @map("batch_id") @db.NVarChar(30)
+  /// Optional reason given by the user; the same on every line of a batch.
+  comment     String?  @db.NVarChar(500)
 
   @@index([entityType, entityId])
   @@index([siteId])

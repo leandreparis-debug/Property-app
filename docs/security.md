@@ -73,9 +73,10 @@
 | `site:read`, `export:read` | ✓ | ✓ | ✓ |
 | `finance:read` | ✓ | ✓ | ✓ |
 | `site:write`, `equipment:write`, `document:upload`, `plan:calibrate` | | ✓ | ✓ |
+| `site:archive` | | | ✓ |
 | `import:run`, `enrichment:apply`, `user:manage`, `audit:read`, `settings:manage` | | | ✓ |
 
-Un rôle inconnu n'accorde rien. `assertCan()` lève `ForbiddenError`. La matrice est testée de façon exhaustive (36 couples rôle × action).
+Un rôle inconnu n'accorde rien. `assertCan()` lève `ForbiddenError`. La matrice est testée de façon exhaustive (39 couples rôle × action).
 
 ### Données financières (`finance:read`)
 
@@ -104,6 +105,55 @@ Les **liens externes** affichés par la fiche (Géorisques, GED…) sont ouverts
 - seuls `http:` et `https:` deviennent des liens ;
 - ils portent `rel="noopener noreferrer"` ;
 - les chemins réseau ne deviennent jamais des liens `file://`.
+
+### Édition (étape 9)
+
+Toutes les permissions sont vérifiées **côté serveur**, dans chaque Server Action et chaque route. L'interface ne fait que masquer ce qui n'est pas autorisé.
+
+| Action | Permission |
+|---|---|
+| Modifier une section, une liste, une série non financière | `site:write` |
+| Modifier un champ ou un indicateur financier | `site:write` **et** `finance:read` |
+| Ajouter ou supprimer un document | `document:upload` |
+| Créer un site | `site:write` |
+| Archiver ou désarchiver un site | `site:archive` (administrateurs uniquement) |
+
+Règles de sécurité de l'édition :
+- **Liste blanche** : seuls les champs `editable: true` du registre sont acceptés. Tout autre champ fait refuser la requête entière.
+- **Motif** : 500 caractères au maximum ; il est obligatoire pour archiver.
+- **Traçabilité** : les écritures passent par `runWithAuditContext({ source: "ui", actorId, batchId, comment })`.
+- **Site archivé** : il n'est pas modifiable.
+- **Server Actions** : Next.js vérifie leur origine.
+- **Routes** : les routes qui modifient des données passent par `withApiAuth`, qui exige un en-tête `Origin` identique à `APP_URL` (403 sinon, y compris sans en-tête).
+
+### Ajout et suppression de documents
+
+**Ajout** : `POST /api/sites/[id]/documents` (multipart, `document:upload`, `Origin` vérifié).
+- **Taille** : **50 Mo** au maximum. `Content-Length` est contrôlé **avant** toute lecture, puis le flux est compté pendant la lecture (`readLimitedBody`), si bien qu'un en-tête absent ou mensonger ne permet pas de dépasser la limite. Au-delà : 413 « Fichier trop volumineux (50 Mo maximum) ».
+- **Types autorisés** : PDF, PNG, JPEG, WebP, DOCX, XLSX, PPTX, DWG, DXF. Ils sont vérifiés **par la signature du contenu**, pas seulement par l'extension (`src/domain/documents.ts`) :
+  - octets magiques pour PDF, PNG, JPEG, WebP et DWG ;
+  - archive ZIP contenant `[Content_Types].xml` et la partie attendue (`word/`, `xl/`, `ppt/`) pour DOCX, XLSX et PPTX ;
+  - texte sans octet nul commençant par un groupe `0 / SECTION` pour DXF.
+
+  Un contenu qui ne correspond pas à son extension est refusé (415).
+- **Nom de fichier** : nettoyé (chemin retiré ; lettres, chiffres, espaces et `- _ . , ( ) ' &` uniquement ; 150 caractères au plus) et utilisé comme titre par défaut.
+- **Stockage** : `STORAGE_ROOT/documents/{siteId}/{documentId}.{ext}`, chemin résolu sous `STORAGE_ROOT`. Le nom stocké est **généré** : le nom fourni par le navigateur n'est jamais utilisé comme chemin.
+- **Base** : le `sha256`, la taille et le type MIME déterminé par la signature sont enregistrés. La création du `Document` est auditée.
+
+**Suppression** : `DELETE /api/documents/[id]` (même permission, `Origin` vérifié, motif facultatif).
+- La suppression de la ligne est auditée.
+- Le fichier est **déplacé** dans `STORAGE_ROOT/trash/documents/`, jamais effacé ; la purge viendra à l'étape 11.
+- Un document encore rattaché à un plan est refusé (409).
+
+**Téléchargement** : inchangé, `Content-Disposition: attachment` et `X-Content-Type-Options: nosniff`, donc aucun document n'est affiché par le navigateur dans l'origine de l'application.
+
+**Absence d'antivirus** : le réseau fermé ne dispose d'**aucun antivirus** côté serveur. Les documents déposés ne sont pas analysés. Le risque est limité par :
+- la liste fermée de types vérifiés par signature (pas d'exécutable, de HTML ni de SVG) ;
+- le téléchargement forcé en pièce jointe ;
+- l'absence de toute exécution ou conversion côté serveur ;
+- la réservation de l'ajout aux rôles `document:upload`.
+
+Il reste recommandé d'analyser les fichiers sur les postes (antivirus local) et, au déploiement (étape 12), d'étudier le branchement d'un analyseur si l'infrastructure en propose un.
 
 ## Requêtes intersites et redirections ouvertes
 - **Server Actions** (connexion) : vérification d'origine intégrée à Next.js.
