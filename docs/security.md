@@ -114,6 +114,13 @@ Un rôle inconnu n'accorde rien. `assertCan()` lève `ForbiddenError`. La matric
 - La limite par IP est **en mémoire, pour une seule instance**. L'IP n'est fiable que derrière un proxy de confiance (`TRUST_PROXY=true`).
 - `upsert` est exécuté comme une lecture suivie d'un create ou d'un update. En cas de concurrence stricte, deux créations simultanées peuvent entrer en conflit : c'est une erreur d'unicité, pas une perte d'audit.
 
+## Crochets de test (`VIGIE_E2E_TEST_HOOKS`)
+
+La suite e2e démarre le build de production avec `VIGIE_E2E_TEST_HOOKS=1`, qui expose `window.__vigieMap` (état de la carte) au navigateur. Le crochet ne contient aucune donnée sensible : un booléen et le code du site sélectionné. Il ne doit pourtant jamais exister en production.
+- Au démarrage (`src/instrumentation-node.ts`), si la variable est définie alors que `NODE_ENV=production`, le serveur écrit un **avertissement de sécurité explicite** dans son journal. Le démarrage n'est pas bloqué, car Playwright en a besoin.
+- Un test e2e démarre le même build sans la variable et vérifie que le crochet est absent.
+- **Ne jamais définir cette variable** dans un déploiement (étape 12).
+
 ## Recommandations pour l'étape 12 (déploiement)
 - **Compte SQL applicatif dédié**, sans `db_owner` :
   - `SELECT` et `INSERT` sur `audit_logs`, **sans** `UPDATE` ni `DELETE` :

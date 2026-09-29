@@ -131,6 +131,42 @@ La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôl
 
 **Mouvement** : vol de caméra `flyTo` de 1,6 s (zoom 16, inclinaison 60°). Avec `prefers-reduced-motion`, toutes les transitions de caméra sont instantanées.
 
+## Vues denses
+
+**Filtres partagés** (carte, liste, supervision) :
+- bouton « Filtres » à droite de la barre de recherche, avec un badge `accent` qui compte les critères actifs ;
+- panneau verre à gauche (320 px), une section par critère, cases à cocher avec le nombre de sites, recherche interne au-delà de 8 valeurs ;
+- puces des filtres actifs sous la barre : chaque puce est un bouton « Retirer le filtre … », précédé du compteur « n / total sites » (`aria-live="polite"`).
+
+**Légende cliquable** : un statut est un bouton (`aria-pressed`) qui ajoute ou retire ce statut du filtre. Les statuts non retenus sont atténués (45 %). Le total reste affiché ; le nombre filtré le précède quand un filtre est actif.
+
+**Tableau** (`/sites`) :
+- vrai `<table>` avec `aria-sort` sur la colonne triée ; lignes de 36 px, en-tête collant ;
+- défilement vertical et horizontal dans son propre conteneur ;
+- chiffres en `numeric`, alignés à droite ;
+- statut : pastille et libellé court ;
+- pied avec le nombre de sites affichés et la surface totale.
+- Une ligne entière est cliquable et focalisable (Entrée ouvre la fiche). L'icône « Voir sur la carte » est un lien distinct.
+
+**Supervision** :
+- grille dense sur un écran (cible 1920×1080, lisible dès 1440×900) ;
+- grands chiffres en Geist Mono ;
+- cartes `surface-1` avec bordure ;
+- titres de section en petites capitales `text-muted`.
+
+**Couleurs dans les graphiques** :
+- **Répartitions par statut** (barre empilée, barres par région) : couleurs de statut, **toujours avec une légende ou un libellé**. Le segment « Conforme » est atténué (70 %).
+- **Tout autre graphique** : tokens neutres uniquement. L'histogramme des échéances est en `surface-3`, sauf la tranche « Arbitrage dépassé » en `status-critical`, avec son libellé. `accent` marque seulement la sélection (région ou tranche filtrée).
+- Aucune bibliothèque de graphiques : barres en HTML/CSS.
+
+**Mode présentation** (`?present=1`) :
+- rail et barre de commande masqués ;
+- plein écran si le navigateur le permet ;
+- typographie agrandie de 15 % (taille racine) ;
+- heure et date de mise à jour en haut à droite ;
+- rafraîchissement toutes les 5 minutes ;
+- Échap, la sortie du plein écran ou « Quitter » en sortent.
+
 ## Accessibilité
 
 - **Contraste AA** : `text` et `text-muted` dépassent 4,5:1 sur toutes les surfaces ; `accent` dépasse 4,5:1 en texte sur les panneaux et comme fond de bouton (texte `bg`). `text-subtle` (≈ 3,2:1) est réservé aux textes désactivés, aux grands textes (≥ 24 px) et aux éléments non textuels. Ces seuils sont vérifiés par `tests/unit/design-tokens.test.ts`.
@@ -138,6 +174,7 @@ La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôl
 - **Clavier** : la coque se parcourt entièrement au clavier (lien d'évitement, rail, barre de commande). Ctrl+K (⌘K sur macOS) ouvre la palette et Échap la ferme.
 - **Boutons-icônes** : ils portent toujours un `aria-label`, et les icônes sont `aria-hidden`.
 - **Animations** : toutes sont désactivées si `prefers-reduced-motion: reduce`. Le halo critique utilise `motion-safe:`. Sur la carte, les vols de caméra deviennent des sauts et le halo est figé.
+- **Vues denses** : tout se fait au clavier. Les puces sont des boutons au nom explicite. Le nombre de résultats est annoncé (`aria-live`). Le tableau est sémantique (`aria-sort`). Dans la palette Ctrl+K, chaque statut est aussi lu en texte masqué.
 - **Carte** :
   - région `role="region"` nommée « Carte des entrepôts » ;
   - `SitePeek` est une région `aria-live="polite"` ;

@@ -57,10 +57,14 @@ export const COMPLIANCE_RULES: readonly ComplianceRule[] = [
     severity: "critical",
     labelFr: "Bail échu",
     evaluate(site, today) {
-      const end = site.lease?.endDate ?? null;
+      // The next exit date when known, otherwise the end date.
       const exit = site.lease?.nextExitDate ?? null;
-      if (!end || !exit || signed(site) || !before(end, today) || !before(exit, today)) return { triggered: false };
-      return { triggered: true, detailFr: `Fin de bail le ${formatDate(end)} et prochaine sortie le ${formatDate(exit)} dépassées` };
+      const reference = exit ?? site.lease?.endDate ?? null;
+      if (!reference || signed(site) || !before(reference, today)) return { triggered: false };
+      return {
+        triggered: true,
+        detailFr: exit ? `Prochaine sortie dépassée depuis le ${formatDate(exit)}` : `Fin de bail dépassée depuis le ${formatDate(reference)}`,
+      };
     },
   },
   {
@@ -69,7 +73,7 @@ export const COMPLIANCE_RULES: readonly ComplianceRule[] = [
     labelFr: "Arbitrage de bail à préparer",
     evaluate(site, today) {
       const arbitration = arbitrationDate(site.lease);
-      if (!arbitration) return { triggered: false };
+      if (!arbitration || signed(site)) return { triggered: false };
       const limit = addMonths(today, COMPLIANCE_THRESHOLDS.arbitrationSoonMonths);
       if (before(arbitration, today) || !before(arbitration, limit)) return { triggered: false };
       const left = diffInDays(today, arbitration);

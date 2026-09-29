@@ -64,7 +64,8 @@ test("Ctrl+K ouvre la palette et Échap la ferme", async ({ page }) => {
   await page.keyboard.press("Control+K");
   const dialog = page.getByRole("dialog", { name: "Recherche" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("La recherche sera disponible prochainement.")).toBeVisible();
+  // Empty palette: the main actions are proposed.
+  await expect(dialog.getByRole("option", { name: /Afficher les sites critiques/ })).toBeVisible();
   await expect(dialog.getByRole("combobox")).toBeFocused();
 
   await page.keyboard.press("Escape");

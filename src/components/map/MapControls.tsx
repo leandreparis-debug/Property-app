@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Compass, List, Map as MapIcon, Minus, Plus, Square } from "lucide-react";
+import { Box, Compass, Crosshair, List, Map as MapIcon, Minus, Plus, Square } from "lucide-react";
 import type { ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,8 @@ export interface MapControlsProps {
   onToggle3d: () => void;
   onNorth: () => void;
   onNational: () => void;
+  /** Reframe on the filtered results. */
+  onFitResults: () => void;
   listOpen: boolean;
   onToggleList: () => void;
   /** Shift left when a right panel is open. */
@@ -69,6 +71,9 @@ export function MapControls(props: MapControlsProps) {
       </Control>
       <Control label="Vue nationale" onClick={props.onNational}>
         <MapIcon className="size-4" />
+      </Control>
+      <Control label="Cadrer les résultats" onClick={props.onFitResults}>
+        <Crosshair className="size-4" />
       </Control>
       <div className="my-0.5 h-px w-6 bg-border" />
       <Control label="Liste des sites" onClick={props.onToggleList} pressed={props.listOpen}>

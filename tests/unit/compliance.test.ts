@@ -90,14 +90,21 @@ describe("LEASE_NOTICE_IMMINENT (critical)", () => {
 });
 
 describe("LEASE_END_PASSED (critical)", () => {
-  it("fires when end AND next exit are past, not signed", () => {
+  it("uses the next exit date when known: past → fires", () => {
     const r = rule("LEASE_END_PASSED").evaluate(site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: d("2026-09-27") }) }), TODAY);
-    expect(r).toEqual({ triggered: true, detailFr: "Fin de bail le 31 janvier 2026 et prochaine sortie le 27 septembre 2026 dépassées" });
+    expect(r).toEqual({ triggered: true, detailFr: "Prochaine sortie dépassée depuis le 27 septembre 2026" });
   });
-  it("boundaries: exit today → no; one of the dates missing or future → no; signed → no", () => {
-    expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: TODAY }) }))).toBe(false);
-    expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: null }) }))).toBe(false);
+  it("end date past but next exit in the future → NOT ended", () => {
     expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: d("2027-01-01") }) }))).toBe(false);
+  });
+  it("only the end date known: past → fires, detail on the end date", () => {
+    const r = rule("LEASE_END_PASSED").evaluate(site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: null }) }), TODAY);
+    expect(r).toEqual({ triggered: true, detailFr: "Fin de bail dépassée depuis le 31 janvier 2026" });
+  });
+  it("boundaries: reference date today → no; yesterday → fires; no date → no; signed → no", () => {
+    expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: TODAY }) }))).toBe(false);
+    expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: null, nextExitDate: addDays(TODAY, -1) }) }))).toBe(true);
+    expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: null, nextExitDate: null }) }))).toBe(false);
     expect(fires("LEASE_END_PASSED", site({ lease: lease({ endDate: d("2026-01-31"), nextExitDate: d("2026-02-01"), renewalConditionsSigned: true }) }))).toBe(false);
   });
 });
@@ -108,6 +115,9 @@ describe("LEASE_ARBITRATION_SOON (warning)", () => {
     const r = rule("LEASE_ARBITRATION_SOON").evaluate(site({ lease: lease({ noticeDate: d("2027-07-15") }) }), TODAY);
     expect(r).toEqual({ triggered: true, detailFr: "Arbitrage le 15 janvier 2027 (dans 109 jours)" });
     expect(fires("LEASE_ARBITRATION_SOON", site({ lease: lease({ noticeDate: addMonths(TODAY, 6) }) }))).toBe(true);
+  });
+  it("signed renewal conditions → no trigger", () => {
+    expect(fires("LEASE_ARBITRATION_SOON", site({ lease: lease({ noticeDate: d("2027-07-15"), renewalConditionsSigned: true }) }))).toBe(false);
   });
   it("boundaries: exactly 6 months ahead → no; past → no (OVERDUE takes over)", () => {
     expect(fires("LEASE_ARBITRATION_SOON", site({ lease: lease({ noticeDate: addMonths(TODAY, 12) }) }))).toBe(false);

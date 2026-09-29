@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { NAV_ITEMS, isNavItemActive, navItemsFor, type NavItem } from "@/config/navigation";
 import type { UserRole } from "@/domain/enums";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { VigieIcon } from "@/components/brand/VigieLogo";
+import { filterQuery } from "@/domain/filters/url";
+import { isPresenting, isSiteView } from "./presentation";
 
 /** Props of {@link NavRail}. */
 export interface NavRailProps {
@@ -30,7 +32,11 @@ export interface NavRailProps {
  */
 export function NavRail({ items = NAV_ITEMS, role, footer, className }: NavRailProps) {
   const pathname = usePathname();
+  const params = useSearchParams();
   const visible = role ? navItemsFor(role, items) : items;
+  // The site views keep the filters (never « site », « sort » nor « present »).
+  const filters = filterQuery(params.toString());
+  if (isPresenting(pathname, params)) return null;
 
   return (
     <nav
@@ -51,7 +57,7 @@ export function NavRail({ items = NAV_ITEMS, role, footer, className }: NavRailP
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
-                    href={item.href}
+                    href={isSiteView(item.href) && filters ? `${item.href}?${filters}` : item.href}
                     aria-label={item.label}
                     aria-current={active ? "page" : undefined}
                     data-active={active || undefined}

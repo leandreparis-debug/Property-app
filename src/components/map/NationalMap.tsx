@@ -3,11 +3,20 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MapLibreMap, type MapGeoJSONFeature, type StyleSpecification } from "maplibre-gl";
 import { Protocol } from "pmtiles";
-import { MonitorX } from "lucide-react";
+import { FilterX, MonitorX } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { MapSiteProperties, MapSitesData } from "@/domain/map-dto";
+import { mapDataFromIndex, type FootprintRecord } from "@/domain/map-data";
+import type { MapSiteProperties } from "@/domain/map-dto";
+import { serializeFilters, withFilters } from "@/domain/filters/url";
 import { EmptyState } from "@/components/empty/EmptyState";
+import { useSiteFilters } from "@/components/filters/use-site-filters";
+import { NATIONAL_VIEW_EVENT } from "@/components/shell/CommandBar";
+import { useSiteIndex } from "@/components/sites/SiteIndexProvider";
+import { replaceQuery } from "@/components/sites/url";
 import { Button } from "@/components/ui/button";
+import type { ComplianceStatus } from "@/lib/status";
+import { cn } from "@/lib/utils";
 import { FallbackBanner } from "./FallbackBanner";
 import { MapControls } from "./MapControls";
 import { MapLegend } from "./MapLegend";
@@ -19,17 +28,21 @@ import type { MapAssets } from "./style/assets";
 import { buildAttributions } from "./style/attribution";
 import { buildBasemapStyle } from "./style/basemap-style";
 import { buildFallbackStyle, countriesFromTopology, type WorldTopology } from "./style/fallback-style";
-import { readSiteParam, withSiteParam } from "./url-state";
+import { readSiteParam, SITE_PARAM } from "./url-state";
 
 /** Props of {@link NationalMap}. */
 export interface NationalMapProps {
-  data: MapSitesData;
+  /** Building footprints (the sites come from the shared site index). */
+  footprints: FootprintRecord[];
   assets: MapAssets;
   isAdmin: boolean;
-  /** Code from `?site=` read by the server page. */
-  initialSiteCode: string | null;
   /** Expose `window.__vigieMap` (never in a production deployment). */
   exposeTestHook: boolean;
+  /**
+   * `full` (home page) or `compact` (supervision): fixed national view, no
+   * control, no hover, no SitePeek; a click opens the main map on the site.
+   */
+  variant?: "full" | "compact";
 }
 
 declare global {
@@ -47,6 +60,15 @@ export const MAX_BOUNDS: LngLatBoundsLike = [
 ];
 export const INITIAL_VIEW = { pitch: 45, bearing: -8 } as const;
 export const FLY = { zoom: 16, pitch: 60, durationMs: 1600 } as const;
+/** Reframing on the filtered results: debounce, padding, max zoom. */
+export const REFRAME = {
+  debounceMs: 400,
+  /** Leaves room for the chips (top), the legend and rail (left), the controls (right). */
+  padding: { top: 130, bottom: 70, left: 380, right: 110 },
+  maxZoom: 12,
+  pitchZoomOut: 0.5,
+  durationMs: 900,
+} as const;
 /** Minimum delay between two halo frames (~15 fps). */
 const HALO_FRAME_MS = 66;
 
@@ -80,41 +102,95 @@ const devWarn = (...args: unknown[]) => {
   if (process.env.NODE_ENV !== "production") console.warn("[carte]", ...args);
 };
 
+/** Bounds of located points, or null. */
+function boundsOf(points: readonly [number, number][]): maplibregl.LngLatBounds | null {
+  if (points.length === 0) return null;
+  const bounds = new maplibregl.LngLatBounds();
+  for (const p of points) bounds.extend(p);
+  return bounds;
+}
+
 /**
  * National map (MapLibre GL), fully offline: full Protomaps basemap when
- * installed, otherwise the local fallback style. Sites colored and ranked by
- * compliance status, clusters, hover preview, camera flight and SitePeek on
- * selection, `?site=` in the URL, accessible list.
+ * installed, otherwise the local fallback style. The sites come from the
+ * shared site index, FILTERED by the URL filters; the selection is `?site=`.
  */
-export default function NationalMap({ data, assets, isAdmin, initialSiteCode, exposeTestHook }: NationalMapProps) {
+export default function NationalMap({ footprints, assets, isAdmin, exposeTestHook, variant = "full" }: NationalMapProps) {
+  const compact = variant === "compact";
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef(new Map<number, maplibregl.Marker>());
-  const selectedRef = useRef<string | null>(initialSiteCode);
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => false);
   const reducedRef = useRef(reducedMotion);
   reducedRef.current = reducedMotion;
+  const router = useRouter();
+  const params = useSearchParams();
+
+  const { evaluatedOn } = useSiteIndex();
+  const { entries, filtered, filters, activeCount, toggleValue, clear } = useSiteFilters();
+  const hook = exposeTestHook && !compact;
 
   const [supported, setSupported] = useState(true);
   const [loaded, setLoaded] = useState(false);
-  const [selectedCode, setSelectedCode] = useState<string | null>(initialSiteCode);
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [is3d, setIs3d] = useState(true);
 
-  const sitesById = useMemo(() => new Map(data.points.features.map((f) => [f.properties.id, f])), [data]);
-  const sitesByCode = useMemo(() => new Map(data.points.features.map((f) => [f.properties.code, f])), [data]);
-  const footprintsById = useMemo(() => new Map(data.footprints.features.map((f) => [f.properties.id, f.properties])), [data]);
+  const selectedCode = compact ? null : readSiteParam(params);
+  const selectedRef = useRef<string | null>(selectedCode);
+
+  // All sites (lookups, legend totals) and the filtered ones (drawn).
+  const all = useMemo(() => mapDataFromIndex(entries, footprints, evaluatedOn), [entries, footprints, evaluatedOn]);
+  const data = useMemo(() => mapDataFromIndex(filtered, footprints, evaluatedOn), [filtered, footprints, evaluatedOn]);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const sitesByCode = useMemo(() => new Map(all.points.features.map((f) => [f.properties.code, f])), [all]);
+  const sitesById = useMemo(() => new Map(all.points.features.map((f) => [f.properties.id, f])), [all]);
+  const visibleCodes = useMemo(() => new Set(data.points.features.map((f) => f.properties.code)), [data]);
+  const footprintsById = useMemo(() => new Map(all.footprints.features.map((f) => [f.properties.id, f.properties])), [all]);
   const sitesList = useMemo(() => data.points.features.map((f) => f.properties), [data]);
+  const filtersKey = serializeFilters(filters).toString();
   const fallback = !assets.basemap;
 
   const updateHook = useCallback(
     (patch: Partial<NonNullable<Window["__vigieMap"]>>) => {
-      if (!exposeTestHook) return;
+      if (!hook) return;
       window.__vigieMap = { ready: false, selectedCode: null, ...window.__vigieMap, ...patch };
     },
-    [exposeTestHook],
+    [hook],
   );
+
+  /** Selects a site (or clears the selection) through the URL. */
+  const select = useCallback((code: string | null) => {
+    const next = new URLSearchParams(window.location.search);
+    if (code) next.set(SITE_PARAM, code);
+    else next.delete(SITE_PARAM);
+    replaceQuery(next.toString());
+  }, []);
+
+  /** Compact variant: opens the main map on a site, filters kept. */
+  const openOnMainMap = useCallback(
+    (code: string) => {
+      const q = withFilters(window.location.search, filters, ["site", "present", "sort"]);
+      router.push(`/?${[q, `site=${encodeURIComponent(code)}`].filter(Boolean).join("&")}`);
+    },
+    [filters, router],
+  );
+  const onPointClick = useRef<(code: string) => void>(() => {});
+  onPointClick.current = compact ? openOnMainMap : (code: string) => select(code);
+
+  /** Reframes the camera on the filtered located sites. */
+  const reframe = useCallback((animate: boolean) => {
+    const m = mapRef.current;
+    const bounds = boundsOf(dataRef.current.points.features.map((f) => f.geometry.coordinates as [number, number]));
+    if (!m || !bounds) return;
+    // Camera computed flat, then pulled back a little when the map is tilted
+    // (a pitched view shows less ground towards the horizon).
+    const camera = m.cameraForBounds(bounds, { padding: REFRAME.padding, maxZoom: REFRAME.maxZoom, bearing: m.getBearing() });
+    if (!camera?.center || camera.zoom === undefined) return;
+    const zoom = Math.min(REFRAME.maxZoom, camera.zoom - (m.getPitch() > 10 ? REFRAME.pitchZoomOut : 0));
+    m.easeTo({ center: camera.center, zoom, bearing: m.getBearing(), pitch: m.getPitch(), duration: animate && !reducedRef.current ? REFRAME.durationMs : 0 });
+  }, []);
 
   // ── Map creation (once) ────────────────────────────────────────────────
   useEffect(() => {
@@ -149,15 +225,23 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
           container,
           style,
           bounds: FRANCE_BOUNDS,
-          fitBoundsOptions: { padding: 48 },
+          fitBoundsOptions: { padding: compact ? 16 : 48 },
           pitch: INITIAL_VIEW.pitch,
           bearing: INITIAL_VIEW.bearing,
           maxBounds: MAX_BOUNDS,
-          minZoom: 4,
+          minZoom: compact ? 3 : 4,
           maxZoom: 18,
           maxPitch: 70,
           attributionControl: false,
-          dragRotate: true,
+          // Compact: fixed national view, clicks only.
+          dragPan: !compact,
+          dragRotate: !compact,
+          scrollZoom: !compact,
+          boxZoom: !compact,
+          doubleClickZoom: !compact,
+          keyboard: !compact,
+          touchZoomRotate: !compact,
+          touchPitch: !compact,
           canvasContextAttributes: { antialias: true },
         });
       } catch (error) {
@@ -167,18 +251,18 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
       }
       mapRef.current = map;
       const m = map;
-      m.addControl(new maplibregl.AttributionControl({ compact: false }), "bottom-right");
+      m.addControl(new maplibregl.AttributionControl({ compact }), "bottom-right");
       m.on("error", (e) => devWarn(e.error?.message ?? e));
 
       m.on("load", () => {
-        m.addSource(SITES_SOURCE, sitesSource(data.points));
-        m.addSource(FOOTPRINTS_SOURCE, footprintsSource(data.footprints));
+        m.addSource(SITES_SOURCE, sitesSource(dataRef.current.points));
+        m.addSource(FOOTPRINTS_SOURCE, footprintsSource(dataRef.current.footprints));
         for (const layer of SITE_LAYERS) m.addLayer(layer);
         setLoaded(true);
 
-        // Pulsing halo of the critical sites (paint properties only).
-        // Throttled to ~15 fps (a pulse needs no more) and paused in a hidden
-        // tab: every paint change re-renders the whole map.
+        // Pulsing halo of the critical sites: throttled to ~15 fps (a pulse
+        // needs no more) and paused in a hidden tab — every paint change
+        // re-renders the whole map.
         const start = performance.now();
         let last = 0;
         const pulse = (now: number) => {
@@ -195,11 +279,11 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
             m.setPaintProperty(LAYER.halo, "circle-opacity", opacity);
           }
         };
-        if (data.counts.critical > 0) raf = requestAnimationFrame(pulse);
+        raf = requestAnimationFrame(pulse);
       });
 
-      // Ready: after `idle`, or — since the pulsing halo repaints every frame
-      // and may prevent `idle` — once the style and the sites are rendered.
+      // Ready: after `idle`, or — since the pulsing halo repaints and may
+      // prevent `idle` — once the style and the sites are rendered.
       let ready = false;
       const markReady = () => {
         if (ready) return;
@@ -222,14 +306,19 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
           const id = props.cluster_id;
           if (seen.has(id)) continue;
           seen.add(id);
-          if (!markers.has(id)) {
-            const el = document.createElement("div");
-            el.className = "vigie-cluster-count";
-            el.textContent = String(props.point_count ?? "");
-            el.setAttribute("aria-hidden", "true");
-            const coords = (f.geometry as GeoJSON.Point).coordinates as [number, number];
-            markers.set(id, new maplibregl.Marker({ element: el, pitchAlignment: "viewport" }).setLngLat(coords).addTo(m));
+          const count = String(props.point_count ?? "");
+          const coords = (f.geometry as GeoJSON.Point).coordinates as [number, number];
+          const existing = markers.get(id);
+          if (existing) {
+            existing.setLngLat(coords);
+            if (existing.getElement().textContent !== count) existing.getElement().textContent = count;
+            continue;
           }
+          const el = document.createElement("div");
+          el.className = "vigie-cluster-count";
+          el.textContent = count;
+          el.setAttribute("aria-hidden", "true");
+          markers.set(id, new maplibregl.Marker({ element: el, pitchAlignment: "viewport" }).setLngLat(coords).addTo(m));
         }
         for (const [id, marker] of markers) {
           if (!seen.has(id)) {
@@ -240,13 +329,12 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
       };
       m.on("render", syncClusterMarkers);
 
-      // Hover preview.
+      // Hover preview (full map only).
       m.on("mousemove", LAYER.points, (e) => {
-        const f = e.features?.[0];
-        const id = f?.properties?.id as string | undefined;
+        const id = e.features?.[0]?.properties?.id as string | undefined;
         if (!id) return;
         m.getCanvas().style.cursor = "pointer";
-        setHover({ id, x: e.point.x, y: e.point.y });
+        if (!compact) setHover({ id, x: e.point.x, y: e.point.y });
       });
       m.on("mouseleave", LAYER.points, () => {
         m.getCanvas().style.cursor = "";
@@ -255,20 +343,20 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
       m.on("mouseenter", LAYER.clusters, () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", LAYER.clusters, () => (m.getCanvas().style.cursor = ""));
 
-      // Click: point → selection; cluster → zoom to its extent.
+      // Click: point → selection (or main map); cluster → zoom to its extent.
       m.on("click", LAYER.points, (e) => {
         const code = e.features?.[0]?.properties?.code as string | undefined;
-        if (code) setSelectedCode(code);
+        if (code) onPointClick.current(code);
       });
       m.on("click", LAYER.clusters, (e) => {
+        if (compact) return;
         const f = e.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = f?.properties?.cluster_id as number | undefined;
         if (clusterId === undefined) return;
         const source = m.getSource(SITES_SOURCE) as GeoJSONSource;
         void source.getClusterLeaves(clusterId, Infinity, 0).then((leaves) => {
-          const bounds = new maplibregl.LngLatBounds();
-          for (const leaf of leaves) bounds.extend((leaf.geometry as GeoJSON.Point).coordinates as [number, number]);
-          m.fitBounds(bounds, { padding: 120, maxZoom: 12, duration: reducedRef.current ? 0 : 900 });
+          const bounds = boundsOf(leaves.map((leaf) => (leaf.geometry as GeoJSON.Point).coordinates as [number, number]));
+          if (bounds) m.fitBounds(bounds, { padding: 120, maxZoom: 12, duration: reducedRef.current ? 0 : 900 });
         });
       });
 
@@ -285,13 +373,13 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
       map?.remove();
       mapRef.current = null;
       releasePmtiles();
-      if (exposeTestHook) delete window.__vigieMap;
+      if (hook) delete window.__vigieMap;
     };
-    // The map is created once; data changes are pushed by the effect below.
+    // The map is created once; data changes are pushed by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Data refresh (same map, new GeoJSON).
+  // Filtered data → sources (the cluster counts follow the filters).
   useEffect(() => {
     const m = mapRef.current;
     if (!m || !loaded) return;
@@ -299,22 +387,42 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
     (m.getSource(FOOTPRINTS_SOURCE) as GeoJSONSource | undefined)?.setData(data.footprints);
   }, [data, loaded]);
 
-  // ── Selection: highlight, camera flight, URL, test hook ────────────────
+  // Reframe after a filter change (debounced), and at load when the URL has
+  // filters. Never while SitePeek is open nor on an empty result.
+  const firstFrame = useRef(true);
+  useEffect(() => {
+    if (!loaded || compact) return;
+    const initial = firstFrame.current;
+    firstFrame.current = false;
+    if (initial && (activeCount === 0 || selectedRef.current)) return;
+    const timer = window.setTimeout(() => {
+      if (selectedRef.current || dataRef.current.points.features.length === 0) return;
+      reframe(!initial);
+    }, initial ? 0 : REFRAME.debounceMs);
+    return () => window.clearTimeout(timer);
+  }, [filtersKey, loaded, compact, activeCount, reframe]);
+
+  // National view requested by the palette.
+  const nationalView = useCallback(() => {
+    mapRef.current?.fitBounds(FRANCE_BOUNDS, { padding: 48, pitch: is3d ? INITIAL_VIEW.pitch : 0, bearing: INITIAL_VIEW.bearing, duration: reducedRef.current ? 0 : 1200 });
+  }, [is3d]);
+  useEffect(() => {
+    if (compact) return;
+    window.addEventListener(NATIONAL_VIEW_EVENT, nationalView);
+    return () => window.removeEventListener(NATIONAL_VIEW_EVENT, nationalView);
+  }, [compact, nationalView]);
+
+  // ── Selection (?site=): highlight, camera flight, test hook ─────────────
   useEffect(() => {
     const m = mapRef.current;
     const previous = selectedRef.current;
     selectedRef.current = selectedCode;
     updateHook({ selectedCode });
-    const url = withSiteParam(window.location.href, selectedCode);
-    if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-      // replaceState: no history entry and no server re-render of the page.
-      window.history.replaceState(window.history.state, "", url);
-    }
     if (!m || !loaded) return;
 
     m.setFilter(LAYER.selected, ["==", ["get", "code"], selectedCode ?? ""]);
     const prevId = previous ? sitesByCode.get(previous)?.properties.id : undefined;
-    if (prevId) m.setFeatureState({ source: FOOTPRINTS_SOURCE, id: prevId }, { selected: false });
+    if (prevId && m.getSource(FOOTPRINTS_SOURCE)) m.setFeatureState({ source: FOOTPRINTS_SOURCE, id: prevId }, { selected: false });
     const feature = selectedCode ? sitesByCode.get(selectedCode) : undefined;
     if (!feature) return;
     m.setFeatureState({ source: FOOTPRINTS_SOURCE, id: feature.properties.id }, { selected: true });
@@ -326,28 +434,20 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
 
   // Escape closes the peek (or the list).
   useEffect(() => {
+    if (compact) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (selectedRef.current) setSelectedCode(null);
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (selectedRef.current) select(null);
       else setListOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  // Back/forward or manual edit of ?site=.
-  useEffect(() => {
-    const onPop = () => setSelectedCode(readSiteParam(window.location.search));
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [compact, select]);
 
   const duration = (ms: number) => (reducedMotion ? 0 : ms);
-  const nationalView = () =>
-    mapRef.current?.fitBounds(FRANCE_BOUNDS, { padding: 48, pitch: is3d ? INITIAL_VIEW.pitch : 0, bearing: INITIAL_VIEW.bearing, duration: duration(1200) });
-
-  const selected = selectedCode ? sitesByCode.get(selectedCode)?.properties : undefined;
+  const selected: MapSiteProperties | undefined = selectedCode ? sitesByCode.get(selectedCode)?.properties : undefined;
   const hovered: MapSiteProperties | undefined = hover ? sitesById.get(hover.id)?.properties : undefined;
+  const noResult = filtered.length === 0 && entries.length > 0;
 
   if (!supported) {
     return (
@@ -358,9 +458,11 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
           headingLevel="h2"
           description="Ce navigateur ne permet pas d'afficher la carte (WebGL désactivé ou indisponible). La liste des sites reste accessible."
         >
-          <Button variant="secondary" onClick={() => setListOpen(true)}>
-            Afficher la liste des sites
-          </Button>
+          {!compact && (
+            <Button variant="secondary" onClick={() => setListOpen(true)}>
+              Afficher la liste des sites
+            </Button>
+          )}
         </EmptyState>
         {listOpen && <SiteListPanel sites={sitesList} selectedCode={null} onSelect={(code) => (window.location.href = `/sites/${sitesByCode.get(code)?.properties.id ?? ""}`)} onClose={() => setListOpen(false)} />}
       </div>
@@ -368,44 +470,60 @@ export default function NationalMap({ data, assets, isAdmin, initialSiteCode, ex
   }
 
   return (
-    <div className="vigie-map absolute inset-0">
+    <div className={cn("vigie-map absolute inset-0", compact && "vigie-map-compact")}>
       {/* h-full/w-full: MapLibre's stylesheet forces `position: relative` on the container. */}
       <div ref={containerRef} className="h-full w-full" data-slot="map-container" />
-      {fallback && <FallbackBanner isAdmin={isAdmin} />}
-      {hovered && hover && !selected && <SiteHoverCard site={hovered} x={hover.x} y={hover.y} />}
-      <MapControls
-        is3d={is3d}
-        shifted={Boolean(selected) || listOpen}
-        onZoomIn={() => mapRef.current?.zoomIn({ duration: duration(300) })}
-        onZoomOut={() => mapRef.current?.zoomOut({ duration: duration(300) })}
-        onToggle3d={() => {
-          const next = !is3d;
-          setIs3d(next);
-          mapRef.current?.easeTo({ pitch: next ? INITIAL_VIEW.pitch : 0, duration: duration(600) });
-        }}
-        onNorth={() => mapRef.current?.easeTo({ bearing: 0, duration: duration(600) })}
-        onNational={nationalView}
-        listOpen={listOpen}
-        onToggleList={() => setListOpen((o) => !o)}
-      />
-      <MapLegend counts={data.counts} unlocated={data.unlocated} />
-      {listOpen && !selected && (
-        <SiteListPanel
-          sites={sitesList}
-          selectedCode={selectedCode}
-          onSelect={(code) => setSelectedCode(code)}
-          onClose={() => setListOpen(false)}
-        />
-      )}
-      {selected && (
-        <SitePeek
-          key={selected.id}
-          site={selected}
-          reasons={data.reasonsById[selected.id] ?? selected.reasons}
-          footprint={footprintsById.get(selected.id) ?? null}
-          reducedMotion={reducedMotion}
-          onClose={() => setSelectedCode(null)}
-        />
+      {!compact && (
+        <>
+          {fallback && <FallbackBanner isAdmin={isAdmin} />}
+          {hovered && hover && !selected && <SiteHoverCard site={hovered} x={hover.x} y={hover.y} />}
+          <MapControls
+            is3d={is3d}
+            shifted={Boolean(selected) || listOpen}
+            onZoomIn={() => mapRef.current?.zoomIn({ duration: duration(300) })}
+            onZoomOut={() => mapRef.current?.zoomOut({ duration: duration(300) })}
+            onToggle3d={() => {
+              const next = !is3d;
+              setIs3d(next);
+              mapRef.current?.easeTo({ pitch: next ? INITIAL_VIEW.pitch : 0, duration: duration(600) });
+            }}
+            onNorth={() => mapRef.current?.easeTo({ bearing: 0, duration: duration(600) })}
+            onNational={nationalView}
+            onFitResults={() => reframe(true)}
+            listOpen={listOpen}
+            onToggleList={() => setListOpen((o) => !o)}
+          />
+          <MapLegend
+            counts={all.counts}
+            filteredCounts={activeCount > 0 ? data.counts : null}
+            selectedStatuses={filters.status}
+            onToggleStatus={(s: ComplianceStatus) => toggleValue("status", s)}
+            unlocated={data.unlocated}
+          />
+          {noResult && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
+              <div className="glass pointer-events-auto rounded-lg px-8 py-7 shadow-panel" data-slot="no-result">
+                <EmptyState icon={FilterX} title="Aucun site ne correspond aux filtres" headingLevel="h2">
+                  <Button variant="secondary" onClick={clear}>
+                    Effacer les filtres
+                  </Button>
+                </EmptyState>
+              </div>
+            </div>
+          )}
+          {listOpen && !selected && <SiteListPanel sites={sitesList} selectedCode={selectedCode} onSelect={(code) => select(code)} onClose={() => setListOpen(false)} />}
+          {selected && (
+            <SitePeek
+              key={selected.id}
+              site={selected}
+              reasons={all.reasonsById[selected.id] ?? selected.reasons}
+              footprint={footprintsById.get(selected.id) ?? null}
+              hiddenByFilters={!visibleCodes.has(selected.code)}
+              reducedMotion={reducedMotion}
+              onClose={() => select(null)}
+            />
+          )}
+        </>
       )}
     </div>
   );

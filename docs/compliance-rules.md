@@ -24,8 +24,8 @@ La **date d'arbitrage** est calculée par `arbitrationDate()` (`src/domain/deriv
 |---|---|---|---|---|---|
 | `LEASE_ARBITRATION_OVERDUE` | critique | date d'arbitrage connue, **strictement antérieure** à aujourd'hui, conditions non signées | — | Arbitrage de bail dépassé | « Arbitrage dépassé depuis le {date} » |
 | `LEASE_NOTICE_IMMINENT` | critique | `noticeDate` connue, aujourd'hui ≤ `noticeDate` < aujourd'hui + 3 mois, conditions non signées | `noticeImminentMonths` = 3 | Préavis imminent | « Date de préavis le {date} (dans n jours) » |
-| `LEASE_END_PASSED` | critique | `endDate` **et** `nextExitDate` connues et toutes deux strictement antérieures à aujourd'hui, conditions non signées | — | Bail échu | « Fin de bail le … et prochaine sortie le … dépassées » |
-| `LEASE_ARBITRATION_SOON` | avertissement | aujourd'hui ≤ date d'arbitrage < aujourd'hui + 6 mois | `arbitrationSoonMonths` = 6 | Arbitrage de bail à préparer | « Arbitrage le {date} (dans n jours) » |
+| `LEASE_END_PASSED` | critique | date retenue = `nextExitDate` si connue, sinon `endDate` ; date retenue strictement antérieure à aujourd'hui, conditions non signées | — | Bail échu | « Prochaine sortie dépassée depuis le … » ou « Fin de bail dépassée depuis le … » |
+| `LEASE_ARBITRATION_SOON` | avertissement | aujourd'hui ≤ date d'arbitrage < aujourd'hui + 6 mois, conditions non signées | `arbitrationSoonMonths` = 6 | Arbitrage de bail à préparer | « Arbitrage le {date} (dans n jours) » |
 | `CRITICAL_DATA_MISSING` | avertissement | adresse vide, ville vide, surface de référence inconnue (`referenceArea`) ou détenteur ICPE vide | — | Données essentielles manquantes | « Manquant : adresse, ville… » |
 | `LOW_COMPLETENESS` | avertissement | score de complétude < 60 % | `minCompleteness` = 60 | Fiche incomplète | « Complétude 45 % (minimum 60 %) » |
 
@@ -38,7 +38,12 @@ Cas limites (couverts par les tests) :
   - une prochaine sortie égale à aujourd'hui n'est pas dépassée.
 - **Seuil exact** : une date située à exactement 3 mois (préavis) ou 6 mois (arbitrage) ne déclenche pas la règle ; la veille de ce seuil, si.
 - **Données de bail insuffisantes** : si une date manque, les règles de bail ne se déclenchent pas. Le manque est reflété par la complétude.
-- `LEASE_ARBITRATION_SOON` ne tient pas compte des conditions signées, conformément à la spécification. C'est à confirmer si l'on veut qu'un bail déjà renouvelé ne reste pas « à surveiller ».
+- **Bail échu** : un bail dont la date de fin est passée mais dont la prochaine sortie est dans le futur n'est **pas** échu. Si seule la date de fin est connue, c'est elle qui compte.
+
+### Corrections de l'étape 7
+
+- `LEASE_ARBITRATION_SOON` ne se déclenche plus si les conditions de renouvellement sont signées (`renewalConditionsSigned === true`).
+- `LEASE_END_PASSED` utilise la prochaine date de sortie quand elle est connue, sinon la date de fin. Auparavant, les deux dates devaient être connues et dépassées.
 
 ## Site inactif
 

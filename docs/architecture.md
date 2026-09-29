@@ -49,7 +49,9 @@
 | `src/server/enrichment/` | Application d'un `enrichment.json` : plan pur (`plan.ts`), lecture de l'état, un seul module d'écriture, rapport ; export des sites | Écrit via `runWithAuditContext({ source: "enrichment", batchId })` ; ne remplit que les champs vides |
 | `src/server/map/`, `src/server/http/range.ts` | Installation du paquet cartographique (vérification SHA-256, bascule atomique, retour arrière) ; service des fichiers par plages d'octets (`/api/map-assets`) | Fichiers uniquement sous `STORAGE_ROOT/map/` |
 | `src/domain/compliance/` | Moteur de conformité : règles déclaratives, complétude, évaluation (voir [`docs/compliance-rules.md`](compliance-rules.md)) | Pur ; la date du jour est injectée ; aucun statut stocké |
-| `src/server/map/sites.ts`, `transform.ts` | Données de la carte : une requête, puis une transformation pure en DTO minimal | Aucun loyer, montant ni donnée de bail détaillée dans le DTO (test sur les clés) |
+| `src/server/sites/` | **Index des sites** : une requête (`querySiteRows`), puis une construction pure (`build.ts`) de `SiteIndexEntry[]` | Aucun montant, aucune date de bail exacte (échéances en tranches) |
+| `src/server/map/sites.ts`, `transform.ts` | Données de la carte, dérivées de l'index (`mapDataFromIndex`, partagé avec le navigateur) | Contrat de `GET /api/map/sites` inchangé |
+| `src/domain/filters/`, `src/domain/search/`, `src/domain/supervision.ts`, `src/domain/sites-table.ts` | Filtres (schéma zod, URL, application, options), recherche locale, indicateurs, tri du tableau | Purs, exécutés dans le navigateur |
 | `src/components/map/` | Carte nationale MapLibre : styles (fond complet et de secours), couches des sites, panneaux | Chargée en import dynamique sur `/` uniquement |
 | `src/components/brand/` | Logo (symbole et nom) | Couleurs de marque réservées au logo |
 | `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
@@ -98,6 +100,18 @@ Détails et justifications : [`docs/security.md`](security.md).
   - nettoyage complet au démontage (`map.remove()`, marqueurs, `requestAnimationFrame`).
 - **Crochet de test** : `window.__vigieMap = { ready, selectedCode }` existe en développement, ou si le serveur démarre avec `VIGIE_E2E_TEST_HOOKS=1` (suite e2e uniquement). Un test e2e démarre le même build sans cette variable et vérifie que le crochet est absent.
 
+## Vues des sites : une seule source de données
+
+- **Index des sites** : le layout protégé `(app)/layout.tsx` charge une fois l'index (`getSiteIndex(today)`, une requête) et le fournit à tous les composants via `SiteIndexProvider`.
+- **Filtrage, recherche, tri et indicateurs** se font dans le navigateur, sur ce tableau de moins de 200 entrées : aucun aller-retour serveur.
+- La carte ajoute seulement les emprises (`getFootprints`). Le mode présentation recharge l'index par `GET /api/sites/index`.
+- **État dans l'URL** :
+  - filtres (`status`, `region`, `dep`…), tri de la liste (`sort`), sélection de la carte (`site`) et mode présentation (`present`) ;
+  - écriture par `history.replaceState`, que Next.js synchronise avec `useSearchParams()` sans relancer le rendu serveur ;
+  - lecture tolérante (zod) : une valeur inconnue est ignorée ;
+  - le rail conserve les paramètres de filtre entre `/`, `/sites` et `/supervision`.
+- Détails : [`docs/filters-and-search.md`](filters-and-search.md).
+
 ## Découpage en 12 étapes
 
 1. **Initialisation** : projet, système de design, coque, Docker, chaîne qualité *(terminée)*.
@@ -106,7 +120,7 @@ Détails et justifications : [`docs/security.md`](security.md).
 4. **Import du tableur** : correspondance des ~200 colonnes, contrôles, rapport d'import *(terminée, voir `docs/import.md`)*.
 5. **Enrichissement et ressources carto** : paquet hors ligne préparé sur un poste connecté (données publiques, fond de carte, orthophotos), installé et appliqué sur le serveur *(terminée, voir `docs/offline-bundle.md`)*.
 6. **Carte nationale** : MapLibre, statut de conformité calculé, aperçu d'un site *(terminée, voir « Carte nationale » ci-dessous et `docs/compliance-rules.md`)*.
-7. **Filtres et supervision**.
+7. **Filtres et supervision** : filtres dans l'URL, recherche Ctrl+K, liste des sites, supervision et mode présentation *(terminée, voir `docs/filters-and-search.md`)*.
 8. **Fiche entrepôt**.
 9. **Édition tracée** : modifications avec journal d'audit.
 10. **Volume 3D et plan**.

@@ -17,6 +17,8 @@ export interface SitePeekProps {
   reasons: readonly ComplianceReason[];
   footprint: MapFootprintProperties | null;
   onClose: () => void;
+  /** The site is not part of the filtered result. */
+  hiddenByFilters?: boolean;
   /** Disable the slide-in transition (prefers-reduced-motion). */
   reducedMotion: boolean;
 }
@@ -26,7 +28,7 @@ export interface SitePeekProps {
  * selected site. Polite live region: its content is announced on selection.
  * Closed by Escape (handled by the map) or the close button.
  */
-export function SitePeek({ site, reasons, footprint, onClose, reducedMotion }: SitePeekProps) {
+export function SitePeek({ site, reasons, footprint, onClose, hiddenByFilters = false, reducedMotion }: SitePeekProps) {
   return (
     <aside
       aria-live="polite"
@@ -48,6 +50,11 @@ export function SitePeek({ site, reasons, footprint, onClose, reducedMotion }: S
             {site.city ? ` · ${site.city}` : ""}
             {site.departmentCode ? ` (${site.departmentCode})` : ""}
           </p>
+          {hiddenByFilters && (
+            <p data-slot="hidden-by-filters" className="mt-2 inline-flex rounded-full border border-border-strong px-2 py-0.5 text-[11px] text-text-muted">
+              Masqué par les filtres actifs
+            </p>
+          )}
         </div>
         <Button variant="ghost" size="icon" aria-label="Fermer l'aperçu" onClick={onClose}>
           <X />

@@ -172,6 +172,16 @@ pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --act
 pnpm enrichment:apply --file vigie-offline-bundle-AAAAMMJJ/enrichment.json --actor admin@vigie.local
 ```
 
+## Les trois vues
+
+| Vue | Adresse | Contenu |
+|---|---|---|
+| Carte | `/` | Carte nationale, statut de conformité de chaque site, aperçu et `SitePeek` |
+| Liste | `/sites` | Tableau dense et triable (`sort=`) de tous les sites |
+| Supervision | `/supervision` | Indicateurs pour les comités, anomalies, répartitions, mode présentation (`present=1`) |
+
+Les trois vues partagent les mêmes **filtres**, conservés dans l'URL : un lien copié restitue exactement la même vue. **Ctrl+K** ouvre la recherche universelle (sites, lieux, actions). Voir [`docs/filters-and-search.md`](docs/filters-and-search.md).
+
 ## Carte nationale
 
 La page d'accueil `/` affiche la carte des entrepôts (MapLibre, hors ligne), avec le statut de conformité calculé pour chaque site ([`docs/compliance-rules.md`](docs/compliance-rules.md)).
@@ -228,6 +238,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── security.md           # sessions, rôles, audit
 │   ├── offline-bundle.md     # paquet hors ligne : procédure, données sortantes, licences
 │   ├── compliance-rules.md   # règles de conformité, complétude
+│   ├── filters-and-search.md # filtres, URL partageables, recherche Ctrl+K
 │   ├── brand/                # SVG de référence du logo
 │   └── design-system.md      # tokens, règles des couleurs de statut, accessibilité
 ├── scripts/

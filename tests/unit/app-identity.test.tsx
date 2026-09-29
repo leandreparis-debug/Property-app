@@ -8,7 +8,7 @@ import { NavRail } from "@/components/shell/NavRail";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/config/app";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/", useSearchParams: () => new URLSearchParams("status=critical&site=X") }));
 
 afterEach(cleanup);
 
