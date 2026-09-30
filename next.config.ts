@@ -25,6 +25,19 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
+/**
+ * Host of APP_URL, trusted for Server Actions. Behind a proxy that rewrites
+ * the Host header (GitHub Codespaces, reverse proxy), Next.js would otherwise
+ * refuse the actions; APP_URL is already the only accepted origin.
+ */
+function appHost(): string[] {
+  try {
+    return process.env.APP_URL ? [new URL(process.env.APP_URL).host] : [];
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
@@ -36,6 +49,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // forbidden() → app/forbidden.tsx (« Accès refusé », HTTP 403).
     authInterrupts: true,
+    serverActions: { allowedOrigins: appHost() },
   },
   // Keep the dev badge away from the navigation rail (bottom-left).
   devIndicators: { position: "bottom-right" },
