@@ -26,16 +26,23 @@ const securityHeaders = [
 ];
 
 /**
- * Host of APP_URL, trusted for Server Actions. Behind a proxy that rewrites
- * the Host header (GitHub Codespaces, reverse proxy), Next.js would otherwise
- * refuse the actions; APP_URL is already the only accepted origin.
+ * Hosts trusted for Server Actions. Behind a proxy that rewrites the Host
+ * header (GitHub Codespaces, reverse proxy), Next.js would otherwise refuse
+ * them: the host of APP_URL (already the only accepted origin) and, inside a
+ * GitHub Codespace, the forwarded address of this codespace's port.
  */
-function appHost(): string[] {
+function trustedHosts(): string[] {
+  const hosts: string[] = [];
   try {
-    return process.env.APP_URL ? [new URL(process.env.APP_URL).host] : [];
+    if (process.env.APP_URL) hosts.push(new URL(process.env.APP_URL).host);
   } catch {
-    return [];
+    // Invalid APP_URL: reported by src/lib/env.ts at startup.
   }
+  const { CODESPACE_NAME, GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN } = process.env;
+  if (CODESPACE_NAME && GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
+    hosts.push(`${CODESPACE_NAME}-${process.env.PORT ?? "3000"}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`);
+  }
+  return [...new Set(hosts)];
 }
 
 const nextConfig: NextConfig = {
@@ -49,7 +56,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // forbidden() → app/forbidden.tsx (« Accès refusé », HTTP 403).
     authInterrupts: true,
-    serverActions: { allowedOrigins: appHost() },
+    serverActions: { allowedOrigins: trustedHosts() },
   },
   // Keep the dev badge away from the navigation rail (bottom-left).
   devIndicators: { position: "bottom-right" },
