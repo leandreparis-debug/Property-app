@@ -27,7 +27,7 @@ services:
       retries: 30
       start_period: 20s
 
-  # One-shot job: creates the `vigie` database and the end-to-end test database
+  # One-shot job (optional; `pnpm db:up` now runs the same SQL inside `db`): creates the `vigie` database and the end-to-end test database
   # `vigie_e2e` if they do not exist (idempotent).
   db-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
