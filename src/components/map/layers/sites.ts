@@ -22,18 +22,24 @@ import type {
   LineLayerSpecification,
 } from "maplibre-gl";
 import type { MapSitesData } from "@/domain/map-dto";
-import { ACCENT, ACCENT_VOLUME, NEUTRAL, STATUS_COLORS } from "../style/theme";
+import { ACCENT, ACCENT_VOLUME, NEUTRAL, STATUS_COLORS, VOLUME_COLORS } from "../style/theme";
 
 /** Source and layer ids. */
 export const SITES_SOURCE = "sites";
 export const FOOTPRINTS_SOURCE = "footprints";
+export const VOLUMES_SOURCE = "volumes";
+/** Global state holding the id of the selected site (volume in accent). */
+export const SELECTED_SITE_STATE = "selectedSiteId";
 export const LAYER = {
   clusters: "site-clusters",
   halo: "site-critical-halo",
   points: "site-points",
   selected: "site-selected",
-  footprintVolume: "footprint-volume",
+  volumeSolid: "volume-solid",
+  volumeApprox: "volume-approximate",
+  volumeEdges: "volume-edges",
   footprintEdge: "footprint-edge",
+  footprintEdgeApprox: "footprint-edge-approximate",
 } as const;
 
 /** Clustering parameters. */
@@ -76,6 +82,11 @@ export function sitesSource(data: MapSitesData["points"]): GeoJSONSourceSpecific
     clusterProperties: CLUSTER_PROPERTIES,
     promoteId: "id",
   };
+}
+
+/** GeoJSON source of the volume parts. */
+export function volumesSource(data: MapSitesData["volumes"]): GeoJSONSourceSpecification {
+  return { type: "geojson", data };
 }
 
 /** GeoJSON source of the footprints. */
@@ -165,19 +176,43 @@ export const SELECTED_LAYER: CircleLayerSpecification = {
   },
 };
 
-/** Simple building volume (height heightM, neutral color; accent when selected). */
-export const FOOTPRINT_VOLUME_LAYER: FillExtrusionLayerSpecification = {
-  id: LAYER.footprintVolume,
+const PART = ["get", "part"] as ExpressionSpecification;
+const APPROXIMATE: ExpressionSpecification = ["boolean", ["get", "approximate"], false];
+const IS_SELECTED: ExpressionSpecification = ["==", ["get", "siteId"], ["to-string", ["global-state", SELECTED_SITE_STATE]]];
+
+/** Neutral color of a volume part; the selected site's cells in accent. */
+const VOLUME_COLOR: ExpressionSpecification = [
+  "case",
+  ["all", IS_SELECTED, ["==", PART, "cell"]], ACCENT_VOLUME,
+  ["all", IS_SELECTED, ["==", PART, "edge"]], ACCENT,
+  ["==", PART, "dock"], VOLUME_COLORS.dock,
+  ["==", PART, "firewall"], VOLUME_COLORS.firewall,
+  ["==", PART, "edge"], VOLUME_COLORS.edge,
+  ["==", ["%", ["get", "index"], 2], 0], VOLUME_COLORS.cellEven,
+  VOLUME_COLORS.cellOdd,
+];
+
+const extrusion = (id: string, filter: ExpressionSpecification, opacity: number): FillExtrusionLayerSpecification => ({
+  id,
   type: "fill-extrusion",
-  source: FOOTPRINTS_SOURCE,
+  source: VOLUMES_SOURCE,
   minzoom: FOOTPRINT_MIN_ZOOM,
+  filter,
   paint: {
-    "fill-extrusion-color": ["case", ["boolean", ["feature-state", "selected"], false], ACCENT_VOLUME, NEUTRAL.surface3],
+    "fill-extrusion-color": VOLUME_COLOR,
     "fill-extrusion-height": ["get", "heightM"],
-    "fill-extrusion-base": 0,
-    "fill-extrusion-opacity": 0.85,
+    "fill-extrusion-base": ["get", "baseM"],
+    "fill-extrusion-opacity": opacity,
+    "fill-extrusion-vertical-gradient": true,
   },
-};
+});
+
+/** Generated volume (footprint known): cells, firewalls, docks. */
+export const VOLUME_SOLID_LAYER = extrusion(LAYER.volumeSolid, ["all", ["!", APPROXIMATE], ["!=", PART, "edge"]], 0.92);
+/** Approximate volume (no footprint): translucent, only its parapets stay solid (wireframe look). */
+export const VOLUME_APPROX_LAYER = extrusion(LAYER.volumeApprox, ["all", APPROXIMATE, ["!=", PART, "edge"]], 0.22);
+/** Roof edges (parapets) of every cell: the fine lines of the roofs. */
+export const VOLUME_EDGES_LAYER = extrusion(LAYER.volumeEdges, ["==", PART, "edge"], 0.95);
 
 /** Ground edge of the footprint, in the site's status color. */
 export const FOOTPRINT_EDGE_LAYER: LineLayerSpecification = {
@@ -185,6 +220,7 @@ export const FOOTPRINT_EDGE_LAYER: LineLayerSpecification = {
   type: "line",
   source: FOOTPRINTS_SOURCE,
   minzoom: FOOTPRINT_MIN_ZOOM,
+  filter: ["!", APPROXIMATE],
   paint: {
     "line-color": ["case", ["boolean", ["feature-state", "selected"], false], ACCENT, statusColor(STATUS)],
     "line-width": 2,
@@ -192,5 +228,13 @@ export const FOOTPRINT_EDGE_LAYER: LineLayerSpecification = {
   },
 };
 
+/** Ground edge of an approximate footprint: same colors, dashed. */
+export const FOOTPRINT_EDGE_APPROX_LAYER: LineLayerSpecification = {
+  ...FOOTPRINT_EDGE_LAYER,
+  id: LAYER.footprintEdgeApprox,
+  filter: APPROXIMATE,
+  paint: { ...FOOTPRINT_EDGE_LAYER.paint, "line-dasharray": [2, 2] },
+};
+
 /** Site layers in drawing order (bottom → top). */
-export const SITE_LAYERS = [FOOTPRINT_VOLUME_LAYER, FOOTPRINT_EDGE_LAYER, CLUSTERS_LAYER, HALO_LAYER, POINTS_LAYER, SELECTED_LAYER] as const;
+export const SITE_LAYERS = [FOOTPRINT_EDGE_LAYER, FOOTPRINT_EDGE_APPROX_LAYER, VOLUME_SOLID_LAYER, VOLUME_APPROX_LAYER, VOLUME_EDGES_LAYER, CLUSTERS_LAYER, HALO_LAYER, POINTS_LAYER, SELECTED_LAYER] as const;

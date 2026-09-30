@@ -93,10 +93,10 @@ erDiagram
 | `icpe_headings` (`IcpeHeading`) | 0..n par site | Rubriques ICPE normalisées (code, régime, libellé). |
 | `site_energy_profiles` (`SiteEnergyProfile`) | 0..1 par site | Année et consommations de référence, OPERAT, refacturation de la gestion technique. |
 | `annual_metrics` (`AnnualMetric`) | 0..n par site | **Cœur de la normalisation** : une ligne par (site, année, indicateur). Remplace les colonnes « XXX 2021 … 2026 ». Catalogue dans `src/domain/metrics.ts`. |
-| `site_geometries` (`SiteGeometry`) | 0..1 par site | Emprise du bâtiment en GeoJSON, hauteur (`height_m`), référence de l'objet source (`source_ref`, ex. `BDTOPO_V3:batiment/<cleabs>`), date de récupération (`fetched_at`) et origine (`source` : `import`, `manual`, `enrichment`). Remplie par l'enrichissement (étape 5), affichée en 3D à l'étape 10. |
+| `site_geometries` (`SiteGeometry`) | 0..1 par site | Emprise du bâtiment en GeoJSON, hauteur (`height_m`), référence de l'objet source (`source_ref`, ex. `BDTOPO_V3:batiment/<cleabs>`), date de récupération (`fetched_at`) et origine (`source` : `import`, `manual`, `enrichment`). Remplie par l'enrichissement (étape 5). Depuis l'étape 10 : côté des quais (`dock_side`) et indicateur de volume approximatif (`volume_approximate`), voir ci-dessous. |
 | `site_public_data` (`SitePublicData`) | 0..n par site, unique sur (site, fournisseur, clé) | Données publiques **informatives** qui ne correspondent à aucun champ métier : risques de la commune, zonage sismique, radon, installations classées voisines, parcelles, zones d'urbanisme, SIREN candidats. Valeur JSON (`value_json`), date de récupération et lot. Table **auditée**, remplacée par couple (fournisseur, clé) à chaque enrichissement (voir `docs/offline-bundle.md`). |
-| `site_plans` (`SitePlan`) | 0..n par site | Plan (image stockée dans `documents`) et son calage géographique (étape 10). |
-| `equipments` (`Equipment`) | 0..n par site | Équipements positionnés sur un plan ou par coordonnées. Type issu du catalogue `EquipmentType`. |
+| `site_plans` (`SitePlan`) | 0..n par site | Plan (image PNG, JPEG ou WebP stockée dans `documents`, catégorie `PLAN`) et son calage géographique : points de contrôle, transformation affine, erreur, rotation, opacité. Un seul plan **courant** (`is_current`) par site ; les précédents forment l'historique. |
+| `equipments` (`Equipment`) | 0..n par site | Équipements positionnés sur un plan (`plan_x`, `plan_y`, pixels) **et** toujours par coordonnées (`latitude`, `longitude`). Type = code du catalogue `src/domain/equipment/catalog.ts` (validé par zod, extensible sans migration). |
 | `documents` (`Document`) | 0..n par site | **Métadonnées** d'un fichier stocké sur disque (`storage_path` relatif, type MIME, taille, SHA-256). |
 | `users` (`User`) | — | Comptes de l'application : email en minuscules, rôle, hachage argon2id, verrouillage (voir `docs/security.md`). |
 | `sessions` (`Session`) | 0..n par utilisateur | Sessions ouvertes. L'identifiant est l'**empreinte SHA-256** du jeton du cookie (le jeton n'est jamais stocké). Expirations absolue et d'inactivité. Table **non auditée**, supprimée explicitement (déconnexion, désactivation, changement de mot de passe). |
@@ -118,6 +118,22 @@ Exception : `leases.economic_rent_per_sqm` et `leases.office_price_per_sqm` sont
 ### Motif des modifications (`audit_logs.comment`)
 
 La migration `ui_editing` ajoute `audit_logs.comment` (`NVARCHAR(500)`, facultatif). C'est le motif saisi par l'utilisateur, écrit sur **toutes** les lignes d'un même enregistrement (même `batch_id`). Il est obligatoire pour un archivage. Aucune autre table ne change.
+
+### Plans et équipements (migration `plan_and_equipment`, étape 10)
+
+| Table | Colonne | Type | Rôle |
+|---|---|---|---|
+| `site_geometries` | `dock_side` | `NVARCHAR(8)`, `'a'` par défaut, `CHECK IN ('a','b')` | Grand côté du rectangle orienté minimal qui porte les quais : `a` = premier, `b` = second (opposé). Modifiable par `site:write`, audité. |
+| `site_geometries` | `volume_approximate` | `BIT`, `0` par défaut | Le volume affiché est approximatif (pas d'emprise : rectangle 2:1 est-ouest de la surface de référence). **Calculé**, jamais saisi. |
+| `site_plans` | `opacity` | `DECIMAL(3,2)`, `0.7` par défaut, `CHECK` entre 0 et 1 | Opacité de la superposition du plan sur la carte. |
+| `site_plans` | `rms_error_m` | `DECIMAL(8,2)` | Erreur quadratique moyenne de la calibration, en mètres au sol. |
+| `site_plans` | `rotation_deg` | `DECIMAL(6,2)` | Rotation du plan trouvée par la calibration, en degrés (informatif). |
+| `equipments` | index `(site_id, type)` | — | Filtres et décomptes par type sur un site. |
+
+- `site_plans.transform_json` : `{ "matrix": [a, b, c, d, e, f] }`, transformation affine **pixel du plan → Web Mercator (EPSG:3857, mètres)** : `X = a·x + b·y + c`, `Y = d·x + e·y + f` (y de l'image vers le bas).
+- `site_plans.control_points_json` : `[{ "pixel": [x, y], "lngLat": [lon, lat] }, …]`, au moins 3 points.
+- Un équipement posé sur un plan calibré garde `plan_x`/`plan_y` ; à la recalibration, ses `latitude`/`longitude` sont **recalculées** dans la même transaction, sous le même `batch_id` d'audit.
+- `SiteGeometry` sans emprise : la ligne peut exister pour ne porter que `dock_side` (`footprint_geojson` reste `NULL`).
 
 ### Audit sans clé étrangère
 `audit_logs` ne porte aucune clé étrangère : l'historique survit à la suppression de l'entité, du site, de l'utilisateur ou du lot d'import. Les valeurs avant et après sont sérialisées en JSON (`NVARCHAR(MAX)`). L'identifiant est un `BIGINT IDENTITY`, pour un ordre d'insertion strict et un volume illimité en pratique.

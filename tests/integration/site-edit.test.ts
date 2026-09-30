@@ -8,7 +8,7 @@ import { archiveSite, createSite, deleteListItem, saveAnnualMetrics, saveListIte
 import { getFieldHistory } from "@/server/sites/history";
 import { getSiteIndex } from "@/server/sites/index";
 import { getField } from "@/domain/fields";
-import { createUserFixture, disconnectAll, raw, resetDatabase } from "./helpers";
+import { createUserFixture, disconnectAll, markAudit, raw, resetDatabase } from "./helpers";
 
 const TODAY = new Date("2026-09-29T00:00:00.000Z");
 const asImport = <T>(fn: () => Promise<T>) => runWithAuditContext({ actorId: null, source: "import", batchId: "imp" }, fn);
@@ -41,7 +41,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await raw.site.deleteMany();
-  await raw.auditLog.deleteMany();
+  await markAudit();
   siteId = await freshSite();
 });
 

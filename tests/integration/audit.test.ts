@@ -6,7 +6,7 @@ import { createLoginIpLimiter } from "@/server/auth/rate-limit";
 import { resetPassword } from "@/server/auth/users";
 import { db } from "@/server/db";
 import { toDateOnly } from "@/domain/dates";
-import { asUser, createUserFixture, disconnectAll, raw, resetDatabase, TEST_PASSWORD, toJson } from "./helpers";
+import { asUser, createUserFixture, disconnectAll, markAudit, raw, resetDatabase, TEST_PASSWORD, toJson } from "./helpers";
 
 const ACTOR = "actor-test-000000000000001";
 const lines = () => raw.auditLog.findMany({ orderBy: { id: "asc" } });
@@ -28,7 +28,7 @@ describe("create / update / delete", () => {
     expect(log[1]).toMatchObject({ action: "CREATE", entityType: "Lease", entityId: lease.id, siteId: site.id });
     expect(JSON.parse(log[1]!.afterValue!)).toMatchObject({ noticeDate: "2027-03-31T00:00:00.000Z", marketRentValue: "52.5" });
 
-    await raw.auditLog.deleteMany();
+    await markAudit();
     await asUser(ACTOR, () => db.site.update({ where: { id: site.id }, data: { name: "Entrepôt renommé", city: "Villeurbanne", version: { increment: 1 } } }));
     log = await lines();
     expect(log.map((l) => [l.action, l.field, l.beforeValue, l.afterValue, l.siteId])).toEqual([
@@ -36,13 +36,13 @@ describe("create / update / delete", () => {
       ["UPDATE", "name", '"Entrepôt audité"', '"Entrepôt renommé"', site.id],
     ]); // version / updatedAt ignored
 
-    await raw.auditLog.deleteMany();
+    await markAudit();
     await asUser(ACTOR, () => db.lease.update({ where: { siteId: site.id }, data: { marketRentValue: "55" } }));
     log = await lines();
     expect(log).toHaveLength(1);
     expect(log[0]).toMatchObject({ action: "UPDATE", entityType: "Lease", field: "marketRentValue", beforeValue: '"52.5"', afterValue: '"55"', siteId: site.id });
 
-    await raw.auditLog.deleteMany();
+    await markAudit();
     await asUser(ACTOR, () => db.lease.delete({ where: { id: lease.id } }));
     await asUser(ACTOR, () => db.site.delete({ where: { id: site.id } }));
     log = await lines();
@@ -56,7 +56,7 @@ describe("create / update / delete", () => {
 
   it("writes nothing for an update that changes nothing", async () => {
     const site = await asUser(ACTOR, () => db.site.create({ data: { code: "AUD-002", name: "Sans changement", latitude: "45.1" } }));
-    await raw.auditLog.deleteMany();
+    await markAudit();
     await asUser(ACTOR, () => db.site.update({ where: { id: site.id }, data: { name: "Sans changement", latitude: "45.100000" } }));
     expect(await raw.auditLog.count()).toBe(0);
   });
@@ -185,7 +185,7 @@ describe("transactions", () => {
 
   it("rolls back when a later write fails (constraint violation)", async () => {
     await asUser(ACTOR, () => db.site.create({ data: { code: "AUD-032", name: "Existant" } }));
-    await raw.auditLog.deleteMany();
+    await markAudit();
     await expect(
       asUser(ACTOR, () =>
         db.$transaction(async (tx) => {

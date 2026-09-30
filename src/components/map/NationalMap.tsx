@@ -1,7 +1,7 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MapLibreMap, type MapGeoJSONFeature, type StyleSpecification } from "maplibre-gl";
+import maplibregl, { type GeoJSONSource, type LngLatBoundsLike, type Map as MapLibreMap, type MapGeoJSONFeature } from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { FilterX, MonitorX } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,11 +23,10 @@ import { MapLegend } from "./MapLegend";
 import { SiteHoverCard } from "./SiteHoverCard";
 import { SiteListPanel } from "./SiteListPanel";
 import { SitePeek } from "./SitePeek";
-import { FOOTPRINTS_SOURCE, LAYER, SITE_LAYERS, SITES_SOURCE, footprintsSource, haloAt, HALO_PULSE, sitesSource } from "./layers/sites";
+import { FOOTPRINTS_SOURCE, LAYER, SELECTED_SITE_STATE, SITE_LAYERS, SITES_SOURCE, VOLUMES_SOURCE, footprintsSource, haloAt, HALO_PULSE, sitesSource, volumesSource } from "./layers/sites";
 import type { MapAssets } from "./style/assets";
-import { buildAttributions } from "./style/attribution";
-import { buildBasemapStyle } from "./style/basemap-style";
-import { buildFallbackStyle, countriesFromTopology, type WorldTopology } from "./style/fallback-style";
+import { buildMapStyle } from "./style/build";
+import { EQUIPMENT_MARKER_MIN_ZOOM, EQUIPMENT_MARKERS_LAYER, EQUIPMENT_SELECTED_LAYER, EQUIPMENT_SOURCE, equipmentCollection, equipmentSource, registerEquipmentImages } from "@/components/plan/equipment-layers";
 import { readSiteParam, SITE_PARAM } from "./url-state";
 
 /** Props of {@link NationalMap}. */
@@ -52,7 +51,12 @@ export interface NationalMapProps {
 
 declare global {
   interface Window {
-    __vigieMap?: { ready: boolean; selectedCode: string | null };
+    __vigieMap?: {
+      ready: boolean;
+      selectedCode: string | null;
+      /** Generated volume of the selected site (cells and docks actually drawn), or null. */
+      volumeParts?: { cells: number; docks: number } | null;
+    };
   }
 }
 
@@ -159,6 +163,7 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
   const sitesByCode = useMemo(() => new Map(all.points.features.map((f) => [f.properties.code, f])), [all]);
   const sitesById = useMemo(() => new Map(all.points.features.map((f) => [f.properties.id, f])), [all]);
   const visibleCodes = useMemo(() => new Set(data.points.features.map((f) => f.properties.code)), [data]);
+  const footprintRecords = useMemo(() => new Map(footprints.map((f) => [f.id, f])), [footprints]);
   const footprintsById = useMemo(() => new Map(all.footprints.features.map((f) => [f.properties.id, f.properties])), [all]);
   const sitesList = useMemo(() => data.points.features.map((f) => f.properties), [data]);
   const filtersKey = serializeFilters(filters).toString();
@@ -220,16 +225,8 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
     acquirePmtiles();
     updateHook({ ready: false, selectedCode: selectedRef.current });
 
-    const buildStyle = async (): Promise<StyleSpecification> => {
-      const origin = window.location.origin;
-      const attributions = buildAttributions(assets.sources, fallback);
-      if (!fallback) return buildBasemapStyle({ origin, ortho: assets.ortho, attributions });
-      const topology = (await import("world-atlas/countries-50m.json")).default as unknown as WorldTopology;
-      return buildFallbackStyle({ countries: countriesFromTopology(topology), origin, ortho: assets.ortho, attributions });
-    };
-
     performance.mark("vigie-map:start");
-    void buildStyle().then((style) => {
+    void buildMapStyle(assets).then((style) => {
       if (cancelled) return;
       performance.mark("vigie-map:style");
       try {
@@ -269,7 +266,14 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
       m.on("load", () => {
         m.addSource(SITES_SOURCE, sitesSource(dataRef.current.points));
         m.addSource(FOOTPRINTS_SOURCE, footprintsSource(dataRef.current.footprints));
+        m.addSource(VOLUMES_SOURCE, volumesSource(dataRef.current.volumes));
+        m.setGlobalStateProperty(SELECTED_SITE_STATE, preview ? (dataRef.current.points.features[0]?.properties.id ?? "") : "");
         for (const layer of SITE_LAYERS) m.addLayer(layer);
+        // Equipments of the selected site, read-only, from zoom 17 (full map only).
+        if (!compact) {
+          m.addSource(EQUIPMENT_SOURCE, { ...equipmentSource(equipmentCollection([])), cluster: false });
+          for (const layer of [EQUIPMENT_SELECTED_LAYER, EQUIPMENT_MARKERS_LAYER]) m.addLayer({ ...layer, minzoom: EQUIPMENT_MARKER_MIN_ZOOM });
+        }
         setLoaded(true);
         // Site preview: its site is highlighted, no halo animation, any click opens the main map.
         if (preview) {
@@ -407,6 +411,7 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
     if (!m || !loaded) return;
     (m.getSource(SITES_SOURCE) as GeoJSONSource | undefined)?.setData(data.points);
     (m.getSource(FOOTPRINTS_SOURCE) as GeoJSONSource | undefined)?.setData(data.footprints);
+    (m.getSource(VOLUMES_SOURCE) as GeoJSONSource | undefined)?.setData(data.volumes);
   }, [data, loaded]);
 
   // Reframe after a filter change (debounced), and at load when the URL has
@@ -439,9 +444,12 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
     const m = mapRef.current;
     const previous = selectedRef.current;
     selectedRef.current = selectedCode;
-    updateHook({ selectedCode });
+    const selectedId = selectedCode ? sitesByCode.get(selectedCode)?.properties.id : undefined;
+    const meta = selectedId ? footprintRecords.get(selectedId)?.meta : undefined;
+    updateHook({ selectedCode, volumeParts: meta ? { cells: meta.cells, docks: meta.docks } : null });
     if (!m || !loaded) return;
 
+    m.setGlobalStateProperty(SELECTED_SITE_STATE, selectedId ?? "");
     m.setFilter(LAYER.selected, ["==", ["get", "code"], selectedCode ?? ""]);
     const prevId = previous ? sitesByCode.get(previous)?.properties.id : undefined;
     if (prevId && m.getSource(FOOTPRINTS_SOURCE)) m.setFeatureState({ source: FOOTPRINTS_SOURCE, id: prevId }, { selected: false });
@@ -452,7 +460,28 @@ export default function NationalMap({ footprints, assets, isAdmin, exposeTestHoo
     const camera = { center, zoom: FLY.zoom, pitch: FLY.pitch, bearing: m.getBearing() };
     if (reducedRef.current) m.jumpTo(camera);
     else m.flyTo({ ...camera, duration: FLY.durationMs, essential: false });
-  }, [selectedCode, loaded, sitesByCode, updateHook]);
+  }, [selectedCode, loaded, sitesByCode, footprintRecords, updateHook]);
+
+  // Equipments of the selected site (read-only; shown from zoom 17).
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!m || !loaded || compact) return;
+    const source = m.getSource(EQUIPMENT_SOURCE) as GeoJSONSource | undefined;
+    const siteId = selectedCode ? sitesByCode.get(selectedCode)?.properties.id : undefined;
+    source?.setData(equipmentCollection([]));
+    if (!siteId) return;
+    const controller = new AbortController();
+    fetch(`/api/sites/${encodeURIComponent(siteId)}/equipments`, { signal: controller.signal })
+      .then((r) => (r.ok ? (r.json() as Promise<{ equipments: { id: string; type: string; label: string | null; lngLat: [number, number] }[] }>) : null))
+      .then(async (body) => {
+        if (!body?.equipments.length || controller.signal.aborted) return;
+        // Pictograms are rasterized only when a site with equipments is selected.
+        await registerEquipmentImages(m);
+        if (!controller.signal.aborted) source?.setData(equipmentCollection(body.equipments));
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [selectedCode, loaded, compact, sitesByCode]);
 
   // Escape closes the peek (or the list).
   useEffect(() => {

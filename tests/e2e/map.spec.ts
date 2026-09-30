@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { e2eEnv } from "./e2e-env";
 import { expect, test, type Page } from "@playwright/test";
 import type { MapSitesData } from "../../src/domain/map-dto";
 import { ORIGIN, VIEWER_STATE } from "./fixtures";
@@ -116,7 +117,7 @@ test.describe("build de production", () => {
 
   test.beforeAll(async () => {
     // Same build, started WITHOUT VIGIE_E2E_TEST_HOOKS, like a real deployment.
-    const env: Record<string, string | undefined> = { ...process.env, PORT: String(PORT) };
+    const env: Record<string, string | undefined> = { ...process.env, ...e2eEnv(PORT) };
     delete env.VIGIE_E2E_TEST_HOOKS;
     server = spawn("pnpm", ["exec", "next", "start", "-p", String(PORT)], { env: env as unknown as NodeJS.ProcessEnv, stdio: "ignore" });
     for (let i = 0; i < 60; i++) {

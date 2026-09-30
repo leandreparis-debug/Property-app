@@ -76,7 +76,7 @@ describe("LeaseTimeline", () => {
 });
 
 describe("SiteTabs", () => {
-  const panels = { overview: "A", lease: "B", operations: "C", finance: "D", energy: "E", technical: "F", icpe: "G", documents: "H" };
+  const panels = { overview: "A", lease: "B", operations: "C", finance: "D", energy: "E", technical: "F", plan: "P", icpe: "G", documents: "H" };
 
   it("ARIA tabs: arrows, Home and End move and activate; the tab lives in ?tab=", () => {
     window.history.replaceState(null, "", "/sites/x?region=Bretagne");
@@ -111,8 +111,8 @@ describe("SiteTabs", () => {
     const { container } = render(<SiteTabs panels={panels} />);
     expect(screen.getByRole("tab", { name: "Vue d'ensemble" }).getAttribute("aria-selected")).toBe("true");
     const all = container.querySelectorAll('[role="tabpanel"]');
-    expect(all).toHaveLength(8);
-    expect([...all].filter((p) => p.classList.contains("hidden"))).toHaveLength(7);
+    expect(all).toHaveLength(9);
+    expect([...all].filter((p) => p.classList.contains("hidden"))).toHaveLength(8);
     expect([...all].every((p) => p.classList.contains("print:block"))).toBe(true);
     expect(screen.getAllByRole("tab").filter((t) => t.tabIndex === 0)).toHaveLength(1);
   });

@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
+import { PLAN_IMAGE_MIMES } from "@/domain/image-size";
 import { jsonError, withApiAuth } from "@/server/auth/api";
 import { db } from "@/server/db";
 import { deleteDocument, UploadError } from "@/server/documents/store";
@@ -15,6 +16,8 @@ export const runtime = "nodejs";
 type Context = { params: Promise<{ id: string }> };
 
 const ID = /^[A-Za-z0-9_-]{1,30}$/;
+/** Types that may be shown inline (plan images). */
+const INLINE_MIMES: ReadonlySet<string> = new Set(PLAN_IMAGE_MIMES);
 const notFound = () => jsonError(404, "Document introuvable.");
 
 /** Download name: the title, with the stored file's extension when the title has none. */
@@ -32,13 +35,21 @@ function downloadName(title: string | null, storagePath: string): string {
  * escape is refused); `Content-Type` comes from the database, never sniffed;
  * `Content-Disposition: attachment` with an RFC 5987 name; `nosniff`;
  * `private, no-store`. A document whose file is missing on disk is a logged 404.
+ *
+ * `?inline=1` (step 10, plan overlay): allowed ONLY for the images of
+ * category `PLAN` (PNG, JPEG, WebP) — `Content-Disposition: inline`, same
+ * `nosniff`; any other document gets a 403 and must be downloaded.
  */
 export const GET = withApiAuth<Context>(
-  async (_request, { params }) => {
+  async (request, { params }) => {
     const { id } = await params;
     if (!ID.test(id)) return notFound();
-    const doc = await db.document.findUnique({ where: { id }, select: { id: true, siteId: true, title: true, storagePath: true, mimeType: true } });
+    const doc = await db.document.findUnique({ where: { id }, select: { id: true, siteId: true, title: true, storagePath: true, mimeType: true, category: true } });
     if (!doc) return notFound();
+    const inline = new URL(request.url).searchParams.get("inline") === "1";
+    if (inline && !(doc.category === "PLAN" && INLINE_MIMES.has(doc.mimeType ?? ""))) {
+      return jsonError(403, "Affichage en ligne réservé aux images de plan.");
+    }
 
     let path: string;
     try {
@@ -65,7 +76,7 @@ export const GET = withApiAuth<Context>(
       headers: {
         "Content-Type": doc.mimeType || "application/octet-stream",
         "Content-Length": String(size),
-        "Content-Disposition": attachmentDisposition(downloadName(doc.title, doc.storagePath)),
+        "Content-Disposition": inline ? "inline" : attachmentDisposition(downloadName(doc.title, doc.storagePath)),
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
       },

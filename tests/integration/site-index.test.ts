@@ -80,7 +80,7 @@ describe("getSiteIndex", () => {
 describe("getMapSites (contract unchanged)", () => {
   it("points, footprints, unlocated, counts, reasons", async () => {
     const data = await getMapSites(TODAY);
-    expect(Object.keys(data).sort()).toEqual(["counts", "evaluatedOn", "footprints", "points", "reasonsById", "unlocated"]);
+    expect(Object.keys(data).sort()).toEqual(["counts", "evaluatedOn", "footprints", "points", "reasonsById", "unlocated", "volumes"]);
     expect(data.evaluatedOn).toBe("2026-09-29");
     expect(data.points.features.map((f) => f.properties.code)).toEqual(["IDX-1"]);
     expect(data.footprints.features[0]!.properties).toMatchObject({ code: "IDX-1", heightM: 11, heightEstimated: false, status: "critical" });

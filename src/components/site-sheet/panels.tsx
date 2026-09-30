@@ -201,6 +201,31 @@ export function ReasonList({ detail }: { detail: SiteDetail }) {
   );
 }
 
+/** Key figures: equipments per category (links to the Plan tab). */
+function EquipmentCounts({ detail }: { detail: SheetContext["detail"] }) {
+  const total = detail.equipmentCounts.reduce((s, c) => s + c.count, 0);
+  return (
+    <section aria-labelledby="overview-equipments" data-slot="equipment-counts" className="rounded-lg border border-border bg-surface-1 px-4 py-3">
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+        <h3 id="overview-equipments" className="text-xs text-text-muted">
+          Équipements <span className="numeric text-text">{total}</span>
+        </h3>
+        <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          {detail.equipmentCounts.map((c) => (
+            <div key={c.category} className="flex gap-1.5">
+              <dt className="text-text-muted">{c.labelFr}</dt>
+              <dd className="numeric">{c.count}</dd>
+            </div>
+          ))}
+        </dl>
+        <a href="?tab=plan" className="ml-auto text-sm text-accent underline-offset-2 hover:underline print:hidden">
+          Voir le plan
+        </a>
+      </div>
+    </section>
+  );
+}
+
 export function OverviewPanel(ctx: SheetContext) {
   const { detail, today, canFinance } = ctx;
   const rent = lastKnown(detail.metrics.RENT);
@@ -232,6 +257,8 @@ export function OverviewPanel(ctx: SheetContext) {
         )}
         <Kpi slot="energy" label={energy ? `Énergie ${energy.year} au m²` : "Énergie au m²"} value={energy ? formatMetricPerSqm("kWh", energy.value) : EMPTY_VALUE} detail="électricité et gaz" />
       </dl>
+
+      <EquipmentCounts detail={detail} />
 
       <SheetSection title="Frise du bail" id="overview-timeline">
         <LeaseTimeline milestones={milestones} today={today} status={detail.evaluation.status} />

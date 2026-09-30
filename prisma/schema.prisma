@@ -343,6 +343,10 @@ model SiteGeometry {
   sourceRef        String?   @map("source_ref") @db.NVarChar(100)
   /// When the source data was fetched.
   fetchedAt        DateTime? @map("fetched_at")
+  /// Long side of the oriented bounding rectangle carrying the docks: a (first) | b (second).
+  dockSide          String    @default("a") @map("dock_side") @db.NVarChar(8)
+  /// The generated volume is approximate (no footprint: rectangle from the reference area). Computed, read-only.
+  volumeApproximate Boolean   @default(false) @map("volume_approximate")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -363,6 +367,12 @@ model SitePlan {
   calibratedAt      DateTime? @map("calibrated_at")
   calibratedById    String?   @map("calibrated_by_id") @db.NVarChar(30)
   isCurrent         Boolean   @default(false) @map("is_current")
+  /// Opacity of the plan overlay on the map (0–1).
+  opacity           Decimal   @default(0.7) @db.Decimal(3, 2)
+  /// Root-mean-square error of the calibration, in metres.
+  rmsErrorM         Decimal?  @map("rms_error_m") @db.Decimal(8, 2)
+  /// Rotation of the plan found by the calibration, in degrees (informative).
+  rotationDeg       Decimal?  @map("rotation_deg") @db.Decimal(6, 2)
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

@@ -155,8 +155,8 @@ test.describe("fiche entrepôt", () => {
     await expect(page.locator('[data-slot="site-preview"]')).toBeHidden();
     await expect(page.getByRole("tablist")).toBeHidden();
     const panels = page.locator('[role="tabpanel"]');
-    await expect(panels).toHaveCount(8);
-    for (let i = 0; i < 8; i++) await expect(panels.nth(i)).toBeVisible();
+    await expect(panels).toHaveCount(9);
+    for (let i = 0; i < 9; i++) await expect(panels.nth(i)).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Financier" })).toBeVisible();
     await expect(page.locator('[data-slot="print-header"]')).toContainText(`Vigie — Fiche ${entry.name} (${entry.code}) — imprimée le`);
     await expect(page.getByText(/^Statut : /)).toBeVisible();

@@ -92,28 +92,7 @@ export const DocumentCategory = defineEnum({
 });
 export type DocumentCategory = (typeof DocumentCategory.values)[number];
 
-/** Catalogue of equipment types (step 10; extended by future modules). */
-export const EquipmentType = defineEnum({
-  SPRINKLER: "Sprinkler",
-  FIRE_HOSE_REEL: "Robinet d'incendie armé (RIA)",
-  FIRE_EXTINGUISHER: "Extincteur",
-  FIRE_DOOR: "Porte coupe-feu",
-  SMOKE_EXTRACTION: "Désenfumage",
-  FIRE_ALARM: "Alarme incendie",
-  ELECTRICAL_PANEL: "Tableau électrique (TGBT)",
-  TRANSFORMER: "Transformateur",
-  GENERATOR: "Groupe électrogène",
-  REFRIGERATION_UNIT: "Groupe froid",
-  BOILER: "Chaudière",
-  DOCK_LEVELER: "Niveleur de quai",
-  INDUSTRIAL_DOOR: "Porte sectionnelle",
-  EV_CHARGER: "Borne de recharge",
-  PV_INVERTER: "Onduleur photovoltaïque",
-  LIGHTNING_PROTECTION: "Paratonnerre",
-  RETENTION_BASIN: "Bassin de rétention",
-  OTHER: "Autre équipement",
-});
-export type EquipmentType = (typeof EquipmentType.values)[number];
+/* Equipment types: see src/domain/equipment/catalog.ts (step 10, no CHECK constraint). */
 
 /** Application role (CHECK constraint `users_role_check`). */
 export const UserRole = defineEnum({

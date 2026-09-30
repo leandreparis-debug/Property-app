@@ -28,6 +28,7 @@
     "db:seed": "tsx --conditions=react-server prisma/seed.ts",
     "db:studio": "prisma studio",
     "fields:lengths": "tsx scripts/generate-field-lengths.ts",
+    "sites:archive": "tsx --conditions=react-server scripts/sites-archive.ts",
     "db:sql": "bash scripts/db-sql.sh",
     "user:create": "tsx --conditions=react-server scripts/user-create.ts",
     "user:reset-password": "tsx --conditions=react-server scripts/user-reset-password.ts",

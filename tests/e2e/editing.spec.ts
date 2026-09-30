@@ -5,7 +5,7 @@ import { ADMIN_STATE, EDITOR, EDITOR_STATE, ORIGIN, VIEWER_STATE } from "./fixtu
 /**
  * Editing of the site sheet. Every test works on its OWN sites (code
  * « E2E-… », created through the « Nouveau site » dialog) and never touches
- * the demo sites; the global teardown removes them.
+ * the demo sites; the global setup resets the vigie_e2e database.
  */
 
 const unique = (prefix: string) => `E2E-${prefix}-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 1e4)}`;

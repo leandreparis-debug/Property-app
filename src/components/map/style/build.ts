@@ -1,0 +1,20 @@
+import type { StyleSpecification } from "maplibre-gl";
+import type { MapAssets } from "./assets";
+import { buildAttributions } from "./attribution";
+import { buildBasemapStyle } from "./basemap-style";
+import { buildFallbackStyle, countriesFromTopology, type WorldTopology } from "./fallback-style";
+
+/**
+ * Style of a map for the installed assets: the full vector basemap, or the
+ * fallback style (world-atlas countries) when it is missing; aerial imagery
+ * in both when installed. Shared by the national map and the Plan tab.
+ * @param assets - Installed map assets.
+ */
+export async function buildMapStyle(assets: MapAssets): Promise<StyleSpecification> {
+  const origin = window.location.origin;
+  const fallback = !assets.basemap;
+  const attributions = buildAttributions(assets.sources, fallback);
+  if (!fallback) return buildBasemapStyle({ origin, ortho: assets.ortho, attributions });
+  const topology = (await import("world-atlas/countries-50m.json")).default as unknown as WorldTopology;
+  return buildFallbackStyle({ countries: countriesFromTopology(topology), origin, ortho: assets.ortho, attributions });
+}

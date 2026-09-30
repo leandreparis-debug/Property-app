@@ -4,7 +4,9 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { cleanFileName, detectDocumentType, MAX_DOCUMENT_BYTES, UPLOAD_MESSAGES } from "@/domain/documents";
 import { DocumentCategory } from "@/domain/enums";
+import { checkPlanImage } from "@/domain/image-size";
 import { runWithAuditContext } from "../audit/context";
+import { can } from "../auth/permissions";
 import type { SessionUser } from "../auth/session";
 import { db } from "../db";
 import { newBatchId } from "../sites/edit-common";
@@ -25,7 +27,7 @@ import { resolveStoragePath } from "../storage";
 /** An upload failure: HTTP status and French message. */
 export class UploadError extends Error {
   constructor(
-    readonly status: 400 | 404 | 409 | 413 | 415,
+    readonly status: 400 | 403 | 404 | 409 | 413 | 415,
     message: string,
   ) {
     super(message);
@@ -52,9 +54,14 @@ export interface UploadInput {
  * Validates and stores an uploaded document, then creates its `Document`
  * (audited, `source = "ui"`). Size ≤ 50 MB, category from the enumeration,
  * type allowed AND confirmed by the file signature.
+ *
+ * Category `PLAN` (step 10): `plan:calibrate` required; PNG, JPEG or WebP
+ * only, dimensions read from the header (8192 px per side at most); a
+ * `SitePlan` becomes the CURRENT plan in the same transaction, the previous
+ * current plan stays in the history.
  * @param user - Acting user (`document:upload` checked by the route).
  * @param input - File and metadata.
- * @returns The created document.
+ * @returns The created document, with `planId` for a plan.
  * @throws {UploadError} On any refusal.
  */
 export async function storeUploadedDocument(user: SessionUser, input: UploadInput) {
@@ -62,6 +69,11 @@ export async function storeUploadedDocument(user: SessionUser, input: UploadInpu
   if (!DocumentCategory.is(input.category)) throw new UploadError(400, "Catégorie obligatoire.");
   const detected = detectDocumentType(input.fileName, input.bytes);
   if (!detected.ok) throw new UploadError(415, detected.error);
+  // A plan is an image (PNG, JPEG, WebP) of at most 8192 px per side, and needs `plan:calibrate`.
+  const isPlan = input.category === "PLAN";
+  const planImage = isPlan ? checkPlanImage(input.bytes) : null;
+  if (isPlan && !can(user.role, "plan:calibrate")) throw new UploadError(403, "Ajout d'un plan non autorisé pour votre rôle.");
+  if (planImage && !planImage.ok) throw new UploadError(detected.type.mime.startsWith("image/") ? 400 : 415, planImage.error);
   const site = await db.site.findUnique({ where: { id: input.siteId }, select: { id: true, archivedAt: true } });
   if (!site) throw new UploadError(404, "Site introuvable.");
   if (site.archivedAt) throw new UploadError(409, "Site archivé : le désarchiver avant d'ajouter un document.");
@@ -74,7 +86,8 @@ export async function storeUploadedDocument(user: SessionUser, input: UploadInpu
   await writeFile(path, input.bytes, { flag: "wx" });
   try {
     return await runWithAuditContext({ actorId: user.id, source: "ui", batchId: newBatchId(), comment: input.comment?.trim() || null }, () =>
-      db.document.create({
+      db.$transaction(async (tx) => {
+        const doc = await tx.document.create({
         data: {
           id,
           siteId: site.id,
@@ -87,6 +100,19 @@ export async function storeUploadedDocument(user: SessionUser, input: UploadInpu
           uploadedById: user.id,
         },
         select: { id: true, title: true, category: true, mimeType: true, sizeBytes: true, sha256: true, storagePath: true },
+        });
+        // New current plan; the previous ones stay in the history (same audit batch).
+        let planId: string | null = null;
+        if (planImage?.ok) {
+          const current = await tx.sitePlan.findMany({ where: { siteId: site.id, isCurrent: true }, select: { id: true } });
+          for (const plan of current) await tx.sitePlan.update({ where: { id: plan.id }, data: { isCurrent: false } });
+          const plan = await tx.sitePlan.create({
+            data: { siteId: site.id, documentId: id, imageWidth: planImage.size.width, imageHeight: planImage.size.height, isCurrent: true },
+            select: { id: true },
+          });
+          planId = plan.id;
+        }
+        return { ...doc, planId };
       }),
     );
   } catch (error) {

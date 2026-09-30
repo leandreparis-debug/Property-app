@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import { ADMIN_STATE } from "./tests/e2e/fixtures";
+import { E2E_PORT, e2eEnv } from "./tests/e2e/e2e-env";
 
-const PORT = 3000;
+const PORT = E2E_PORT;
 const BASE_URL = `http://localhost:${PORT}`;
 
 /**
@@ -17,7 +18,6 @@ const BASE_URL = `http://localhost:${PORT}`;
 export default defineConfig({
   testDir: "./tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",
-  globalTeardown: "./tests/e2e/global-teardown.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -44,10 +44,12 @@ export default defineConfig({
   webServer: {
     // VIGIE_E2E_TEST_HOOKS exposes window.__vigieMap in this test server only;
     // map.spec.ts starts the same build WITHOUT it and checks it is absent.
-    command: "pnpm build && pnpm start",
-    env: { VIGIE_E2E_TEST_HOOKS: "1" },
+    // Own database (vigie_e2e) and storage root: `vigie` is never used by the tests.
+    command: `pnpm build && pnpm start -p ${PORT}`,
+    env: { ...e2eEnv(), VIGIE_E2E_TEST_HOOKS: "1" },
     url: `${BASE_URL}/api/health`,
-    reuseExistingServer: !process.env.CI,
+    // Never reuse a running server: it could be a `pnpm dev` on the development database.
+    reuseExistingServer: false,
     timeout: 240_000,
     stdout: "ignore",
     stderr: "pipe",

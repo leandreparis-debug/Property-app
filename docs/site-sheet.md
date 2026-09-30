@@ -60,12 +60,13 @@ L'URL de la fiche porte le contexte de la liste (`listContextQuery` : filtres et
 
 | Onglet | Contenu |
 |---|---|
-| Vue d'ensemble | Indicateurs (surface de référence, loyer de la dernière année, coût d'occupation au m², énergie au m²), frise du bail, raisons, champs manquants, identité, organisation, localisation |
+| Vue d'ensemble | Indicateurs (surface de référence, loyer de la dernière année, coût d'occupation au m², énergie au m²), nombre d'équipements par catégorie, frise du bail, raisons, champs manquants, identité, organisation, localisation |
 | Bail | Frise en grand, section `lease`, section `lease_financial` (ou « Accès restreint ») |
 | Exploitation | Exploitant, mode d'exploitation, contrat de prestation, ETP, CA marchandise et colis par année |
 | Financier | Tableau des indicateurs financiers et du coût d'occupation, graphique loyer et coût d'occupation |
 | Énergie | Profil énergétique, tableau des consommations, graphique électricité et gaz au m², graphique de l'eau |
 | Technique | Surfaces et barre de répartition, capacités, caractéristiques, historique des travaux, emprise |
+| Plan | Volume 3D, plan calibré superposé, équipements et leur liste ; ajout et calibration du plan, côté des quais (voir [`docs/plans-and-equipment.md`](plans-and-equipment.md)). La carte n'est montée que lorsque l'onglet est affiché ; à l'impression, la liste des équipements remplace la carte |
 | ICPE et risques | Champs ICPE (dont le lien Géorisques), rubriques et régime en toutes lettres, données publiques |
 | Documents | Ajout (dépôt ou bouton), documents par catégorie (téléchargement, suppression), références du tableur avec leur type détecté |
 

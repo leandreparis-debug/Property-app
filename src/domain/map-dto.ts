@@ -37,6 +37,22 @@ export interface MapFootprintProperties {
   status: ComplianceStatus;
   heightM: number;
   heightEstimated: boolean;
+  /** Approximate volume (no footprint): drawn as a translucent wireframe. */
+  approximate: boolean;
+}
+
+/**
+ * Properties of a volume feature: a cell (`index` ≥ 0), or all the
+ * firewalls / docks / roof edges of a site merged (`index` = -1).
+ */
+export interface MapVolumeProperties {
+  siteId: string;
+  code: string;
+  part: "cell" | "firewall" | "dock" | "edge";
+  index: number;
+  heightM: number;
+  baseM: number;
+  approximate: boolean;
 }
 
 /** A site without coordinates. */
@@ -54,6 +70,8 @@ export interface MapSitesData {
   evaluatedOn: string;
   points: FeatureCollection<Point, MapSiteProperties>;
   footprints: FeatureCollection<Polygon | MultiPolygon, MapFootprintProperties>;
+  /** 3D volumes of the footprints (computed by the server, see domain/volume). */
+  volumes: FeatureCollection<Polygon | MultiPolygon, MapVolumeProperties>;
   unlocated: UnlocatedSite[];
   counts: Record<ComplianceStatus, number>;
   /** All reasons per site id (the points only carry the first 3). */

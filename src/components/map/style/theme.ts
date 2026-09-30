@@ -47,3 +47,16 @@ export const ACCENT = "#6e8bff";
 
 /** Selected building volume: accent at 35 % over surface-3 (edge stays pure accent). */
 export const ACCENT_VOLUME = "#374778";
+
+/**
+ * Building volumes (neutral only, never status colors): two very close
+ * surface-3 tones alternate between cells, firewalls and parapets are
+ * lighter, docks darker.
+ */
+export const VOLUME_COLORS = {
+  cellEven: "#1a2230",
+  cellOdd: "#1f2837",
+  firewall: "#2a3446",
+  edge: "#33405a",
+  dock: "#10151d",
+} as const;

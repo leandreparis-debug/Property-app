@@ -28,6 +28,8 @@ blob-report/
 
 # application files (reports, documents): STORAGE_ROOT
 /storage/
+# storage root of the end-to-end suite
+/.e2e-storage/
 
 # offline bundle (tools/offline-bundle): working files, probe output, bundles, site exports
 /.bundle-work/

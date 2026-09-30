@@ -67,8 +67,11 @@ describe("getMapSites", () => {
     const crit = data.points.features.find((f) => f.properties.code === "CRIT-1")!.properties;
     expect(crit.reasons[0]).toMatchObject({ ruleId: "LEASE_ARBITRATION_OVERDUE", severity: "critical" });
     expect(crit.reasons.map((r) => r.ruleId)).toContain("LEASE_NOTICE_IMMINENT");
-    expect(data.footprints.features).toHaveLength(1);
-    expect(data.footprints.features[0]!.properties).toMatchObject({ code: "OK-1", heightM: 12, heightEstimated: true });
+    // One stored footprint; the other located sites with an area get an approximate volume.
+    const exact = data.footprints.features.filter((f) => !f.properties.approximate);
+    expect(exact).toHaveLength(1);
+    expect(exact[0]!.properties).toMatchObject({ code: "OK-1", heightM: 12, heightEstimated: true });
+    expect(data.volumes.features.some((f) => f.properties.code === "OK-1" && f.properties.part === "cell")).toBe(true);
     expect(data.points.features.find((f) => f.properties.code === "OK-1")!.properties.hasFootprint).toBe(true);
   });
 });

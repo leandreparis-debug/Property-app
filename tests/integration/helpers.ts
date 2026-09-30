@@ -4,21 +4,54 @@ import { createPrismaClient } from "@/server/prisma";
 import { db } from "@/server/db";
 import { testDatabaseUrl } from "./test-db";
 
+const plain = createPrismaClient(testDatabaseUrl());
+
+/**
+ * Audit lines written before this id belong to earlier tests. The journal is
+ * NEVER deleted, not even in tests: `resetDatabase()` moves this mark instead,
+ * and every read of `raw.auditLog` only sees the lines written after it.
+ */
+let auditMark = 0n;
+
+const AUDIT_READS = new Set(["findMany", "findFirst", "findFirstOrThrow", "count", "groupBy", "aggregate"]);
+
 /**
  * Plain (unaudited) client on the test database, for fixtures and cleanup
- * only — application code under test uses the audited `db` singleton.
+ * only — application code under test uses the audited `db` singleton. Its
+ * audit READS are limited to the lines written since the last
+ * `resetDatabase()` / `markAudit()`.
  */
-export const raw = createPrismaClient(testDatabaseUrl());
+export const raw = plain.$extends({
+  query: {
+    auditLog: {
+      async $allOperations({ operation, args, query }) {
+        if (AUDIT_READS.has(operation)) {
+          const a = args as { where?: object };
+          a.where = { AND: [a.where ?? {}, { id: { gt: auditMark } }] };
+        }
+        return query(args);
+      },
+    },
+  },
+});
 
-/** Empties every table of the test database (FK-safe order). */
+/** Only the audit lines written from now on are visible to `raw.auditLog` reads. */
+export async function markAudit(): Promise<void> {
+  auditMark = (await plain.auditLog.aggregate({ _max: { id: true } }))._max.id ?? 0n;
+}
+
+/**
+ * Empties the business tables of the test database (FK-safe order). The audit
+ * journal is kept (append-only, even in tests): the audit mark moves instead.
+ */
 export async function resetDatabase(): Promise<void> {
   await raw.session.deleteMany();
   await raw.equipment.deleteMany();
   await raw.sitePlan.deleteMany();
   await raw.site.deleteMany();
-  await raw.auditLog.deleteMany();
   await raw.importBatch.deleteMany();
   await raw.user.deleteMany();
+  await markAudit();
 }
 
 /** A valid password for test accounts. */
@@ -52,7 +85,7 @@ export function asUser<T>(actorId: string, fn: () => Promise<T>): Promise<T> {
 
 /** Closes both clients. */
 export async function disconnectAll(): Promise<void> {
-  await raw.$disconnect();
+  await plain.$disconnect();
   await db.$disconnect();
 }
 

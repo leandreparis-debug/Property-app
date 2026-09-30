@@ -5,7 +5,6 @@ import {
   BuildingWorkKind,
   DataSource,
   DocumentCategory,
-  EquipmentType,
   ExternalSystem,
   IcpeRegime,
   ImportBatchKind,
@@ -59,12 +58,3 @@ describe.each(cases)("%s", (_name, definition, expected) => {
   });
 });
 
-it("has a label for every equipment type", () => {
-  expect(EquipmentType.values.length).toBeGreaterThan(5);
-  for (const value of EquipmentType.values) {
-    expect(EquipmentType.label(value)).toMatch(/\S/);
-    expect(value.length).toBeLessThanOrEqual(40);
-  }
-  expect(EquipmentType.is("SPRINKLER")).toBe(true);
-  expect(EquipmentType.is("sprinkler")).toBe(false);
-});

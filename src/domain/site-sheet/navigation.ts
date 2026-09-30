@@ -13,6 +13,7 @@ export const SITE_TABS = [
   { id: "finance", labelFr: "Financier" },
   { id: "energy", labelFr: "Énergie" },
   { id: "technical", labelFr: "Technique" },
+  { id: "plan", labelFr: "Plan" },
   { id: "icpe", labelFr: "ICPE et risques" },
   { id: "documents", labelFr: "Documents" },
 ] as const;

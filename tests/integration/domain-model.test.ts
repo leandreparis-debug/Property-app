@@ -13,7 +13,7 @@ async function cleanDatabase() {
   await prisma.equipment.deleteMany();
   await prisma.sitePlan.deleteMany();
   await prisma.site.deleteMany();
-  await prisma.auditLog.deleteMany();
+  // The audit journal is never deleted, not even in tests (append-only).
   await prisma.importBatch.deleteMany();
   await prisma.user.deleteMany();
 }

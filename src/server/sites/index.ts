@@ -33,10 +33,10 @@ export async function querySiteRows(): Promise<SiteRow[]> {
       lease: {
         select: { code: true, holdingEntity: true, endDate: true, nextExitDate: true, noticeDate: true, noticePeriodMonths: true, renewalConditionsSigned: true },
       },
-      technical: { select: { surveyedTotalArea: true, totalWarehouseArea: true, socialOfficeArea: true, landArea: true, dockCount: true } },
+      technical: { select: { surveyedTotalArea: true, totalWarehouseArea: true, socialOfficeArea: true, landArea: true, dockCount: true, cellCount: true, heightM: true } },
       icpe: { select: { holder: true } },
       _count: { select: { icpeHeadings: true } },
-      geometry: { select: { footprintGeoJson: true, heightM: true } },
+      geometry: { select: { footprintGeoJson: true, heightM: true, dockSide: true } },
     },
   });
   return rows.map(({ _count, ...r }) => ({
@@ -63,13 +63,24 @@ export async function getSiteData(today: Date): Promise<{ index: SiteIndexEntry[
   return { index: buildSiteIndex(rows, today), footprints: footprintsFromRows(rows), evaluatedOn: toIsoDate(today) ?? "" };
 }
 
-/** Building footprints of the non-archived sites (map pages). */
+/**
+ * Building footprints and generated volumes of the non-archived sites (map
+ * pages): stored footprint, or approximate rectangle from the reference area.
+ * One query; no financial field is read.
+ */
 export async function getFootprints(): Promise<FootprintRecord[]> {
-  const rows = await db.siteGeometry.findMany({
-    where: { site: { archivedAt: null }, footprintGeoJson: { not: null } },
-    select: { siteId: true, footprintGeoJson: true, heightM: true, site: { select: { code: true } } },
+  const rows = await db.site.findMany({
+    where: { archivedAt: null },
+    select: {
+      id: true,
+      code: true,
+      latitude: true,
+      longitude: true,
+      technical: { select: { surveyedTotalArea: true, totalWarehouseArea: true, heightM: true, cellCount: true, dockCount: true } },
+      geometry: { select: { footprintGeoJson: true, heightM: true, dockSide: true } },
+    },
   });
-  return footprintsFromRows(rows.map((r) => ({ id: r.siteId, code: r.site.code, geometry: { footprintGeoJson: r.footprintGeoJson, heightM: r.heightM } })));
+  return footprintsFromRows(rows);
 }
 
 /** An archived site (list reserved to administrators). */

@@ -101,6 +101,11 @@ La permission est accordée **rôle par rôle** dans `PERMISSIONS`. La retirer �
   - `Content-Disposition: attachment`, avec un nom ASCII de repli et le nom exact encodé selon la RFC 5987 (`filename*=UTF-8''…`). Guillemets, séparateurs de chemin et caractères de contrôle sont retirés (`src/server/http/content-disposition.ts`) ;
   - `X-Content-Type-Options: nosniff` et `Cache-Control: private, no-store`.
 
+**Variante en ligne** (`?inline=1`, étape 10) : elle sert à superposer le plan sur la carte et à l'afficher dans l'assistant de calibration.
+- Autorisée **uniquement** pour un document de catégorie `PLAN` dont le type MIME, déterminé par la signature à l'envoi, est PNG, JPEG ou WebP. Tout autre document répond 403 « Affichage en ligne réservé aux images de plan » et doit être téléchargé.
+- Réponse avec `Content-Disposition: inline`, sans nom de fichier, et les mêmes `nosniff` et `private, no-store`. Le `Content-Type` vient toujours de la base.
+- Aucun SVG ni HTML ne peut être servi en ligne : ces types ne sont pas acceptés à l'envoi.
+
 Les **liens externes** affichés par la fiche (Géorisques, GED…) sont ouverts par le navigateur de l'utilisateur, jamais par le serveur :
 - seuls `http:` et `https:` deviennent des liens ;
 - ils portent `rel="noopener noreferrer"` ;
@@ -117,6 +122,9 @@ Toutes les permissions sont vérifiées **côté serveur**, dans chaque Server A
 | Ajouter ou supprimer un document | `document:upload` |
 | Créer un site | `site:write` |
 | Archiver ou désarchiver un site | `site:archive` (administrateurs uniquement) |
+| Ajouter un plan (document `PLAN`), le calibrer ou le recalibrer | `plan:calibrate` (et `document:upload` pour l'envoi) |
+| Créer, déplacer, modifier ou archiver un équipement | `equipment:write` |
+| Choisir le côté des quais du volume 3D | `site:write` |
 
 Règles de sécurité de l'édition :
 - **Liste blanche** : seuls les champs `editable: true` du registre sont acceptés. Tout autre champ fait refuser la requête entière.
@@ -136,6 +144,11 @@ Règles de sécurité de l'édition :
   - texte sans octet nul commençant par un groupe `0 / SECTION` pour DXF.
 
   Un contenu qui ne correspond pas à son extension est refusé (415).
+- **Plans** (catégorie `PLAN`, étape 10) : les contrôles sont plus stricts.
+  - Seules les images PNG, JPEG et WebP sont acceptées ; un PDF, un DWG ou un DXF est refusé (415) avec un message invitant à exporter le plan AutoCAD en image.
+  - Les dimensions sont lues dans l'en-tête par une fonction pure, sans décodage (`src/domain/image-size.ts`). Au-delà de 8 192 px de côté : 400.
+  - La permission `plan:calibrate` est exigée (403 sinon).
+  - Le `SitePlan` courant est créé dans la même transaction auditée que le `Document`.
 - **Nom de fichier** : nettoyé (chemin retiré ; lettres, chiffres, espaces et `- _ . , ( ) ' &` uniquement ; 150 caractères au plus) et utilisé comme titre par défaut.
 - **Stockage** : `STORAGE_ROOT/documents/{siteId}/{documentId}.{ext}`, chemin résolu sous `STORAGE_ROOT`. Le nom stocké est **généré** : le nom fourni par le navigateur n'est jamais utilisé comme chemin.
 - **Base** : le `sha256`, la taille et le type MIME déterminé par la signature sont enregistrés. La création du `Document` est auditée.
@@ -154,6 +167,19 @@ Règles de sécurité de l'édition :
 - la réservation de l'ajout aux rôles `document:upload`.
 
 Il reste recommandé d'analyser les fichiers sur les postes (antivirus local) et, au déploiement (étape 12), d'étudier le branchement d'un analyseur si l'infrastructure en propose un.
+
+### Plans et équipements (étape 10)
+
+- **Server Actions** : `savePlanCalibration`, `setDockSide`, `createEquipment`, `updateEquipment`, `moveEquipment` et `archiveEquipment` délèguent à `src/server/plans/edit.ts` et `src/server/equipment/edit.ts`, qui vérifient la permission, verrouillent la ligne du site (`UPDLOCK`), refusent un site archivé et écrivent dans une transaction auditée (`source: "ui"`, un `batchId` par action, motif facultatif).
+- **Recalibration** : les coordonnées des équipements posés sur le plan sont recalculées dans la **même** transaction, avec le **même** `batchId` que la calibration.
+- **Validation** :
+  - le type d'équipement doit appartenir au catalogue (zod) ;
+  - les points de contrôle sont des nombres finis, 20 au maximum, avec une latitude dans ±85° ;
+  - des points alignés sont refusés ;
+  - une position d'équipement à plus de 1 km du site est refusée ;
+  - les textes ont une longueur limitée.
+- **Lecture pour la carte nationale** : `GET /api/sites/[id]/equipments` (`site:read`) ne renvoie que l'identifiant, le type, le libellé et la position des équipements non archivés d'un site non archivé.
+- **Pictogrammes** : SVG écrits dans le dépôt et transformés en images dans le navigateur (`data:`, déjà autorisé par `img-src`). Aucun SVG fourni par un utilisateur n'est jamais affiché.
 
 ## Requêtes intersites et redirections ouvertes
 - **Server Actions** (connexion) : vérification d'origine intégrée à Next.js.
@@ -177,6 +203,7 @@ Il reste recommandé d'analyser les fichiers sur les postes (antivirus local) et
 - **Champs masqués** : `User.passwordHash`. Il vaut `"[redacted]"` dans `CREATE`, et un changement de hachage écrit une ligne `field = "passwordHash"` avec `"[redacted]"` avant et après.
 - **Même transaction.** Les lignes d'audit sont écrites dans la transaction de la modification. Hors transaction, l'extension en ouvre une. Dans `db.$transaction(async (tx) => …)`, toutes les opérations, auditées ou non, et leurs lignes d'audit partagent la transaction de l'appelant. Si elle est annulée, l'audit l'est aussi.
 - **Ajout seul.** `update`, `upsert`, `delete`, `updateMany` et `deleteMany` sur `AuditLog` lèvent une erreur via le client.
+- **Jamais supprimé, même en test.** Aucun code ne supprime de ligne d'audit, ni l'application, ni les scripts, ni les tests. `tests/unit/audit-never-deleted.test.ts` parcourt `src/`, `tests/`, `scripts/`, `tools/` et `prisma/` (hors migrations) et échoue sur `DELETE FROM audit_logs`, `TRUNCATE`/`DROP TABLE audit_logs` ou `auditLog.delete(Many)`. Les tests travaillent sur des bases dédiées (`vigie_test` pour l'intégration, `vigie_e2e` pour Playwright) recréées entières à chaque lancement ; la base `vigie` n'est jamais utilisée par les tests.
 - **Sérialisation stable** : clés triées, `Decimal` et `BigInt` en chaîne, `Date` en ISO 8601, `null` conservé.
 
 ### Règles pour les développeurs

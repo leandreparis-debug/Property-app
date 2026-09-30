@@ -100,6 +100,18 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 - Par sécurité, le setup refuse toute base dont le nom ne se termine pas par `_test`.
 - Prisma 7 bloque `migrate reset` lorsqu'il détecte un agent IA (Claude Code, Cursor…) et demande le consentement explicite de l'utilisateur. Lancée par un humain ou par la CI, la commande fonctionne normalement.
 
+### Base des tests e2e
+
+`pnpm test:e2e` ne touche **jamais** la base de développement `vigie`. Il travaille sur `vigie_e2e`, créée par `pnpm db:up` :
+
+- le `globalSetup` (`tests/e2e/global-setup.ts`) la réinitialise (migrations rejouées), charge le seed, importe `samples/vigie-sample.xlsx` puis crée les trois comptes de test (`e2e-admin@vigie.local`, `e2e-editor@vigie.local`, `e2e-viewer@vigie.local`) ;
+- le serveur Playwright démarre avec sa propre `DATABASE_URL` (`database=vigie_e2e`, forçable par `E2E_DATABASE_URL`) et son propre `STORAGE_ROOT` (`.e2e-storage/`, vidé à chaque lancement, ignoré par git) ;
+- `tests/e2e/e2e-env.ts` refuse toute base dont le nom ne se termine pas par `_e2e`.
+
+> **Le journal d'audit n'est jamais supprimé, même en test.** Aucun code (application, scripts, tests) n'efface de ligne de `audit_logs` : un test unitaire (`tests/unit/audit-never-deleted.test.ts`) échoue si `DELETE FROM audit_logs`, `TRUNCATE`, `auditLog.delete…` apparaît ailleurs que dans les migrations. Les bases de test (`vigie_test`, `vigie_e2e`) sont recréées entières ; les tests d'intégration ne vident pas l'audit mais filtrent leurs lectures au-delà d'un repère (`markAudit()`).
+>
+> Les sites `E2E-…` laissés dans `vigie` par les passages de l'étape 9 s’archivent avec `pnpm sites:archive --prefix E2E- --actor <email admin> --reason "Sites de test"` (archivage audité, rien n’est supprimé).
+
 ## Scripts
 
 | Script | Rôle |
@@ -111,10 +123,10 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm typecheck` | Vérification TypeScript (`tsc --noEmit`) |
 | `pnpm test` | Tests unitaires Vitest |
 | `pnpm test:watch` | Vitest en mode watch |
-| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production ; la base doit tourner. Le `globalSetup` crée (ou réinitialise) trois comptes de test (`e2e-admin@vigie.local`, `e2e-editor@vigie.local`, `e2e-viewer@vigie.local`) dans la base de `.env`. Les tests d'édition ne travaillent que sur des sites qu'ils créent (codes `E2E-…`), supprimés en fin de suite |
+| `pnpm test:e2e` | Tests Playwright (Chromium) sur un build de production, sur la base **dédiée `vigie_e2e`** (voir « Base des tests e2e ») ; `pnpm db:up` doit avoir tourné |
 | `pnpm test:integration` | Tests d'intégration Vitest sur la base `vigie_test` (recréée à chaque lancement) |
 | `pnpm check:offline` | Échoue si une URL `http(s)://` externe apparaît dans `src/` ou `public/` |
-| `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente de la base `vigie` |
+| `pnpm db:up` | `docker compose up` + attente du healthcheck + création idempotente des bases `vigie` et `vigie_e2e` |
 | `pnpm db:down` | Arrête SQL Server (le volume `vigie-mssql-data` est conservé) |
 | `pnpm db:generate` | Génère le client Prisma dans `generated/prisma/` (lancé aussi par `pnpm install`) |
 | `pnpm db:migrate` | `prisma migrate dev` : crée ou applique les migrations en développement |
@@ -134,6 +146,7 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm bundle:build` | **Poste connecté** : prépare `vigie-offline-bundle-AAAAMMJJ/` (enrichissement, fond de carte, orthophotos) ; `--fixtures` fonctionne sans réseau |
 | `pnpm map:install` | Vérifie un paquet et installe sa carte dans `STORAGE_ROOT/map/` (`--rollback` : version précédente) |
 | `pnpm enrichment:apply` | Applique `enrichment.json` : ne remplit que les champs vides, liste les divergences (`--dry-run` d'abord) |
+| `pnpm sites:archive` | Archive les sites dont le code commence par un préfixe, par l’archivage audité (`--prefix E2E- --actor <admin> --reason "<motif>"`) ; aucun audit supprimé |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
 ## Import du tableur
@@ -190,6 +203,17 @@ Les trois vues partagent les mêmes **filtres**, conservés dans l'URL : un lien
 - **administrateurs** : en plus, archivage et désarchivage.
 
 Chaque modification est validée côté serveur, tracée dans le journal d'audit (auteur, ancienne et nouvelle valeur, motif facultatif) et protégée des conflits champ par champ. Une valeur saisie dans l'interface n'est plus écrasée par l'import du tableur. Voir [`docs/editing.md`](docs/editing.md).
+
+
+## Plan, volume 3D et équipements
+
+L'onglet **Plan** de la fiche (`?tab=plan`) affiche :
+
+- le **volume 3D** généré à partir de l'emprise, de la hauteur, des cellules et des quais. Sans emprise, c'est un volume approximatif, rendu en filaire ;
+- le **plan AutoCAD** exporté en image, calibré par des points de contrôle et superposé à la carte ;
+- les **équipements** (incendie, électricité, fluides, environnement, sécurité des personnes), à placer, déplacer au clavier ou à la souris, modifier et archiver.
+
+Toutes les écritures sont auditées. Procédure et règles : [`docs/plans-and-equipment.md`](docs/plans-and-equipment.md).
 
 ## Carte nationale
 

@@ -115,11 +115,27 @@ La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôl
 - **Groupes** (jusqu'au zoom 7) : disque `surface-2` dont le contour prend la couleur de la sévérité **la plus grave** du groupe. Le nombre de sites est affiché en Geist Mono par un marqueur HTML, car Geist n'existe pas en glyphes de carte.
 - **Sélection** : anneau `accent` autour du point, et volume du bâtiment teinté en `accent` atténué avec un liseré `accent`.
 
-**Emprises** (à partir du zoom 14) :
-- volume simple `fill-extrusion` de la hauteur connue, ou de 12 m par défaut avec la mention « Volume estimé (hauteur par défaut) » ;
-- couleur neutre `surface-3` ;
-- liseré au sol de la couleur du statut du site ;
-- le volume détaillé viendra à l'étape 10.
+**Volumes des bâtiments** (à partir du zoom 14, étape 10, règles de génération dans `docs/plans-and-equipment.md`) :
+- **cellules** en `fill-extrusion`, dans deux tons `surface-3` alternés à peine distincts (`#1A2230` et `#1F2837`) pour lire le découpage ;
+- **murs coupe-feu** plus clairs (`#2A3446`), dépassant le toit de 1 m ;
+- **arêtes de toit** soulignées par un acrotère fin (`border-strong`, 0,35 m de large, 0,4 m de haut), qui remplace une ligne : MapLibre ne sait pas tracer une ligne en altitude ;
+- **quais** plus sombres (`#10151D`), 4,5 m de haut, le long du côté choisi ;
+- liseré au sol de la couleur du statut du site (inchangé) ; au-dessus du dégradé vertical de MapLibre, aucune autre couleur ;
+- **site sélectionné** : cellules en `accent` atténué (`#374778`), acrotères en `accent`, via l'état global `selectedSiteId` (aucune donnée à recharger) ;
+- **volume approximatif** (emprise non renseignée) : **filaire translucide**, avec des cellules, murs et quais à 22 % d'opacité, des acrotères pleins qui dessinent les arêtes et un liseré au sol en pointillés. `SitePeek` affiche « Volume approximatif (emprise non renseignée) », et « Hauteur estimée (12 m par défaut) » si la hauteur manque.
+
+**Équipements** (`src/components/plan/`) :
+- **pictogrammes dessinés à la main** en SVG dans le dépôt (`pictograms.ts`), transformés à l'exécution en images MapLibre (canvas → `map.addImage`, à 2×), sans sprite ni police ;
+- **jamais de couleur de statut** : fond `surface-2`, contour `text-muted`, trait du pictogramme en `text`. La **catégorie** se lit à la **forme** (rond pour Incendie, carré pour Électricité, losange pour Fluides, hexagone pour Environnement, pilule pour Sécurité des personnes), le **type** à l'icône ;
+- `accent` est réservé à la sélection : anneau de 2,5 px autour de l'équipement sélectionné, et contour de la ligne sélectionnée dans la liste ;
+- taille de 32 px, lisible dès le zoom 18 (réduite à 55 % au zoom 15). En dessous du zoom 17, les équipements sont **regroupés** en disques `surface-2` neutres ;
+- le même SVG sert dans l'interface (`Pictogram`) : la liste et la carte parlent le même langage.
+
+**Superposition du plan** (onglet Plan) :
+- source MapLibre `image`, placée par ses quatre coins calculés par la transformation affine, et dessinée **sous** les volumes ;
+- opacité réglable de 0 à 100 % (70 % par défaut), bouton « Masquer le plan » (`aria-pressed`) ;
+- quand le plan est visible, le volume passe à 25 % d'opacité pour ne pas masquer le plan ;
+- dans l'assistant de calibration, les points de contrôle sont des pastilles numérotées `surface-2` au contour `accent`, reprises à l'identique sur l'image et sur la carte ; un point suspect a un contour en pointillés `text-muted`, jamais une couleur de statut.
 
 **Images aériennes** (`style/ortho.ts`) : visibles à partir du zoom 14, **désaturées** (saturation −0,7), **assombries** (luminosité maximale 0,55) et légèrement contrastées (+0,12), pour ne jamais concurrencer les couleurs de statut.
 

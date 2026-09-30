@@ -27,7 +27,8 @@ services:
       retries: 30
       start_period: 20s
 
-  # One-shot job: creates the `vigie` database if it does not exist (idempotent).
+  # One-shot job: creates the `vigie` database and the end-to-end test database
+  # `vigie_e2e` if they do not exist (idempotent).
   db-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
     platform: linux/amd64
@@ -41,8 +42,8 @@ services:
       - -c
       - >-
         /opt/mssql-tools18/bin/sqlcmd -C -S db -U sa -P "$$MSSQL_SA_PASSWORD" -b
-        -Q "IF DB_ID(N'vigie') IS NULL CREATE DATABASE [vigie];"
-        && echo "Base 'vigie' prête."
+        -Q "IF DB_ID(N'vigie') IS NULL CREATE DATABASE [vigie]; IF DB_ID(N'vigie_e2e') IS NULL CREATE DATABASE [vigie_e2e];"
+        && echo "Bases 'vigie' et 'vigie_e2e' prêtes."
     restart: "no"
 
 volumes:

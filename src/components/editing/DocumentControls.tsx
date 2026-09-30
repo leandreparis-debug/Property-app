@@ -12,7 +12,7 @@ import { INPUT_CLASS } from "./FieldInput";
 import { useToast } from "./feedback";
 
 /** Upload with progress (fetch has no upload progress: XMLHttpRequest). */
-function send(url: string, body: FormData, onProgress: (ratio: number) => void): Promise<{ status: number; error?: string }> {
+export function uploadWithProgress(url: string, body: FormData, onProgress: (ratio: number) => void): Promise<{ status: number; error?: string }> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
@@ -80,7 +80,7 @@ export function DocumentUploader({ siteId }: { siteId: string }) {
     body.set("title", title);
     if (comment.trim()) body.set("comment", comment.trim());
     setProgress(0);
-    const result = await send(`/api/sites/${encodeURIComponent(siteId)}/documents`, body, setProgress);
+    const result = await uploadWithProgress(`/api/sites/${encodeURIComponent(siteId)}/documents`, body, setProgress);
     if (result.status === 201) {
       toast("Document ajouté", title);
       reset();

@@ -37,7 +37,10 @@ describe("buildMapSitesData", () => {
     expect(data.points.features).toHaveLength(1);
     const f = data.points.features[0]!;
     expect(f.geometry.coordinates).toEqual([4.9, 45.7]);
-    expect(f.properties).toMatchObject({ id: "s1", code: "T-1", status: "ok", statusRank: 0, totalArea: 20000, hasFootprint: false, isActive: true, completeness: 100 });
+    expect(f.properties).toMatchObject({ id: "s1", code: "T-1", status: "ok", statusRank: 0, totalArea: 20000, hasFootprint: true, isActive: true, completeness: 100 });
+    // No footprint but an area: approximate volume.
+    expect(data.footprints.features[0]!.properties.approximate).toBe(true);
+    expect(buildMapSitesData([row({ technical: null })], TODAY).points.features[0]!.properties.hasFootprint).toBe(false);
   });
 
   it("the DTO carries no financial or detailed lease field (list of keys)", () => {
@@ -63,7 +66,7 @@ describe("buildMapSitesData", () => {
     expect(data.unlocated.map((u) => u.code)).toEqual(["T-1", "T-3"]);
   });
 
-  it("footprints: default height and heightEstimated; invalid geometry ignored", () => {
+  it("footprints: default height and heightEstimated; invalid geometry → approximate volume", () => {
     const data = buildMapSitesData(
       [
         row({ geometry: { footprintGeoJson: square, heightM: null } }),
@@ -73,10 +76,15 @@ describe("buildMapSitesData", () => {
       TODAY,
     );
     expect(data.footprints.features.map((f) => f.properties)).toEqual([
-      { id: "s1", code: "T-1", status: "ok", heightM: DEFAULT_BUILDING_HEIGHT_M, heightEstimated: true },
-      { id: "s2", code: "T-2", status: "ok", heightM: 14.5, heightEstimated: false },
+      { id: "s1", code: "T-1", status: "ok", heightM: DEFAULT_BUILDING_HEIGHT_M, heightEstimated: true, approximate: false },
+      { id: "s2", code: "T-2", status: "ok", heightM: 14.5, heightEstimated: false, approximate: false },
+      { id: "s3", code: "T-3", status: "ok", heightM: 3, heightEstimated: false, approximate: true },
     ]);
-    expect(data.points.features.find((f) => f.properties.id === "s3")!.properties.hasFootprint).toBe(false);
+    // Volumes: one feature per cell, the docks of a site merged; tagged with the site.
+    const s2 = data.volumes.features.filter((f) => f.properties.siteId === "s2");
+    expect(s2.filter((f) => f.properties.part === "cell")).toHaveLength(1);
+    expect(s2.find((f) => f.properties.part === "dock")!.geometry.type).toBe("MultiPolygon");
+    expect(data.volumes.features.every((f) => f.properties.approximate === (f.properties.siteId === "s3"))).toBe(true);
     expect(parseFootprint(JSON.stringify({ type: "Point", coordinates: [1, 2] }))).toBeNull();
   });
 

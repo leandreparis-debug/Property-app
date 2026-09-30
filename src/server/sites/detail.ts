@@ -12,7 +12,9 @@ import { groupPublicData, type PublicDataGroup } from "@/domain/site-sheet/publi
 import { sortWorks } from "@/domain/site-sheet/works";
 import type { MultiPolygon, Polygon } from "geojson";
 import { db } from "../db";
-import { parseFootprint } from "./build";
+import type { FootprintRecord } from "@/domain/map-data";
+import { categoryOf, EQUIPMENT_CATEGORIES } from "@/domain/equipment/catalog";
+import { footprintOf, parseFootprint } from "./build";
 
 export { resolveProvenanceLabel, type FieldProvenance } from "@/domain/site-sheet/provenance";
 
@@ -115,6 +117,10 @@ export interface SiteDetail {
   referenceArea: number | null;
   evaluation: ComplianceEvaluation;
   footprint: SiteFootprint | null;
+  /** Footprint and generated 3D volume (approximate without footprint), or null. */
+  volume: FootprintRecord | null;
+  /** Non-archived equipments per category, in catalog order (all categories, zeros included). */
+  equipmentCounts: { category: string; labelFr: string; count: number }[];
   publicData: PublicDataGroup[];
   documents: SiteDocument[];
 }
@@ -128,7 +134,10 @@ export interface SiteDetail {
  */
 export async function getSiteDetail(id: string, today: Date): Promise<SiteDetail | null> {
   if (!isWellFormedSiteId(id)) return null;
-  const row = await db.site.findUnique({ where: { id }, include: DETAIL_INCLUDE });
+  const [row, equipmentTypes] = await Promise.all([
+    db.site.findUnique({ where: { id }, include: DETAIL_INCLUDE }),
+    db.equipment.groupBy({ by: ["type"], where: { siteId: id, archivedAt: null }, _count: { _all: true } }),
+  ]);
   if (!row) return null;
 
   const { externalIds, lease, serviceContract, technical, buildingWorks, icpe, icpeHeadings, energyProfile, annualMetrics, geometry, documents, publicData, ...scalars } = row;
@@ -198,6 +207,12 @@ export async function getSiteDetail(id: string, today: Date): Promise<SiteDetail
     referenceArea: area,
     evaluation,
     footprint,
+    equipmentCounts: EQUIPMENT_CATEGORIES.map((c) => ({
+      category: c.code,
+      labelFr: c.labelFr,
+      count: equipmentTypes.filter((t) => categoryOf(t.type)?.code === c.code).reduce((sum, t) => sum + t._count._all, 0),
+    })),
+    volume: footprintOf({ id: scalars.id, code: scalars.code, latitude: scalars.latitude, longitude: scalars.longitude, technical, geometry }),
     publicData: groupPublicData(publicData),
     documents: documents.map((d) => ({
       id: d.id,

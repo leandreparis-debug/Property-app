@@ -101,7 +101,8 @@ export function SitePeek({ site, reasons, footprint, onClose, hiddenByFilters = 
             </>
           )}
         </dl>
-        {footprint?.heightEstimated && <p className="text-xs text-text-subtle">Volume estimé (hauteur par défaut)</p>}
+        {footprint?.approximate && <p className="text-xs text-text-muted">Volume approximatif (emprise non renseignée)</p>}
+        {footprint?.heightEstimated && <p className="text-xs text-text-muted">Hauteur estimée (12 m par défaut)</p>}
       </div>
 
       <footer className="border-t border-border px-5 py-4">
