@@ -4,6 +4,7 @@
  * reference area. Never any rent, amount or detailed lease data (a unit test
  * checks the list of keys).
  */
+import type { DeadlineBucket } from "./site-index";
 import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
 import type { ComplianceReason } from "./compliance/types";
 import type { ComplianceStatus } from "@/lib/status";
@@ -27,6 +28,8 @@ export interface MapSiteProperties {
   completeness: number;
   /** Reference area (m²), or null. */
   totalArea: number | null;
+  /** Lease deadline bucket (label « Échéance » of the map pins). */
+  deadline: DeadlineBucket;
   hasFootprint: boolean;
 }
 

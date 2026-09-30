@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  colorScheme: "dark",
-  themeColor: "#07090C",
+  colorScheme: "light",
+  themeColor: "#F5F2EC",
 };
 
 /** Root layout: document, fonts and theme only. The application shell lives in `(app)/layout.tsx`. */
@@ -27,7 +27,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   await headers();
 
   return (
-    <html lang="fr" className={cn("dark", GeistSans.variable, GeistMono.variable)}>
+    <html lang="fr" className={cn(GeistSans.variable, GeistMono.variable)}>
       <body>{children}</body>
     </html>
   );

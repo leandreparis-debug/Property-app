@@ -181,8 +181,17 @@ Il reste recommandé d'analyser les fichiers sur les postes (antivirus local) et
 - **Lecture pour la carte nationale** : `GET /api/sites/[id]/equipments` (`site:read`) ne renvoie que l'identifiant, le type, le libellé et la position des équipements non archivés d'un site non archivé.
 - **Pictogrammes** : SVG écrits dans le dépôt et transformés en images dans le navigateur (`data:`, déjà autorisé par `img-src`). Aucun SVG fourni par un utilisateur n'est jamais affiché.
 
+## Fond de carte IGN en ligne (exception au réseau fermé)
+
+Par défaut (`MAP_BASEMAP=ign`), le **navigateur** de chaque utilisateur charge le « Plan IGN » et les photographies aériennes sur la Géoplateforme de l'IGN (`https://data.geopf.fr`, données publiques, licence Etalab). C'est un choix assumé de la refonte visuelle ; ses limites :
+
+- **Le serveur n'appelle jamais internet** : seuls les postes des utilisateurs contactent `data.geopf.fr`. Ils doivent y avoir accès (proxy de l'entreprise).
+- **CSP** : cette seule origine est ajoutée, et seulement à `img-src` et `connect-src` (`src/lib/basemap.ts`, `src/lib/csp.ts`). Aucun script, style, police ni cadre externe. Un test unitaire le vérifie.
+- **Ce qui sort** : des demandes de tuiles (zoom, x, y), donc la zone consultée. Aucune donnée métier : ni code, ni nom, ni statut de site. L'IGN voit l'adresse IP de sortie et l'en-tête `Referer` est réduit à l'origine (`Referrer-Policy: same-origin` : aucun `Referer` vers un autre site).
+- **Mode fermé** : `MAP_BASEMAP=offline` revient au fond installé sur le serveur (étape 5) ou au fond de secours, sans aucune requête externe. Les tests e2e tournent dans ce mode et vérifient qu'aucune requête ne quitte l'origine.
+
 ## Requêtes intersites et redirections ouvertes
-- **Server Actions** (connexion) : vérification d'origine intégrée à Next.js.
+- **Server Actions** (connexion) : vérification d'origine intégrée à Next.js. Derrière un proxy qui réécrit l'en-tête `Host` (GitHub Codespaces, reverse proxy), seul l'hôte de `APP_URL` est ajouté aux origines acceptées (`next.config.ts`), plus, dans un Codespace, son adresse de redirection de port.
 - **Route handlers** qui modifient des données (POST, PUT, PATCH, DELETE) : l'en-tête `Origin` doit correspondre exactement à l'origine de `APP_URL` (`isSameOrigin`). Une origine absente est refusée. `withApiAuth()` et la route de déconnexion l'appliquent.
 - **`SameSite=Lax`** : le cookie n'est pas envoyé sur les sous-requêtes intersites.
 - **`?next=`** (`safeRedirectPath`) : n'accepte que des chemins internes qui commencent par `/`. Sont refusés `//…`, `/\…`, les caractères de contrôle, les URL absolues, `javascript:` et `/login`. Tout le reste renvoie vers `/`.

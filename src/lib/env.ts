@@ -49,6 +49,8 @@ const envSchema = z.object({
   TRUST_PROXY: booleanString().default(false),
   /** Root folder of the files written by the application (reports, documents). */
   STORAGE_ROOT: z.string().trim().min(1, "ne doit pas être vide").optional(),
+  /** Basemap: `ign` (IGN Géoplateforme, online in the browser) or `offline` (see lib/basemap.ts). */
+  MAP_BASEMAP: z.enum(["ign", "offline"], { error: "doit valoir « ign » ou « offline »" }).default("ign"),
 });
 
 /** Validated, typed server environment. */

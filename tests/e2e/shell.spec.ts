@@ -4,7 +4,7 @@ import { ORIGIN } from "./fixtures";
 // Every test of this file runs as the e2e admin (storage state from the setup project).
 
 const ROUTES = [
-  { label: "Carte", path: "/", heading: "Carte des entrepôts" },
+  { label: "Carte", path: "/", heading: "Carte du portefeuille" },
   { label: "Sites", path: "/sites", heading: "Sites" },
   { label: "Supervision", path: "/supervision", heading: "Supervision" },
   { label: "Administration", path: "/admin", heading: "Administration" },
@@ -25,7 +25,7 @@ function trackCspViolations(page: Page): string[] {
   return violations;
 }
 
-test("la page d'accueil affiche le rail, la barre de commande et la légende", async ({ page }) => {
+test("la page d'accueil affiche la barre de navigation, la recherche et la légende", async ({ page }) => {
   const csp = trackCspViolations(page);
   await page.goto("/");
 
@@ -39,11 +39,11 @@ test("la page d'accueil affiche le rail, la barre de commande et la légende", a
   await expect(legend.getByRole("listitem")).toHaveText([/^Critique\d+$/, /^À surveiller\d+$/, /^Non évalué\d+$/, /^Conforme\d+$/]);
   await expect(page.getByRole("region", { name: "Carte des entrepôts" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "fr");
-  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
   expect(csp).toEqual([]);
 });
 
-test("le rail permet de naviguer vers les 4 routes", async ({ page }) => {
+test("la navigation mène aux 4 routes", async ({ page }) => {
   await page.goto("/admin");
   for (const route of ROUTES) {
     const link = rail(page).getByRole("link", { name: route.label, exact: true });
@@ -72,13 +72,15 @@ test("Ctrl+K ouvre la palette et Échap la ferme", async ({ page }) => {
   await expect(dialog).toBeHidden();
 });
 
-test("le rail se parcourt au clavier et le focus est visible", async ({ page }) => {
+test("la barre du haut se parcourt au clavier et le focus est visible", async ({ page }) => {
   await page.goto("/");
   await expect(rail(page)).toBeVisible();
 
-  // First Tab stop: the skip link.
+  // First Tab stop: the skip link, then the brand (home link).
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Aller au contenu" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: /Vigie — accueil/ })).toBeFocused();
 
   for (const route of ROUTES) {
     await page.keyboard.press("Tab");
@@ -93,19 +95,16 @@ test("le rail se parcourt au clavier et le focus est visible", async ({ page }) 
           return `${style.outlineStyle} ${parseFloat(style.outlineWidth) >= 2} ${style.outlineColor}`;
         }),
       )
-      .toBe("solid true rgb(110, 139, 255)"); // --color-accent
+      .toBe("solid true rgb(27, 79, 156)"); // --color-accent
   }
 
-  // Tooltip follows keyboard focus.
-  await expect(page.getByRole("tooltip").filter({ hasText: "Administration" })).toBeVisible();
-
-  // Next stop: the user menu, at the bottom of the rail.
+  // Then the search field (Enter opens the palette), then the user menu.
+  await page.keyboard.press("Tab");
+  const search = page.getByRole("button", { name: /Rechercher un site/ });
+  await expect(search).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: /Menu utilisateur/ })).toBeFocused();
-
-  // Then the command bar; Enter opens the palette.
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: /Rechercher un site/ })).toBeFocused();
+  await search.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: "Recherche" })).toBeVisible();
 });

@@ -27,7 +27,13 @@ describe("parseEnv", () => {
       SESSION_ABSOLUTE_HOURS: 12,
       TRUST_PROXY: false,
       STORAGE_ROOT: "./storage",
+      MAP_BASEMAP: "ign",
     });
+  });
+
+  it("MAP_BASEMAP: ign by default, offline accepted, anything else refused", () => {
+    expect(parseEnv({ ...valid, MAP_BASEMAP: "offline" }).MAP_BASEMAP).toBe("offline");
+    expect(errorOf(() => parseEnv({ ...valid, MAP_BASEMAP: "osm" })).variables).toEqual(["MAP_BASEMAP"]);
   });
 
   it("defaults STORAGE_ROOT to ./storage outside production and requires it in production", () => {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { mapOrigins } from "@/lib/basemap";
 import { buildContentSecurityPolicy } from "@/lib/csp";
 import { SESSION_COOKIE_NAMES } from "@/server/auth/cookies";
 
@@ -35,7 +36,7 @@ export function middleware(request: NextRequest) {
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = buildContentSecurityPolicy(nonce, process.env.NODE_ENV === "development");
+  const csp = buildContentSecurityPolicy(nonce, process.env.NODE_ENV === "development", mapOrigins());
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);

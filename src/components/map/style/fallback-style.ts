@@ -81,8 +81,8 @@ export function buildFallbackStyle({ countries, origin, ortho, attributions }: F
       ...(ortho ? { [ORTHO_SOURCE]: orthoSource(mapAssetUrls(origin).ortho) } : {}),
     },
     layers: [
-      { id: "background", type: "background", paint: { "background-color": n.bg } },
-      { id: "countries-neighbours", type: "fill", source: "countries", filter: ["!", ["get", "isFrance"]], paint: { "fill-color": "#090c11" } },
+      { id: "background", type: "background", paint: { "background-color": MAP_NEUTRAL.water } },
+      { id: "countries-neighbours", type: "fill", source: "countries", filter: ["!", ["get", "isFrance"]], paint: { "fill-color": MAP_NEUTRAL.landcover } },
       { id: "countries-france", type: "fill", source: "countries", filter: ["get", "isFrance"], paint: { "fill-color": MAP_NEUTRAL.land } },
       ...(ortho ? [ORTHO_LAYER_SPEC] : []),
       { id: "borders-neighbours", type: "line", source: "countries", filter: ["!", ["get", "isFrance"]], paint: { "line-color": n.border, "line-width": 0.6 } },

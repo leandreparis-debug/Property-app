@@ -3,7 +3,7 @@
  *
  * Each pictogram is the inner markup of a 24 × 24 SVG drawn with strokes in
  * the `GLYPH` color; {@link markerSvg} places it in the marker SHAPE of its
- * category, filled with surface-2. Status colors are never used; the accent
+ * category, filled in white. Status colors are never used; the accent
  * only appears on the selection ring (a separate map layer).
  *
  * At load time, the map rasterizes each marker to a canvas and registers it
@@ -11,8 +11,8 @@
  */
 import type { MarkerShape } from "@/domain/equipment/catalog";
 
-/** Marker fill (surface-2), outline (border-strong) and glyph (text) colors. */
-export const MARKER_COLORS = { fill: "#131923", outline: "#8b96a8", glyph: "#e6eaf2" } as const;
+/** Marker fill (white), outline (text-muted) and glyph (text) colors. */
+export const MARKER_COLORS = { fill: "#ffffff", outline: "#635d54", glyph: "#1d1b18" } as const;
 
 /** Pictograms by icon key (inner SVG, 24 × 24 units, stroke = glyph color). */
 export const PICTOGRAMS: Readonly<Record<string, string>> = {

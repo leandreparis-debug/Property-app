@@ -1,27 +1,32 @@
 # Système de design
 
-Thème unique en V1 : sombre, de type « salle de contrôle », pour ordinateur uniquement. Les tokens sont définis dans `src/app/globals.css` (bloc `@theme`) et affichés sur `/dev/design` (hors production).
+Thème clair et chaud, pour ordinateur uniquement : fond crème, cartes blanches arrondies, un seul accent bleu. Barre de navigation horizontale en haut. Les tokens sont définis dans `src/app/globals.css` (bloc `@theme`) et affichés sur `/dev/design` (hors production).
+
+> **Accent provisoire.** Le bleu `#1B4F9C` sera remplacé par la valeur exacte de la charte Carrefour Property dès qu'elle sera fournie (un seul token à changer : `--color-accent`, et ses variantes `-strong` et `-soft`).
 
 ## Tokens de couleur
 
 | Token | Valeur | Usage | Classe Tailwind |
 |---|---|---|---|
-| `--color-bg` | `#07090C` | fond global, derrière la carte | `bg-bg` |
-| `--color-surface-1` | `#0D1117` | panneaux | `bg-surface-1` |
-| `--color-surface-2` | `#131923` | éléments survolés, champs | `bg-surface-2` |
-| `--color-surface-3` | `#1A2230` | éléments actifs | `bg-surface-3` |
-| `--color-border` | `#232C3B` | bordures standard | `border-border` |
-| `--color-border-strong` | `#33405A` | séparateurs marqués, focus secondaire | `border-border-strong` |
-| `--color-text` | `#E6EAF2` | texte principal | `text-text` |
-| `--color-text-muted` | `#8B96A8` | texte secondaire, libellés | `text-text-muted` |
-| `--color-text-subtle` | `#5B6578` | métadonnées, désactivé | `text-text-subtle` |
-| `--color-accent` | `#6E8BFF` | interactions, sélection, focus (jamais un statut) | `bg-accent`, `text-accent` |
-| `--color-status-ok` | `#2FB67C` | conforme | `bg-status-ok` |
-| `--color-status-warning` | `#F2A93B` | écart à surveiller | `bg-status-warning` |
-| `--color-status-critical` | `#F0524F` | écart critique | `bg-status-critical` |
-| `--color-status-unknown` | `#5B6578` | statut non calculable | `bg-status-unknown` |
+| `--color-bg` | `#F5F2EC` | fond global (crème) | `bg-bg` |
+| `--color-surface-1` | `#FFFFFF` | cartes, panneaux, barre du haut | `bg-surface-1` |
+| `--color-surface-2` | `#FAF8F4` | champs, éléments survolés | `bg-surface-2` |
+| `--color-surface-3` | `#EFEAE1` | éléments actifs, pistes de barres | `bg-surface-3` |
+| `--color-border` | `#E7E1D7` | bordures standard | `border-border` |
+| `--color-border-strong` | `#CFC5B5` | séparateurs marqués, survol | `border-border-strong` |
+| `--color-text` | `#1D1B18` | texte principal | `text-text` |
+| `--color-text-muted` | `#635D54` | texte secondaire, libellés | `text-text-muted` |
+| `--color-text-subtle` | `#8A8378` | métadonnées, désactivé, grand texte | `text-text-subtle` |
+| `--color-accent` | `#1B4F9C` | interactions, sélection, focus (jamais un statut) | `bg-accent`, `text-accent` |
+| `--color-accent-strong` | `#123A75` | texte sur fond `accent-soft`, survol | `text-accent-strong` |
+| `--color-accent-soft` | `#E8EEF8` | fond des éléments sélectionnés (onglets, puces) | `bg-accent-soft` |
+| `--color-on-accent` | `#FFFFFF` | texte sur fond `accent` | `text-on-accent` |
+| `--color-status-ok` | `#2F8F5B` | conforme | `bg-status-ok` |
+| `--color-status-warning` | `#C98512` | écart à surveiller | `bg-status-warning` |
+| `--color-status-critical` | `#CF3B32` | écart critique | `bg-status-critical` |
+| `--color-status-unknown` | `#8B867D` | statut non calculable | `bg-status-unknown` |
 
-Autres tokens : rayons `--radius-sm` 6 px, `--radius-md` 10 px, `--radius-lg` 14 px ; ombre `--shadow-panel` (profonde et diffuse, classe `shadow-panel`).
+Autres tokens : rayons `--radius-sm` 8 px, `--radius-md` 12 px, `--radius-lg` 16 px ; ombre `--shadow-panel` (douce et chaude, classe `shadow-panel`). Contrastes vérifiés par test : `text` et `text-muted` ≥ 4,5:1 sur toutes les surfaces, `accent` ≥ 4,5:1 comme texte et comme fond de bouton.
 
 ### Correspondance shadcn/ui
 
@@ -31,9 +36,15 @@ Deux écarts volontaires :
 - le rôle shadcn « accent » (fond neutre de survol) est exposé sous le nom **`highlight`** (→ `surface-3`), car notre `accent` désigne la couleur d'interaction ;
 - `--destructive` est mappé sur `text`, et les composants n'ont pas de variante `destructive` : le rouge est réservé au statut. Un champ invalide se signale par une bordure claire en pointillés et un message d'erreur.
 
-### Thème clair (plus tard)
+### Thème sombre (plus tard)
 
-Tailwind v4 publie chaque token sous forme de variable CSS sur `:root`, et les utilitaires la lisent via `var()`. Un thème clair consistera à redéfinir les `--color-*` sous un sélecteur (par exemple `.light`), sans modifier les composants.
+Tailwind v4 publie chaque token sous forme de variable CSS sur `:root`, et les utilitaires la lisent via `var()`. Un thème sombre (par exemple pour la supervision en réunion) consistera à redéfinir les `--color-*` sous un sélecteur, sans modifier les composants.
+
+## Mise en page
+
+- **Barre du haut** (`CommandBar` + `MainNav`, collante) : logo et nom, liens texte (l'actif souligné en `accent`, `aria-current="page"`), champ de recherche (Ctrl K), menu utilisateur. Sur les vues des sites (carte, liste, supervision), une seconde rangée porte le bouton « Filtres » et les puces des filtres actifs.
+- **Contenu** : colonne centrée de 1 440 px au plus (`PageContainer`), titres de page en 30 px gras.
+- **Cartes** : fond blanc, bordure `border`, rayon 16 px, ombre douce.
 
 ## Règle d'usage des couleurs de statut
 
@@ -57,7 +68,7 @@ Ordre de tri (`compareStatusSeverity`) : critical > warning > unknown > ok.
 
 ## Style verre
 
-Utilitaire `glass`, pour les panneaux flottants au-dessus de la carte : `surface-1` à 72 % d'opacité, `backdrop-filter: blur(16px)` et bordure `border`. À combiner avec `rounded-lg` et `shadow-panel`. Le composant `Panel` l'applique automatiquement.
+Utilitaire `glass`, pour les panneaux flottants au-dessus de la carte : `surface-1` (blanc) à 92 % d'opacité, `backdrop-filter: blur(12px)` et bordure `border`. À combiner avec `rounded-lg` et `shadow-panel`. Le composant `Panel` l'applique automatiquement.
 
 ## Typographie
 
@@ -75,33 +86,27 @@ Kit de marque « vigie-brand » : un phare dans une tuile arrondie, une lanterne
   - `VigieLogo` : `horizontal`, `vertical` ou `icon` ; thèmes `dark`, `light` et `mono`.
   - Sous 48 px, le composant utilise automatiquement les dessins simplifiés du favicon (32 puis 16 px). Le symbole complet n'est jamais réduit à 16 px.
 - **Usages** :
-  - rail : `VigieIcon` de 36 px, décoratif ;
+  - barre du haut : `VigieIcon` de 32 px, décoratif, suivi du nom « Vigie » (lien vers l'accueil) ;
   - écran de connexion : `VigieLogo variant="vertical"` dans le titre `h1` (nom accessible : « Vigie ») ;
   - onglet : `src/app/icon.svg` (dessin 32 px), `favicon.ico` (16 et 32 px) et `apple-icon.png` (180 px).
 - **Police de marque** : Unbounded 600, auto-hébergée via `@fontsource/unbounded`. Jeton `--font-brand`, **réservé au logo**.
-- **Couleurs de marque** : Nuit `#0B0E12`, Ardoise `#141A21`, Blanc cassé `#EEF1F3`, Signal (cyan) `#7CC8E0`, Signal foncé `#2F6F86` (sur fond clair). Elles ne servent qu'au logo : l'`accent` de l'interface reste `#6E8BFF`.
+- **Couleurs de marque** : Nuit `#0B0E12`, Ardoise `#141A21`, Blanc cassé `#EEF1F3`, Signal (cyan) `#7CC8E0`, Signal foncé `#2F6F86` (sur fond clair). Elles ne servent qu'au logo : l'`accent` de l'interface est `#1B4F9C` (provisoire).
 - **Interdits** : vert, ambre ou rouge dans le logo (réservés aux statuts) ; toute déformation, ombre ou dégradé. Garder autour du logo une zone libre d'au moins 25 % de la hauteur de la tuile.
 - Les SVG de référence du kit sont dans `docs/brand/`.
 
 ## Carte
 
-La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôle ». **Seules les couleurs neutres** construisent le fond : les couleurs de statut n'apparaissent que sur les sites, et `accent` uniquement pour la sélection et le focus. Des tests vérifient l'absence de ces couleurs dans les styles du fond.
+**Page d'accueil « Carte du portefeuille »** (`src/app/(app)/page.tsx`) : titre et date, bouton « Nouveau site », trois cartes (`PortfolioBriefs` : **Échéances** sous 6 mois, fiches **À compléter** sous 60 %, décompte **Conformité**), puis la carte dans une carte blanche, avec à droite une colonne de 380 px : le résumé du site sélectionné (`SitePeek`), la liste des sites, ou une invitation à choisir un site.
 
-**Thème du fond** (`style/basemap-style.ts`, dérivé des jetons) :
-- terres `#0B0F15`, eau `#05070A`, végétation et occupation du sol à peine distinctes ;
-- frontières en `border-strong`, limites régionales en pointillés à 45 % d'opacité ;
-- **autoroutes et voies rapides** mises en valeur comme axes de desserte : trait gris-bleu `#3A4A66` avec un halo flou. Les autres routes restent très discrètes (`surface-2` et `surface-3`) ;
-- noms de villes en `text-muted`, seulement les villes principales avant le zoom 7 ;
-- bâtiments du fond extrudés discrètement à partir du zoom 15 (`surface-2` vers `surface-3` selon la hauteur) ;
-- points d'intérêt (icônes colorées) et flèches de sens unique retirés.
+**Étiquettes des sites** (`site-pins.ts`) : chaque site isolé est une pastille blanche (marqueur HTML, aucune police de carte nécessaire) avec la pastille de statut et, au choix (« Étiquette » : Surface / Échéance / Code), la surface de référence, la tranche d'échéance du bail ou le code. Le site sélectionné passe en `accent` (texte blanc). Les groupes (jusqu'au zoom 7) restent des disques neutres cerclés de la sévérité la plus grave.
 
-**Fond de secours** (`style/fallback-style.ts`), utilisé quand le fond détaillé n'est pas installé :
-- silhouettes des pays (Natural Earth 1:50 millions, paquet `world-atlas`) ;
-- France en `#0B0F15` avec une frontière `border-strong`, voisins atténués, mer en `bg` ;
-- aucun texte, aucune police, aucun symbole ;
-- un bandeau discret signale « Fond de carte détaillé non installé ».
+**Fonds de carte.** **Seules les couleurs neutres** construisent le fond : les couleurs de statut n'apparaissent que sur les sites, et `accent` uniquement pour la sélection et le focus. Des tests vérifient l'absence de ces couleurs dans les styles du fond.
 
-**Hiérarchie des sites**, du plus discret au plus visible, pour que l'œil aille aux anomalies :
+- **IGN Géoplateforme, en ligne** (par défaut, `MAP_BASEMAP=ign`, `style/ign-style.ts`) : « Plan IGN » (légèrement désaturé, −30 %) et photographies aériennes (BD ORTHO), tuiles WMTS chargées par le navigateur. Bascule « Plan IGN / Photo aérienne » sur la carte ; la fiche et l'onglet Plan s'ouvrent sur la photo aérienne. Voir `docs/security.md` pour l'exception au réseau fermé.
+- **Fond hors ligne** (`MAP_BASEMAP=offline`, `style/basemap-style.ts`, dérivé des jetons) : terres `#F1ECE3`, eau `#D6E0E6`, routes blanches, autoroutes sable `#D9C7A4` avec un halo, limites régionales en pointillés, noms de villes en `text-muted`, bâtiments extrudés à partir du zoom 15, points d'intérêt retirés.
+- **Fond de secours** (`style/fallback-style.ts`), quand rien n'est disponible : silhouettes des pays (Natural Earth 1:50 millions), France en `#F1ECE3`, voisins atténués, mer `#D6E0E6`, aucun texte ; un bandeau discret signale « Fond de carte détaillé non installé ».
+
+**Hiérarchie des sites** (points des variantes compactes — supervision, aperçu de la fiche — et halo des sites critiques sous les pastilles), du plus discret au plus visible :
 
 | Statut | Rendu |
 |---|---|
@@ -116,17 +121,17 @@ La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôl
 - **Sélection** : anneau `accent` autour du point, et volume du bâtiment teinté en `accent` atténué avec un liseré `accent`.
 
 **Volumes des bâtiments** (à partir du zoom 14, étape 10, règles de génération dans `docs/plans-and-equipment.md`) :
-- **cellules** en `fill-extrusion`, dans deux tons `surface-3` alternés à peine distincts (`#1A2230` et `#1F2837`) pour lire le découpage ;
-- **murs coupe-feu** plus clairs (`#2A3446`), dépassant le toit de 1 m ;
-- **arêtes de toit** soulignées par un acrotère fin (`border-strong`, 0,35 m de large, 0,4 m de haut), qui remplace une ligne : MapLibre ne sait pas tracer une ligne en altitude ;
-- **quais** plus sombres (`#10151D`), 4,5 m de haut, le long du côté choisi ;
+- **cellules** en `fill-extrusion`, dans deux tons chauds clairs alternés à peine distincts (`#ECE6DB` et `#E3DCCF`) pour lire le découpage ;
+- **murs coupe-feu** plus foncés (`#CFC5B5`), dépassant le toit de 1 m ;
+- **arêtes de toit** soulignées par un acrotère fin (`#A89C88`, 0,35 m de large, 0,4 m de haut), qui remplace une ligne : MapLibre ne sait pas tracer une ligne en altitude ;
+- **quais** plus foncés (`#8F8472`), 4,5 m de haut, le long du côté choisi ;
 - liseré au sol de la couleur du statut du site (inchangé) ; au-dessus du dégradé vertical de MapLibre, aucune autre couleur ;
-- **site sélectionné** : cellules en `accent` atténué (`#374778`), acrotères en `accent`, via l'état global `selectedSiteId` (aucune donnée à recharger) ;
+- **site sélectionné** : cellules en `accent` éclairci (`#9FB6DC`), acrotères en `accent`, via l'état global `selectedSiteId` (aucune donnée à recharger) ;
 - **volume approximatif** (emprise non renseignée) : **filaire translucide**, avec des cellules, murs et quais à 22 % d'opacité, des acrotères pleins qui dessinent les arêtes et un liseré au sol en pointillés. `SitePeek` affiche « Volume approximatif (emprise non renseignée) », et « Hauteur estimée (12 m par défaut) » si la hauteur manque.
 
 **Équipements** (`src/components/plan/`) :
 - **pictogrammes dessinés à la main** en SVG dans le dépôt (`pictograms.ts`), transformés à l'exécution en images MapLibre (canvas → `map.addImage`, à 2×), sans sprite ni police ;
-- **jamais de couleur de statut** : fond `surface-2`, contour `text-muted`, trait du pictogramme en `text`. La **catégorie** se lit à la **forme** (rond pour Incendie, carré pour Électricité, losange pour Fluides, hexagone pour Environnement, pilule pour Sécurité des personnes), le **type** à l'icône ;
+- **jamais de couleur de statut** : fond blanc, contour `text-muted`, trait du pictogramme en `text`. La **catégorie** se lit à la **forme** (rond pour Incendie, carré pour Électricité, losange pour Fluides, hexagone pour Environnement, pilule pour Sécurité des personnes), le **type** à l'icône ;
 - `accent` est réservé à la sélection : anneau de 2,5 px autour de l'équipement sélectionné, et contour de la ligne sélectionnée dans la liste ;
 - taille de 32 px, lisible dès le zoom 18 (réduite à 55 % au zoom 15). En dessous du zoom 17, les équipements sont **regroupés** en disques `surface-2` neutres ;
 - le même SVG sert dans l'interface (`Pictogram`) : la liste et la carte parlent le même langage.
@@ -137,12 +142,12 @@ La carte nationale (`src/components/map/`) garde l'ambiance « salle de contrôl
 - quand le plan est visible, le volume passe à 25 % d'opacité pour ne pas masquer le plan ;
 - dans l'assistant de calibration, les points de contrôle sont des pastilles numérotées `surface-2` au contour `accent`, reprises à l'identique sur l'image et sur la carte ; un point suspect a un contour en pointillés `text-muted`, jamais une couleur de statut.
 
-**Images aériennes** (`style/ortho.ts`) : visibles à partir du zoom 14, **désaturées** (saturation −0,7), **assombries** (luminosité maximale 0,55) et légèrement contrastées (+0,12), pour ne jamais concurrencer les couleurs de statut.
+**Images aériennes hors ligne** (`style/ortho.ts`) : visibles à partir du zoom 14, légèrement désaturées (−0,25), pour ne jamais concurrencer les couleurs de statut.
 
 **Panneaux** :
-- `SitePeek` : panneau verre de 380 px qui glisse depuis la droite. L'animation est coupée avec `prefers-reduced-motion`.
+- `SitePeek` : colonne de droite de 380 px dans la carte. L'animation d'entrée est coupée avec `prefers-reduced-motion`.
 - Aperçu au survol : carte verre qui suit le curseur sans sortir de l'écran.
-- Contrôles, légende avec décomptes en chiffres tabulaires, pastille des sites non localisés.
+- Contrôles (à droite de la carte), sélecteurs « Étiquette » et « Fond de carte » (en haut), légende avec décomptes en chiffres tabulaires et pastille des sites non localisés (en bas à gauche).
 - La barre de complétude reste neutre (`text-muted` sur `surface-3`), jamais en couleur de statut.
 
 **Mouvement** : vol de caméra `flyTo` de 1,6 s (zoom 16, inclinaison 60°). Avec `prefers-reduced-motion`, toutes les transitions de caméra sont instantanées.

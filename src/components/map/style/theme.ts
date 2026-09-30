@@ -11,52 +11,52 @@ import type { ComplianceStatus } from "@/lib/status";
 
 /** Neutral design tokens (CSS custom property → value). */
 export const NEUTRAL = {
-  bg: "#07090c",
-  surface1: "#0d1117",
-  surface2: "#131923",
-  surface3: "#1a2230",
-  border: "#232c3b",
-  borderStrong: "#33405a",
-  text: "#e6eaf2",
-  textMuted: "#8b96a8",
+  bg: "#f5f2ec",
+  surface1: "#ffffff",
+  surface2: "#faf8f4",
+  surface3: "#efeae1",
+  border: "#e7e1d7",
+  borderStrong: "#cfc5b5",
+  text: "#1d1b18",
+  textMuted: "#635d54",
 } as const;
 
-/** Map-specific neutrals (derived from the tokens, darker for the canvas). */
+/** Map-specific neutrals of the offline basemap (light, warm, derived from the tokens). */
 export const MAP_NEUTRAL = {
-  land: "#0b0f15",
-  water: "#05070a",
-  /** Motorways and expressways: service axes, lighter than other roads. */
-  highway: "#3a4a66",
-  highwayHalo: "#1b2433",
-  majorRoad: "#1a2230",
-  minorRoad: "#131923",
-  rail: "#1a2230",
-  landcover: "#0c1118",
+  land: "#f1ece3",
+  water: "#d6e0e6",
+  /** Motorways and expressways: service axes, stronger than other roads. */
+  highway: "#d9c7a4",
+  highwayHalo: "#fbf7ef",
+  majorRoad: "#ffffff",
+  minorRoad: "#faf7f1",
+  rail: "#d3cabb",
+  landcover: "#e6e9d8",
 } as const;
 
 /** Status colors (RESERVED for the sites). */
 export const STATUS_COLORS: Readonly<Record<ComplianceStatus, string>> = {
-  ok: "#2fb67c",
-  warning: "#f2a93b",
-  critical: "#f0524f",
-  unknown: "#5b6578",
+  ok: "#2f8f5b",
+  warning: "#c98512",
+  critical: "#cf3b32",
+  unknown: "#8b867d",
 };
 
 /** Accent (selection, focus). */
-export const ACCENT = "#6e8bff";
+export const ACCENT = "#1b4f9c";
 
-/** Selected building volume: accent at 35 % over surface-3 (edge stays pure accent). */
-export const ACCENT_VOLUME = "#374778";
+/** Selected building volume: accent mixed with the light volume tone (edge stays pure accent). */
+export const ACCENT_VOLUME = "#9fb6dc";
 
 /**
  * Building volumes (neutral only, never status colors): two very close
- * surface-3 tones alternate between cells, firewalls and parapets are
- * lighter, docks darker.
+ * warm light tones alternate between cells, firewalls and parapets are
+ * darker, docks darker still.
  */
 export const VOLUME_COLORS = {
-  cellEven: "#1a2230",
-  cellOdd: "#1f2837",
-  firewall: "#2a3446",
-  edge: "#33405a",
-  dock: "#10151d",
+  cellEven: "#ece6db",
+  cellOdd: "#e3dccf",
+  firewall: "#cfc5b5",
+  edge: "#a89c88",
+  dock: "#8f8472",
 } as const;

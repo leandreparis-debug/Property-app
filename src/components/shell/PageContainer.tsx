@@ -10,9 +10,9 @@ export interface PageContainerProps {
 }
 
 /**
- * Content area for non-map pages: clears the navigation rail (left) and the
- * floating command bar (top).
+ * Content area of the pages: centered column (1440 px at most) under the
+ * top bar.
  */
 export function PageContainer({ children, className }: PageContainerProps) {
-  return <div className={cn("min-h-dvh pt-24 pr-6 pb-10 pl-28", className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full max-w-[1440px] px-8 pt-7 pb-12", className)}>{children}</div>;
 }

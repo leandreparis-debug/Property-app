@@ -1,3 +1,4 @@
+import { basemapMode } from "@/lib/basemap";
 import type { Metadata } from "next";
 import { resolveMapAssets } from "@/components/map/style/assets";
 import { PageContainer } from "@/components/shell/PageContainer";
@@ -11,8 +12,8 @@ export const metadata: Metadata = { title: "Supervision" };
 export default async function SupervisionPage() {
   const [footprints, manifest] = await Promise.all([getFootprints(), readInstalledManifest()]);
   return (
-    <PageContainer className="h-dvh pt-[7.5rem] pb-3 has-[[data-presenting]]:p-0">
-      <SupervisionView footprints={footprints} assets={resolveMapAssets(manifest ? publicManifest(manifest) : null)} />
+    <PageContainer className="h-[calc(100dvh-7.1rem)] pt-5 pb-4 has-[[data-presenting]]:h-dvh has-[[data-presenting]]:max-w-none has-[[data-presenting]]:p-0">
+      <SupervisionView footprints={footprints} assets={resolveMapAssets(manifest ? publicManifest(manifest) : null, basemapMode() === "ign")} />
     </PageContainer>
   );
 }

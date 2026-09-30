@@ -55,7 +55,7 @@ describe("buildMapSitesData", () => {
     collect(data);
     for (const k of keys) expect(k).not.toMatch(/rent|amount|price|loyer|montant|lease|notice|endDate|exit|holding|indexation|vlm/i);
     expect(Object.keys(data.points.features[0]!.properties).sort()).toEqual(
-      ["code", "city", "completeness", "departmentCode", "hasFootprint", "id", "isActive", "name", "reasonCount", "reasons", "region", "status", "statusRank", "totalArea"].sort(),
+      ["code", "city", "completeness", "deadline", "departmentCode", "hasFootprint", "id", "isActive", "name", "reasonCount", "reasons", "region", "status", "statusRank", "totalArea"].sort(),
     );
     expect(Object.keys(data.unlocated[0]!).sort()).toEqual(["city", "code", "id", "name", "status"]);
   });

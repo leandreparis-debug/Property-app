@@ -40,11 +40,11 @@ export function UserMenu({ name, email, role }: UserMenuProps) {
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Menu utilisateur : ${name || email}`}
-          className="flex size-10 items-center justify-center rounded-full border border-border-strong bg-surface-3 text-xs font-semibold tracking-wide text-text transition-colors hover:bg-surface-2 data-[state=open]:border-accent"
+          className="flex size-10 items-center justify-center rounded-full border border-border bg-accent-soft text-xs font-bold tracking-wide text-accent-strong transition-colors hover:border-border-strong data-[state=open]:border-accent"
         >
           <span aria-hidden="true">{initialsOf(name, email)}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="end" className="w-64">
+        <DropdownMenuContent side="bottom" align="end" className="w-64">
           <DropdownMenuLabel className="flex flex-col gap-1">
             <span className="truncate font-medium text-text">{name || email}</span>
             <span className="truncate text-xs font-normal text-text-muted">{email}</span>

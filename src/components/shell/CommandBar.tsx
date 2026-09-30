@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { MapPin, SearchIcon, Zap } from "lucide-react";
 import { parseFilters, withFilters, type SiteFilters } from "@/domain/filters";
 import { highlight, prepareSearch, searchPlaces, searchSites } from "@/domain/search";
@@ -26,6 +26,10 @@ export const NATIONAL_VIEW_EVENT = "vigie:national-view";
 
 /** Props of {@link CommandBar}. */
 export interface CommandBarProps {
+  /** Left part of the bar (brand and main navigation). */
+  start?: ReactNode;
+  /** Right part of the bar (user menu). */
+  end?: ReactNode;
   /** Extra classes. */
   className?: string;
 }
@@ -48,12 +52,13 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 /**
- * Floating command bar, top center, with — on the site views (map, list,
- * supervision) — the « Filtres » button, the panel and the active chips.
- * Ctrl+K (⌘K) opens the universal search: sites, places and actions, all
- * computed locally on the site index.
+ * Top bar of the application (sticky): brand and navigation (`start`), the
+ * search field and the user menu (`end`). On the site views (map, list,
+ * supervision) a second row carries the « Filtres » button, the panel and
+ * the active chips. Ctrl+K (⌘K) opens the universal search: sites, places
+ * and actions, all computed locally on the site index.
  */
-export function CommandBar({ className }: CommandBarProps) {
+export function CommandBar({ start, end, className }: CommandBarProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
@@ -121,32 +126,36 @@ export function CommandBar({ className }: CommandBarProps) {
 
   return (
     <>
-      <div
-        data-slot="command-bar"
-        className={cn("pointer-events-none fixed top-3 right-0 left-0 z-30 flex flex-col items-center gap-2 pr-3 pl-24", className)}
-      >
-        <div className="flex w-full max-w-2xl items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            aria-keyshortcuts="Control+K"
-            className={cn(
-              "glass pointer-events-auto flex h-11 w-full max-w-xl items-center gap-3 rounded-lg px-4 text-left text-sm text-text-muted shadow-panel transition-colors",
-              "hover:border-border-strong hover:text-text",
-            )}
-          >
-            <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
-            <span className="flex-1 truncate">{SEARCH_PLACEHOLDER}</span>
-            <kbd className="flex h-6 items-center gap-0.5 rounded-sm border border-border-strong bg-surface-2 px-1.5 text-[11px] font-medium text-text-muted">
-              <span className="sr-only">Raccourci : </span>Ctrl K
-            </kbd>
-          </button>
-          {siteView && <FilterButton count={activeCount} open={panelOpen} onClick={() => setPanelOpen((o) => !o)} />}
+      <header data-slot="top-bar" className={cn("sticky top-0 z-40 border-b border-border bg-surface-1", className)}>
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-8">
+          {start}
+          <div data-slot="command-bar" className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              aria-keyshortcuts="Control+K"
+              className="flex h-10 w-72 items-center gap-3 rounded-md border border-border bg-surface-2 px-3.5 text-left text-sm text-text-muted transition-colors hover:border-border-strong hover:text-text xl:w-80"
+            >
+              <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
+              <span className="flex-1 truncate">{SEARCH_PLACEHOLDER}</span>
+              <kbd className="flex h-6 items-center gap-0.5 rounded-sm border border-border bg-surface-1 px-1.5 text-[11px] font-medium text-text-muted">
+                <span className="sr-only">Raccourci : </span>Ctrl K
+              </kbd>
+            </button>
+            {end}
+          </div>
         </div>
-        {siteView && <FilterChips />}
-      </div>
+        {siteView && (
+          <div data-slot="filter-bar" className="border-t border-border bg-surface-1">
+            <div className="mx-auto flex min-h-12 max-w-[1440px] flex-wrap items-center gap-3 px-8 py-2">
+              <FilterButton count={activeCount} open={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
+              <FilterChips className="justify-start" />
+            </div>
+          </div>
+        )}
+      </header>
       {siteView && panelOpen && <FilterPanel onClose={() => setPanelOpen(false)} />}
 
       <CommandDialog open={open} onOpenChange={setOpen} title="Recherche" description="Rechercher un site, une ville ou un code" shouldFilter={false}>

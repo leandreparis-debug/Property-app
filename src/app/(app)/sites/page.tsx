@@ -22,7 +22,7 @@ export default async function SitesPage({ searchParams }: { searchParams: Promis
   const showArchived = canArchive && (await searchParams).archived === "1";
   const archived = showArchived ? await getArchivedSites() : [];
   return (
-    <PageContainer className="pt-[7.5rem] pb-3">
+    <PageContainer className="pt-5 pb-4">
       <h1 className="sr-only">{showArchived ? "Sites archivés" : "Sites"}</h1>
       <div className="mb-3 flex flex-wrap items-center justify-end gap-2" data-slot="sites-toolbar">
         {canArchive && (

@@ -27,7 +27,7 @@ export function sortSitesForList(sites: readonly MapSiteProperties[]): MapSitePr
 export function SiteListPanel({ sites, selectedCode, onSelect, onClose }: SiteListPanelProps) {
   const sorted = sortSitesForList(sites);
   return (
-    <aside aria-labelledby="site-list-title" data-slot="site-list" className="glass absolute top-20 right-3 bottom-3 z-30 flex w-[380px] max-w-[calc(100vw-7rem)] flex-col rounded-lg text-text shadow-panel">
+    <aside aria-labelledby="site-list-title" data-slot="site-list" className="flex min-h-0 flex-1 flex-col text-text">
       <header className="flex items-center justify-between border-b border-border px-5 py-3">
         <h2 id="site-list-title" className="text-sm font-semibold tracking-tight">
           Liste des sites <span className="numeric text-text-muted">({sorted.length})</span>

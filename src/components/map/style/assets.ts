@@ -19,6 +19,12 @@ export interface MapAssets {
   ortho: boolean;
   /** Attributions (plain text). */
   sources: MapAssetsManifest["sources"];
+  /**
+   * IGN Géoplateforme basemap (Plan IGN + aerial photographs) loaded online
+   * by the browser (`MAP_BASEMAP=ign`). When true it replaces the offline
+   * basemap; the offline assets stay the closed-network mode.
+   */
+  ign: boolean;
 }
 
 /** Files required by the full basemap (paths relative to STORAGE_ROOT/map/). */
@@ -29,14 +35,16 @@ export const REQUIRED_GLYPH = "fonts/Noto Sans Regular/0-255.pbf";
 /**
  * Decides which assets the map can use.
  * @param manifest - Installed manifest, or null when no map is installed.
+ * @param ign - IGN online basemap enabled (`basemapMode() === "ign"`).
  */
-export function resolveMapAssets(manifest: MapAssetsManifest | null): MapAssets {
-  if (!manifest) return { basemap: false, ortho: false, sources: [] };
+export function resolveMapAssets(manifest: MapAssetsManifest | null, ign = false): MapAssets {
+  if (!manifest) return { basemap: false, ortho: false, sources: [], ign };
   const files = new Map(manifest.files.map((f) => [f.path, f.size]));
   const present = (p: string) => (files.get(p) ?? 0) > 0;
   return {
     basemap: REQUIRED_BASEMAP_FILES.every(present) && present(REQUIRED_GLYPH),
     ortho: present("ortho-sites.pmtiles"),
     sources: manifest.sources,
+    ign,
   };
 }

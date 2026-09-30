@@ -36,7 +36,7 @@ export function SitePeek({ site, reasons, footprint, onClose, hiddenByFilters = 
       data-slot="site-peek"
       data-code={site.code}
       className={cn(
-        "glass absolute top-20 right-3 bottom-3 z-30 flex w-[380px] max-w-[calc(100vw-7rem)] flex-col rounded-lg text-text shadow-panel",
+        "flex min-h-0 flex-1 flex-col text-text",
         !reducedMotion && "animate-[peek-in_220ms_ease-out]",
       )}
     >

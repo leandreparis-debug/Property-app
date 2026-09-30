@@ -27,5 +27,6 @@ export function e2eDatabaseUrl(): string {
 
 /** Variables given to every process of the suite (server, scripts). */
 export function e2eEnv(port = E2E_PORT): Record<string, string> {
-  return { DATABASE_URL: e2eDatabaseUrl(), STORAGE_ROOT: E2E_STORAGE_ROOT, APP_URL: `http://localhost:${port}`, PORT: String(port) };
+  // Closed network: the offline basemap (never the IGN online tiles).
+  return { DATABASE_URL: e2eDatabaseUrl(), STORAGE_ROOT: E2E_STORAGE_ROOT, APP_URL: `http://localhost:${port}`, PORT: String(port), MAP_BASEMAP: "offline" };
 }

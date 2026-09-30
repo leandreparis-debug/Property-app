@@ -54,6 +54,7 @@ export function PlanPanel({ data, assets, canCalibrate, canEditEquipment, canWri
   const [showPlan, setShowPlan] = useState(true);
   const [opacity, setOpacity] = useState(plan?.opacity ?? 0.7);
   const [is3d, setIs3d] = useState(false);
+  const [base, setBase] = useState<"plan" | "photo">("photo");
   const [recenter, setRecenter] = useState(0);
   const [focusOn, setFocusOn] = useState<{ lngLat: [number, number]; key: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -264,6 +265,12 @@ export function PlanPanel({ data, assets, canCalibrate, canEditEquipment, canWri
             </label>
           </>
         )}
+        {assets.ign && (
+          <Button size="sm" variant="secondary" aria-pressed={base === "plan"} onClick={() => setBase((b) => (b === "photo" ? "plan" : "photo"))}>
+            <MapIcon aria-hidden="true" />
+            {base === "photo" ? "Plan IGN" : "Photo aérienne"}
+          </Button>
+        )}
         <Button size="sm" variant="secondary" aria-pressed={is3d} onClick={() => setIs3d((v) => !v)}>
           <Box aria-hidden="true" />
           {is3d ? "Vue 2D" : "Vue 3D"}
@@ -335,6 +342,7 @@ export function PlanPanel({ data, assets, canCalibrate, canEditEquipment, canWri
               onDrag={(eid, lngLat) => eid === selectedId && setDraft({ id: eid, lngLat })}
               onNudge={nudge}
               is3d={is3d}
+              base={base}
               recenter={recenter}
               focusOn={focusOn}
               ariaLabel={`Carte du site ${site.name} : volume, plan et équipements`}

@@ -217,9 +217,9 @@ Toutes les écritures sont auditées. Procédure et règles : [`docs/plans-and-e
 
 ## Carte nationale
 
-La page d'accueil `/` affiche la carte des entrepôts (MapLibre, hors ligne), avec le statut de conformité calculé pour chaque site ([`docs/compliance-rules.md`](docs/compliance-rules.md)).
+La page d'accueil `/` (« Carte du portefeuille ») affiche les échéances, les fiches à compléter, le décompte de conformité, puis la carte des entrepôts (MapLibre) avec une étiquette par site (surface, échéance ou code) et le résumé du site sélectionné à droite. Le statut de conformité est calculé pour chaque site ([`docs/compliance-rules.md`](docs/compliance-rules.md)).
 
-**Voir la carte complète** : sans paquet cartographique réel, la carte utilise un fond de secours (silhouettes des pays, bandeau « Fond de carte détaillé non installé »). Pour obtenir le fond vectoriel détaillé et les images aériennes :
+**Fond de carte** : par défaut (`MAP_BASEMAP=ign`), « Plan IGN » et photographies aériennes de l'IGN, chargés en ligne par le navigateur ; les postes doivent joindre `data.geopf.fr` (voir [`docs/security.md`](docs/security.md)). En réseau fermé, `MAP_BASEMAP=offline` utilise le fond installé sur le serveur, ou un fond de secours (silhouettes des pays, bandeau « Fond de carte détaillé non installé »). Pour installer le fond vectoriel détaillé et les images aériennes hors ligne :
 
 ```bash
 # Sur un poste connecté (docs/offline-bundle.md) : pmtiles requis
@@ -244,6 +244,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `SESSION_ABSOLUTE_HOURS` | Durée maximale d'une session, en heures (défaut 12) |
 | `TRUST_PROXY` | `true` uniquement derrière un reverse proxy qui renseigne `X-Forwarded-For` (défaut `false`) |
 | `STORAGE_ROOT` | Dossier racine des fichiers écrits par l'application (rapports d'import et d'enrichissement, carte installée `map/`, documents). Par défaut `./storage` hors production ; **obligatoire en production**. Tous les chemins sont résolus sous cette racine. |
+| `MAP_BASEMAP` | `ign` (défaut : fond IGN en ligne, chargé par le navigateur) ou `offline` (réseau fermé : fond installé ou fond de secours) |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 | `VIGIE_E2E_TEST_HOOKS` | Réservée à la suite e2e (`1` expose `window.__vigieMap`) ; **ne jamais la définir en production** |
 

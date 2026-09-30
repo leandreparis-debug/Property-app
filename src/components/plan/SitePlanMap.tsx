@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty/EmptyState";
 import { SELECTED_SITE_STATE, VOLUME_APPROX_LAYER, VOLUME_EDGES_LAYER, VOLUME_SOLID_LAYER, VOLUMES_SOURCE, volumesSource } from "@/components/map/layers/sites";
 import type { MapAssets } from "@/components/map/style/assets";
 import { buildMapStyle } from "@/components/map/style/build";
+import { setBaseLayer, type BaseLayer } from "@/components/map/style/ign-style";
 import { ACCENT, NEUTRAL } from "@/components/map/style/theme";
 import { cn } from "@/lib/utils";
 import { EQUIPMENT_LAYER, EQUIPMENT_LAYERS, EQUIPMENT_SOURCE, equipmentCollection, equipmentSource, registerEquipmentImages, SELECTED_EQUIPMENT_STATE } from "./equipment-layers";
@@ -49,6 +50,8 @@ export interface SitePlanMapProps {
   is3d?: boolean;
   /** Incremented to re-center the camera on the site. */
   recenter?: number;
+  /** IGN basemap (online mode only): aerial photographs by default. */
+  base?: BaseLayer;
   /** Centers the camera on a position (a new `key` triggers the move). */
   focusOn?: { lngLat: [number, number]; key: number } | null;
   ariaLabel: string;
@@ -115,7 +118,7 @@ function footprintCenter(volume: FootprintRecord | null): [number, number] | nul
  * installed) and works without any of them.
  */
 export default function SitePlanMap(props: SitePlanMapProps) {
-  const { assets, center, volume, overlay, equipments, selectedId = null, placing = false, controlPoints, is3d = false, recenter = 0, focusOn = null, ariaLabel, testHook, className } = props;
+  const { assets, center, volume, overlay, equipments, selectedId = null, placing = false, controlPoints, is3d = false, recenter = 0, focusOn = null, base = "photo", ariaLabel, testHook, className } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -141,7 +144,7 @@ export default function SitePlanMap(props: SitePlanMapProps) {
     if (!container || !home) return;
     let cancelled = false;
     acquire();
-    void buildMapStyle(assets).then((style) => {
+    void buildMapStyle(assets, latest.current.base ?? "photo").then((style) => {
       if (cancelled) return;
       const map = new maplibregl.Map({
         container,
@@ -215,6 +218,11 @@ export default function SitePlanMap(props: SitePlanMapProps) {
     // Created once; the effects below push the changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // IGN basemap: plan or aerial photographs.
+  useEffect(() => {
+    if (loaded && assets.ign && mapRef.current) setBaseLayer(mapRef.current, base);
+  }, [base, loaded, assets.ign]);
 
   // Volume.
   useEffect(() => {

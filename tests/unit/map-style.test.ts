@@ -74,8 +74,8 @@ describe("basemap-style", () => {
     const withOrtho = buildBasemapStyle({ origin: "", ortho: true, attributions: [] });
     const ortho = withOrtho.layers.find((l) => l.id === "ortho") as unknown as { minzoom?: number; paint: Record<string, number> };
     expect(ortho.minzoom).toBe(14);
-    expect(ortho.paint["raster-saturation"]).toBeCloseTo(-0.7);
-    expect(ortho.paint["raster-brightness-max"]).toBeCloseTo(0.55);
+    expect(ortho.paint["raster-saturation"]).toBeCloseTo(-0.25);
+    expect(ortho.paint["raster-brightness-max"]).toBeCloseTo(0.95);
     expect(ortho.paint["raster-contrast"]).toBeGreaterThan(0);
     // Below the first label layer.
     const i = withOrtho.layers.findIndex((l) => l.id === "ortho");
@@ -103,7 +103,7 @@ describe("fallback-style", () => {
     const text = json({ ...style, sources: {} });
     expect(text).not.toMatch(/https?:\/\//);
     for (const c of FORBIDDEN_IN_BASEMAP) expect(text).not.toContain(c);
-    expect(style.layers.find((l) => l.id === "background")).toMatchObject({ paint: { "background-color": NEUTRAL.bg } });
+    expect(style.layers.find((l) => l.id === "background")).toMatchObject({ paint: { "background-color": MAP_NEUTRAL.water } });
   });
 
   it("ortho optional in the fallback too", () => {

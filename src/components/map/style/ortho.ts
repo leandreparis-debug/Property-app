@@ -14,16 +14,16 @@ export function orthoSource(url: string): RasterSourceSpecification {
   return { type: "raster", url, tileSize: 256, minzoom: 15, maxzoom: 18 };
 }
 
-/** Raster layer, desaturated and darkened. */
+/** Raster layer, slightly desaturated so the status colors stay readable. */
 export const ORTHO_LAYER_SPEC: RasterLayerSpecification = {
   id: ORTHO_LAYER,
   type: "raster",
   source: ORTHO_SOURCE,
   minzoom: 14,
   paint: {
-    "raster-saturation": -0.7,
-    "raster-brightness-max": 0.55,
-    "raster-contrast": 0.12,
+    "raster-saturation": -0.25,
+    "raster-brightness-max": 0.95,
+    "raster-contrast": 0.05,
     "raster-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 15, 1],
     "raster-fade-duration": 200,
   },

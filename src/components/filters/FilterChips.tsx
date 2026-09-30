@@ -33,7 +33,7 @@ export function FilterChips({ className }: { className?: string }) {
 
   return (
     <div data-slot="filter-chips" className={cn("pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5", className)}>
-      <p aria-live="polite" data-slot="filter-count" className="glass rounded-full px-3 py-1 text-xs text-text-muted shadow-panel">
+      <p aria-live="polite" data-slot="filter-count" className="rounded-full bg-surface-3 px-3 py-1 text-xs text-text-muted">
         <span className="numeric text-text">{filtered.length}</span> / <span className="numeric">{total}</span> sites
       </p>
       {chips.map((chip) => (
@@ -42,7 +42,7 @@ export function FilterChips({ className }: { className?: string }) {
           type="button"
           onClick={chip.remove}
           aria-label={`Retirer le filtre ${chip.label}`}
-          className="glass flex h-7 items-center gap-1.5 rounded-full px-3 text-xs text-text shadow-panel outline-none hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent"
+          className="flex h-7 items-center gap-1.5 rounded-full border border-accent/30 bg-accent-soft px-3 text-xs text-accent-strong outline-none hover:border-accent focus-visible:outline-2 focus-visible:outline-accent"
         >
           <span>{chip.label}</span>
           <X className="size-3 text-text-muted" aria-hidden="true" />

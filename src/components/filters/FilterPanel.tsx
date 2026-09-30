@@ -73,7 +73,7 @@ export function FilterPanel({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <aside id="filter-panel" aria-labelledby="filter-panel-title" data-slot="filter-panel" className="glass pointer-events-auto fixed top-[6.5rem] bottom-3 left-24 z-40 flex w-80 flex-col rounded-lg text-text shadow-panel">
+    <aside id="filter-panel" aria-labelledby="filter-panel-title" data-slot="filter-panel" className="glass pointer-events-auto fixed top-[7.75rem] bottom-3 left-8 z-40 flex w-80 flex-col rounded-lg text-text shadow-panel">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 id="filter-panel-title" className="text-sm font-semibold tracking-tight">Filtres</h2>
         <div className="flex items-center gap-1">

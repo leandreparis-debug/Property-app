@@ -25,20 +25,21 @@ function contrast(a: string, b: string): number {
 }
 
 const EXPECTED: Record<string, string> = {
-  "--color-bg": "#07090c",
-  "--color-surface-1": "#0d1117",
-  "--color-surface-2": "#131923",
-  "--color-surface-3": "#1a2230",
-  "--color-border": "#232c3b",
-  "--color-border-strong": "#33405a",
-  "--color-text": "#e6eaf2",
-  "--color-text-muted": "#8b96a8",
-  "--color-text-subtle": "#5b6578",
-  "--color-accent": "#6e8bff",
-  "--color-status-ok": "#2fb67c",
-  "--color-status-warning": "#f2a93b",
-  "--color-status-critical": "#f0524f",
-  "--color-status-unknown": "#5b6578",
+  "--color-bg": "#f5f2ec",
+  "--color-surface-1": "#ffffff",
+  "--color-surface-2": "#faf8f4",
+  "--color-surface-3": "#efeae1",
+  "--color-border": "#e7e1d7",
+  "--color-border-strong": "#cfc5b5",
+  "--color-text": "#1d1b18",
+  "--color-text-muted": "#635d54",
+  "--color-text-subtle": "#8a8378",
+  "--color-accent": "#1b4f9c",
+  "--color-on-accent": "#ffffff",
+  "--color-status-ok": "#2f8f5b",
+  "--color-status-warning": "#c98512",
+  "--color-status-critical": "#cf3b32",
+  "--color-status-unknown": "#8b867d",
 };
 
 describe("design tokens", () => {
@@ -46,11 +47,11 @@ describe("design tokens", () => {
     expect(token(name)).toBe(value);
   });
 
-  it("defines the 6 / 10 / 14 px radii", () => {
+  it("defines the 8 / 12 / 16 px radii", () => {
     expect([token("--radius-sm"), token("--radius-md"), token("--radius-lg")]).toEqual([
-      "6px",
-      "10px",
-      "14px",
+      "8px",
+      "12px",
+      "16px",
     ]);
   });
 
@@ -72,7 +73,7 @@ describe("text contrast (WCAG AA)", () => {
 
   it("accent reaches 4.5:1 as text on panels, and as a button background", () => {
     expect(contrast(token("--color-accent"), token("--color-surface-1"))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(token("--color-bg"), token("--color-accent"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token("--color-on-accent"), token("--color-accent"))).toBeGreaterThanOrEqual(4.5);
   });
 
   it("text-subtle reaches 3:1 (large text / non-text only) on bg and surface-1", () => {

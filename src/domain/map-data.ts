@@ -97,6 +97,7 @@ export function mapDataFromIndex(entries: readonly SiteIndexEntry[], footprints:
         reasonCount: e.reasons.length,
         completeness: e.completeness,
         totalArea: e.totalArea,
+        deadline: e.leaseDeadlineBucket,
         hasFootprint: footprint !== undefined,
       },
     });

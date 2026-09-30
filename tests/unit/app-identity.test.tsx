@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LOGO_THEMES, logoDrawing, VigieIcon, VigieLogo } from "@/components/brand/VigieLogo";
-import { NavRail } from "@/components/shell/NavRail";
+import { MainNav } from "@/components/shell/MainNav";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_NAME } from "@/config/app";
 
@@ -22,10 +22,10 @@ describe("application name and logo", () => {
     expect(logo.textContent).toBe(APP_NAME.toUpperCase());
   });
 
-  it("the rail shows the brand symbol (decorative, simplified drawing below 48 px)", () => {
+  it("the top bar shows the brand symbol (decorative, simplified drawing below 48 px)", () => {
     const { container } = render(
       <TooltipProvider>
-        <NavRail />
+        <MainNav />
       </TooltipProvider>,
     );
     const icon = container.querySelector('[data-slot="vigie-icon"]');

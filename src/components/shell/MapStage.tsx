@@ -43,7 +43,7 @@ function MapPlaceholder() {
       {/* Faint grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(230_234_242/0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgb(230_234_242/0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
       {/* Radial vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgb(7_9_12/0.55)_55%,var(--color-bg)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgb(245_242_236/0.55)_55%,var(--color-bg)_100%)]" />
       <p className="absolute inset-0 flex items-center justify-center text-2xl font-medium tracking-tight text-text-subtle select-none">
         Carte — étape 6
       </p>

@@ -3,14 +3,18 @@ import type { MapAssets } from "./assets";
 import { buildAttributions } from "./attribution";
 import { buildBasemapStyle } from "./basemap-style";
 import { buildFallbackStyle, countriesFromTopology, type WorldTopology } from "./fallback-style";
+import { buildIgnStyle, type BaseLayer } from "./ign-style";
 
 /**
- * Style of a map for the installed assets: the full vector basemap, or the
- * fallback style (world-atlas countries) when it is missing; aerial imagery
- * in both when installed. Shared by the national map and the Plan tab.
- * @param assets - Installed map assets.
+ * Style of a map for the available assets: the IGN online basemap when
+ * enabled; otherwise the offline vector basemap, or the fallback style
+ * (world-atlas countries) when it is missing, with the installed aerial
+ * imagery. Shared by the national map and the Plan tab.
+ * @param assets - Map assets.
+ * @param base - IGN basemap shown first (plan or photographs).
  */
-export async function buildMapStyle(assets: MapAssets): Promise<StyleSpecification> {
+export async function buildMapStyle(assets: MapAssets, base: BaseLayer = "plan"): Promise<StyleSpecification> {
+  if (assets.ign) return buildIgnStyle(base);
   const origin = window.location.origin;
   const fallback = !assets.basemap;
   const attributions = buildAttributions(assets.sources, fallback);

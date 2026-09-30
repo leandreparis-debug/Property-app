@@ -19,7 +19,7 @@ const NationalMap = dynamic(loadMap, {
   ssr: false,
   loading: () => (
     <div aria-hidden="true" className="absolute inset-0 bg-bg">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgb(7_9_12/0.55)_55%,var(--color-bg)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgb(245_242_236/0.55)_55%,var(--color-bg)_100%)]" />
     </div>
   ),
 });

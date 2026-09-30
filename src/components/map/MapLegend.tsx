@@ -31,7 +31,7 @@ export function MapLegend({ counts, filteredCounts, selectedStatuses, onToggleSt
   const n = unlocated.length;
   const filtering = selectedStatuses.length > 0;
   return (
-    <div className="absolute bottom-3 left-24 z-20 flex w-64 flex-col gap-2">
+    <div className="absolute bottom-3 left-3 z-20 flex w-64 flex-col gap-2">
       {n > 0 && (
         <div data-slot="unlocated" className="glass rounded-lg text-text shadow-panel">
           <button

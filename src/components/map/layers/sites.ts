@@ -154,7 +154,7 @@ export const POINTS_LAYER: CircleLayerSpecification = {
     "circle-radius": ["match", STATUS, "critical", 7, "warning", 6, "unknown", 4.5, 3.5],
     "circle-color": statusColor(STATUS),
     "circle-opacity": ["match", STATUS, "ok", 0.55, "unknown", 0, 0.95],
-    "circle-stroke-color": ["match", STATUS, "unknown", STATUS_COLORS.unknown, NEUTRAL.bg],
+    "circle-stroke-color": ["match", STATUS, "unknown", STATUS_COLORS.unknown, NEUTRAL.surface1],
     "circle-stroke-width": ["match", STATUS, "unknown", 1.5, "ok", 0, 1],
     "circle-stroke-opacity": 0.9,
     "circle-pitch-alignment": "viewport",

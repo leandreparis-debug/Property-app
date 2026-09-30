@@ -1,3 +1,4 @@
+import { basemapMode } from "@/lib/basemap";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -69,7 +70,7 @@ export default async function SitePage({ params }: Props) {
   const { site } = detail;
   const center: [number, number] | null = site.latitude !== null && site.longitude !== null ? [site.longitude, site.latitude] : null;
   const footprint = detail.volume;
-  const assets = resolveMapAssets(manifest ? publicManifest(manifest) : null);
+  const assets = resolveMapAssets(manifest ? publicManifest(manifest) : null, basemapMode() === "ign");
 
   return (
     <EditGuardProvider>
