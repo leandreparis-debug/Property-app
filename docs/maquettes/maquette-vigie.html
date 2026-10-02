@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vigie — maquette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root {
+    --bg: #f5f2ec;          /* crème */
+    --surface: #ffffff;
+    --surface-2: #faf8f4;
+    --line: #e7e1d7;
+    --line-strong: #d6cdbf;
+    --text: #1d1b18;
+    --muted: #6f6a62;
+    --accent: #1b4f9c;      /* bleu — à remplacer par la valeur exacte de la charte */
+    --accent-soft: #e8eef8;
+    --accent-ink: #123a75;
+    --ok: #2f8f5b;
+    --warn: #c98512;
+    --crit: #cf3b32;
+    --unknown: #8b867d;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgb(40 30 10 / .05), 0 8px 24px -12px rgb(40 30 10 / .12);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 Manrope, system-ui, sans-serif; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
+  button { font: inherit; cursor: pointer; }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* ── Barre du haut ─────────────────────────────── */
+  header.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .top-inner { max-width: 1440px; margin: 0 auto; padding: 0 32px; height: 68px; display: flex; align-items: center; gap: 32px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; letter-spacing: -.02em; }
+  .logo-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); display: grid; place-items: center; }
+  .logo-mark svg { width: 18px; height: 18px; }
+  nav.main { display: flex; gap: 4px; height: 100%; }
+  nav.main button { background: none; border: 0; padding: 0 14px; color: var(--muted); font-weight: 500; position: relative; }
+  nav.main button[aria-current="page"] { color: var(--text); font-weight: 600; }
+  nav.main button[aria-current="page"]::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 2px; background: var(--accent); border-radius: 2px; }
+  .search { white-space: nowrap; margin-left: auto; display: flex; align-items: center; gap: 10px; width: 300px; height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); background: var(--surface-2); }
+  .kbd { margin-left: auto; font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .user { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 500; font-size: 14px; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+
+  main { max-width: 1440px; margin: 0 auto; padding: 28px 32px 48px; }
+  .view { display: none; } .view.active { display: block; }
+
+  /* ── En-tête de page ─────────────────────────── */
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+  h1 { font-size: 32px; letter-spacing: -.025em; margin: 0; font-weight: 700; }
+  .sub { color: var(--muted); margin-top: 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent; font-weight: 600; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-ink); }
+  .btn-ghost { background: var(--surface); border-color: var(--line); color: var(--text); }
+  .btn svg { width: 16px; height: 16px; }
+
+  /* ── Bandeau de cartes ────────────────────────── */
+  .briefs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .brief { padding: 18px 20px; }
+  .brief-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; margin-bottom: 12px; }
+  .brief-head small { color: var(--muted); font-weight: 500; }
+  .brief-head a { font-size: 13px; font-weight: 600; }
+  .brief ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .brief li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .brief li .when { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+  /* ── Carte ─────────────────────────────────────── */
+  .map-card { display: grid; grid-template-columns: 1fr 380px; overflow: hidden; height: 640px; }
+  .map-wrap { position: relative; }
+  #map, #siteMap { position: absolute; inset: 0; }
+  .map-toolbar { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 10px; z-index: 2; pointer-events: none; }
+  .map-toolbar > * { pointer-events: auto; }
+  .map-search { flex: 1; display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 10px 16px; border: 1px solid var(--line); }
+  .map-search input { border: 0; outline: 0; font: inherit; width: 100%; background: none; }
+  .map-search .eyebrow { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .chip { height: 46px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); font-weight: 500; font-size: 14px; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 4px; height: 46px; }
+  .seg button { border: 0; background: none; padding: 0 12px; border-radius: 8px; color: var(--muted); font-weight: 500; font-size: 14px; }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+  .map-bottom { position: absolute; left: 16px; bottom: 16px; right: 16px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 2; pointer-events: none; }
+  .map-bottom > * { pointer-events: auto; }
+  .legend { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 10px 14px; display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Étiquettes de sites */
+  .pin { transform: translateY(-4px); display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 9px; border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 700; font-size: 13px; white-space: nowrap; box-shadow: 0 2px 8px rgb(30 20 0 / .22); border: 2px solid var(--surface); cursor: pointer; transition: transform .12s; }
+  .pin:hover { transform: translateY(-6px); }
+  .pin .dot { width: 10px; height: 10px; box-shadow: 0 0 0 2px var(--surface); }
+  .pin.selected { background: var(--accent); color: #fff; border-color: #fff; }
+  .pin::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-right: 2px solid var(--surface); border-bottom: 2px solid var(--surface); z-index: -1; }
+  .pin.selected::after { border-color: #fff; }
+
+  /* Panneau latéral */
+  aside.peek { border-left: 1px solid var(--line); padding: 24px; display: flex; flex-direction: column; overflow-y: auto; }
+  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
+  .peek-top { display: flex; justify-content: space-between; align-items: center; }
+  .eyebrow { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .peek h2 { font-size: 26px; letter-spacing: -.02em; margin: 6px 0 4px; line-height: 1.15; }
+  .addr { color: var(--muted); display: flex; gap: 6px; align-items: center; font-size: 14px; }
+  .ortho { margin: 18px 0; height: 132px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-2) center/cover no-repeat; position: relative; }
+  .ortho .tag { position: absolute; left: 8px; bottom: 8px; background: rgb(255 255 255 / .9); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--muted); }
+  .facts { display: flex; gap: 18px; padding: 14px 0; border-block: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .facts b { color: var(--text); font-weight: 600; }
+  .big { font-size: 30px; font-weight: 700; letter-spacing: -.02em; margin-top: 16px; }
+  .big-sub { color: var(--muted); font-size: 13px; }
+  .follow { margin-top: 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+  .follow ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .follow li { display: flex; gap: 8px; align-items: center; }
+  .bar { height: 6px; background: #ece6dc; border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .bar > div { height: 100%; background: var(--accent); border-radius: 99px; }
+  .peek-actions { margin-top: auto; padding-top: 20px; display: flex; gap: 10px; }
+  .peek-actions .btn-primary { flex: 1; justify-content: center; }
+
+  .foot { margin-top: 10px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; }
+
+  /* ── Fiche ─────────────────────────────────────── */
+  .crumbs { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .sheet-head { display: grid; grid-template-columns: 1fr 360px; gap: 20px; margin-bottom: 20px; }
+  .sheet-id { padding: 24px 28px; }
+  .sheet-id h1 { font-size: 30px; }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 22px; }
+  .meta dt { font-size: 12px; color: var(--muted); } .meta dd { margin: 2px 0 0; font-weight: 600; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .kpi { padding: 16px 20px; } .kpi .v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; } .kpi .d { color: var(--muted); font-size: 13px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { border: 1px solid transparent; background: none; padding: 8px 14px; border-radius: 999px; color: var(--muted); font-weight: 500; }
+  .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+  .plan-card { display: grid; grid-template-columns: 1fr 340px; overflow: hidden; height: 560px; }
+  .eq-panel { border-left: 1px solid var(--line); padding: 20px; overflow-y: auto; }
+  .cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
+  .cats span { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+  .eq { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; font-size: 14px; }
+  .eq:hover { background: var(--surface-2); } .eq small { display: block; color: var(--muted); font-size: 12px; }
+  .eq-ico { width: 30px; height: 30px; border-radius: 9px; background: var(--surface-2); border: 1.5px solid var(--line-strong); display: grid; place-items: center; flex: none; }
+  .eq-ico svg { width: 16px; height: 16px; stroke: var(--text); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .eq-marker { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid var(--text); display: grid; place-items: center; box-shadow: 0 2px 6px rgb(0 0 0 / .25); }
+  .eq-marker svg { width: 15px; height: 15px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .eq-marker.sq { border-radius: 7px; } .eq-marker.dia { border-radius: 6px; transform: rotate(45deg); } .eq-marker.dia svg { transform: rotate(-45deg); }
+  .plan-tools { position: absolute; top: 14px; left: 14px; display: flex; gap: 8px; z-index: 2; }
+
+  .note { margin-top: 28px; padding: 16px 20px; border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--muted); font-size: 13px; background: var(--surface-2); }
+
+  .maplibregl-ctrl-attrib { font-size: 11px; }
+  .maplibregl-ctrl-group { border-radius: 10px !important; box-shadow: var(--shadow) !important; }
+
+  @media (max-width: 1100px) {
+    .briefs, .kpis { grid-template-columns: 1fr; }
+    .map-card, .plan-card, .sheet-head { grid-template-columns: 1fr; height: auto; }
+    .map-wrap { height: 520px; } .plan-card .map-wrap { height: 420px; }
+    aside.peek, .eq-panel { border-left: 0; border-top: 1px solid var(--line); }
+    .search { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="logo">
+      <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-6 9 6"/><path d="M5 10v9h14v-9"/><path d="M9 19v-5h6v5"/></svg></div>
+      Vigie
+    </div>
+    <nav class="main" aria-label="Navigation principale">
+      <button data-view="carte" aria-current="page">Carte</button>
+      <button data-view="fiche">Fiche site</button>
+      <button disabled title="Maquette">Liste des sites</button>
+      <button disabled title="Maquette">Supervision</button>
+    </nav>
+    <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Rechercher un site, une ville…<span class="kbd">Ctrl K</span></div>
+    <div class="user"><span class="avatar">LP</span>Éditeur</div>
+  </div>
+</header>
+
+<main>
+  <!-- ═════════════ VUE CARTE ═════════════ -->
+  <section class="view active" id="view-carte">
+    <div class="page-head">
+      <div>
+        <h1>Carte du portefeuille</h1>
+        <div class="sub">mercredi 30 septembre · 10 entrepôts · 9 localisés · données fictives</div>
+      </div>
+      <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nouveau site</button>
+    </div>
+
+    <div class="briefs">
+      <div class="card brief">
+        <div class="brief-head"><span>Échéances <small>· 90 jours</small></span><a href="#">Calendrier ↗</a></div>
+        <ul>
+          <li><span class="dot" style="background:var(--crit)"></span>Préavis — Lille-Lesquin<span class="when">dépassé</span></li>
+          <li><span class="dot" style="background:var(--warn)"></span>Fin de bail — Marseille-Vitrolles<span class="when">12 nov.</span></li>
+        </ul>
+      </div>
+      <div class="card brief">
+        <div class="brief-head"><span>À traiter <small>· dossiers</small></span><a href="#">Tout voir ↗</a></div>
+        <ul>
+          <li><span class="dot" style="background:var(--unknown)"></span>2 plans à calibrer<span class="when">Rennes, Dijon</span></li>
+          <li><span class="dot" style="background:var(--unknown)"></span>Bordeaux-Cestas : fiche complète à 22 %<span class="when">14 champs</span></li>
+        </ul>
+      </div>
+      <div class="card brief">
+        <div class="brief-head"><span>Conformité</span><a href="#">Supervision ↗</a></div>
+        <ul>
+          <li><span class="dot" style="background:var(--crit)"></span>1 site critique</li>
+          <li><span class="dot" style="background:var(--warn)"></span>2 à surveiller <span class="when">· 5 conformes · 2 non évalués</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card map-card">
+      <div class="map-wrap">
+        <div id="map" aria-label="Carte des entrepôts"></div>
+        <div class="map-toolbar">
+          <label class="map-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span style="flex:1"><span class="eyebrow">France métropolitaine</span><br /><input placeholder="Ville, adresse, code entrepôt…" /></span>
+          </label>
+          <div class="seg" role="group" aria-label="Étiquette">
+            <button aria-pressed="true" data-label="area">Surface</button>
+            <button aria-pressed="false" data-label="lease">Échéance</button>
+            <button aria-pressed="false" data-label="docks">Quais</button>
+          </div>
+          <button class="chip">Statut ▾</button>
+          <button class="chip">Région ▾</button>
+        </div>
+        <div class="map-bottom">
+          <div class="legend">
+            <span><i class="dot" style="background:var(--crit)"></i>Critique</span>
+            <span><i class="dot" style="background:var(--warn)"></i>À surveiller</span>
+            <span><i class="dot" style="background:var(--ok)"></i>Conforme</span>
+            <span><i class="dot" style="background:var(--unknown)"></i>Non évalué</span>
+          </div>
+          <div class="seg" role="group" aria-label="Fond de carte">
+            <button aria-pressed="true" data-base="plan">Plan IGN</button>
+            <button aria-pressed="false" data-base="ortho">Photo aérienne</button>
+          </div>
+        </div>
+      </div>
+      <aside class="peek" id="peek" aria-live="polite"></aside>
+    </div>
+    <div class="foot"><span id="foot-count">9 sites affichés</span><span>Fond : © IGN – Géoplateforme · données fictives</span></div>
+  </section>
+
+  <!-- ═════════════ VUE FICHE ═════════════ -->
+  <section class="view" id="view-fiche">
+    <div class="crumbs"><a href="#" data-goto="carte">Carte</a> › <span id="f-crumb"></span></div>
+    <div class="sheet-head">
+      <div class="card sheet-id">
+        <div class="peek-top"><span class="status" id="f-status"></span><span class="mono" id="f-code" style="color:var(--muted)"></span></div>
+        <h1 id="f-name" style="margin-top:8px"></h1>
+        <div class="addr" id="f-addr"></div>
+        <dl class="meta">
+          <div><dt>Exploitant</dt><dd>Logisticien Démo</dd></div>
+          <div><dt>Typologie</dt><dd>Multi-température</dd></div>
+          <div><dt>Portefeuille</dt><dd>Portefeuille Démo</dd></div>
+          <div><dt>Complétude</dt><dd id="f-compl"></dd></div>
+        </dl>
+      </div>
+      <div class="card" style="overflow:hidden;position:relative;min-height:220px">
+        <div id="f-ortho" style="position:absolute;inset:0;background:center/cover no-repeat"></div>
+        <span class="tag" style="position:absolute;left:12px;bottom:12px;background:#fffe;border-radius:8px;padding:4px 10px;font-size:12px">Photo aérienne IGN · Ouvrir sur la carte ↗</span>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="card kpi"><div class="d">Surface de référence</div><div class="v" id="k-area"></div><div class="d">relevé de géomètre</div></div>
+      <div class="card kpi"><div class="d">Loyer 2025</div><div class="v">1 842 000 €</div><div class="d">38,1 €/m²</div></div>
+      <div class="card kpi"><div class="d">Échéance du bail</div><div class="v" id="k-lease"></div><div class="d">préavis de 6 mois</div></div>
+      <div class="card kpi"><div class="d">Équipements</div><div class="v">6</div><div class="d">Incendie 4 · Électricité 1 · Env. 1</div></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button>Vue d'ensemble</button><button>Bail</button><button>Exploitation</button><button>Financier</button><button>Énergie</button><button>Technique</button><button aria-selected="true">Plan</button><button>ICPE et risques</button><button>Documents</button>
+    </div>
+    <div class="card plan-card">
+      <div class="map-wrap">
+        <div id="siteMap" aria-label="Carte du site"></div>
+        <div class="plan-tools">
+          <span class="seg"><button aria-pressed="true">Photo</button><button aria-pressed="false">Plan IGN</button></span>
+          <span class="seg"><button aria-pressed="true">Plan calibré</button><button aria-pressed="false">Masquer</button></span>
+          <button class="chip">Vue 3D</button>
+        </div>
+      </div>
+      <div class="eq-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>Équipements (6)</b><button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:13px">+ Ajouter</button></div>
+        <div class="cats"><span>Incendie 4</span><span>Électricité 1</span><span>Fluides 0</span><span>Environnement 1</span><span>Personnes 0</span></div>
+        <div id="eqList"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="note">
+    <b>Maquette.</b> Fond de carte et photos aériennes : IGN Géoplateforme (chargés en ligne par le navigateur). Données fictives.
+    Le bleu d'accent est provisoire : il sera remplacé par la valeur exacte de la charte Carrefour Property (logo et couleurs à fournir).
+    Les couleurs rouge / orange / vert restent réservées au statut de conformité.
+  </div>
+</main>
+
+<script>
+const IGN = (layer, fmt) => `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=${fmt}`;
+const PLAN = IGN("GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2", "image/png");
+const ORTHO = IGN("ORTHOIMAGERY.ORTHOPHOTOS", "image/jpeg");
+const orthoTile = (lon, lat, z) => {
+  const n = 2 ** z, x = Math.floor((lon + 180) / 360 * n);
+  const r = lat * Math.PI / 180, y = Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
+  return ORTHO.replace("{z}", z).replace("{x}", x).replace("{y}", y);
+};
+const style = {
+  version: 8,
+  sources: {
+    plan: { type: "raster", tiles: [PLAN], tileSize: 256, maxzoom: 19, attribution: "© IGN – Géoplateforme" },
+    ortho: { type: "raster", tiles: [ORTHO], tileSize: 256, maxzoom: 19, attribution: "© IGN – Géoplateforme" },
+  },
+  layers: [
+    { id: "plan", type: "raster", source: "plan", paint: { "raster-saturation": -0.35, "raster-brightness-min": 0.08 } },
+    { id: "ortho", type: "raster", source: "ortho", layout: { visibility: "none" } },
+  ],
+};
+
+const STATUS = { critical: ["Critique", "var(--crit)"], warning: ["À surveiller", "var(--warn)"], ok: ["Conforme", "var(--ok)"], unknown: ["Non évalué", "var(--unknown)"] };
+const SITES = [
+  { code: "DEMO-001", name: "Lyon-Est", city: "Saint-Priest (69)", lat: 45.7106, lon: 4.9486, area: 48320, docks: 44, cells: 8, lease: "06/2031", status: "ok", compl: 96, tasks: ["Plan calibré (0,4 m)", "6 équipements"] },
+  { code: "DEMO-002", name: "Lille-Lesquin", city: "Lesquin (59)", lat: 50.589, lon: 3.115, area: 32150, docks: 29, cells: 5, lease: "préavis dépassé", status: "critical", compl: 81, tasks: ["Préavis dépassé depuis 45 jours", "Arbitrage à décider"] },
+  { code: "DEMO-003", name: "Marseille-Vitrolles", city: "Vitrolles (13)", lat: 43.445, lon: 5.248, area: 27480, docks: 25, cells: 5, lease: "11/2026", status: "warning", compl: 74, tasks: ["Fin de bail le 12 novembre", "Aucun plan"] },
+  { code: "DEMO-004", name: "Bordeaux-Cestas", city: "Cestas (33)", lat: 44.742, lon: -0.681, area: null, docks: null, cells: null, lease: "—", status: "unknown", compl: 22, tasks: ["14 champs manquants", "Surface non renseignée"] },
+  { code: "DEMO-005", name: "Rennes-Nord", city: "La Mézière (35)", lat: 48.215, lon: -1.753, area: 18900, docks: 17, cells: 3, lease: "—", status: "unknown", compl: 57, tasks: ["Site inactif", "Plan à calibrer"] },
+  { code: "DEMO-007", name: "Toulouse-Sud", city: "Portet-sur-Garonne (31)", lat: 43.523, lon: 1.404, area: 39760, docks: 36, cells: 7, lease: "03/2030", status: "ok", compl: 93, tasks: ["À jour"] },
+  { code: "DEMO-008", name: "Nantes-Carquefou", city: "Carquefou (44)", lat: 47.298, lon: -1.492, area: 25600, docks: 23, cells: 4, lease: "09/2029", status: "ok", compl: 88, tasks: ["À jour"] },
+  { code: "DEMO-009", name: "Paris-Rungis", city: "Rungis (94)", lat: 48.747, lon: 2.349, area: 15480, docks: 14, cells: 3, lease: "01/2027", status: "warning", compl: 90, tasks: ["Préavis à envoyer avant juillet 2026"] },
+  { code: "DEMO-010", name: "Dijon-Longvic", city: "Longvic (21)", lat: 47.288, lon: 5.064, area: 12750, docks: 12, cells: 2, lease: "05/2032", status: "ok", compl: 84, tasks: ["Plan à calibrer"] },
+];
+const nf = new Intl.NumberFormat("fr-FR");
+let labelMode = "area", selected = SITES[0];
+
+const labelOf = (s) => labelMode === "area" ? (s.area ? `${nf.format(s.area)} m²` : "Surface ?") : labelMode === "docks" ? (s.docks ? `${s.docks} quais` : "Quais ?") : s.lease;
+
+const map = new maplibregl.Map({ container: "map", style, center: [2.4, 46.6], zoom: 5.1, attributionControl: { compact: true } });
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+const markers = SITES.map((s) => {
+  const el = document.createElement("button");
+  el.className = "pin";
+  el.setAttribute("aria-label", `${s.name}, ${STATUS[s.status][0]}`);
+  el.addEventListener("click", (e) => { e.stopPropagation(); select(s, true); });
+  const m = new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat([s.lon, s.lat]).addTo(map);
+  return { s, el, m };
+});
+function drawPins() {
+  for (const { s, el } of markers) {
+    el.classList.toggle("selected", s === selected);
+    el.innerHTML = `<span class="dot" style="background:${STATUS[s.status][1]}"></span>${labelOf(s)}`;
+  }
+}
+function select(s, fly) {
+  selected = s;
+  drawPins();
+  renderPeek();
+  if (fly) map.flyTo({ center: [s.lon, s.lat], zoom: 13.5, duration: 1400 });
+}
+function renderPeek() {
+  const s = selected, [label, color] = STATUS[s.status];
+  document.getElementById("peek").innerHTML = `
+    <div class="peek-top"><span class="status" style="color:${color}"><span class="dot" style="background:${color}"></span>${label}</span><span class="mono" style="color:var(--muted)">${s.code}</span></div>
+    <div class="eyebrow" style="margin-top:14px">${s.city}</div>
+    <h2>Entrepôt ${s.name}</h2>
+    <div class="ortho" style="background-image:url('${orthoTile(s.lon, s.lat, 16)}')"><span class="tag">Photo aérienne IGN</span></div>
+    <div class="facts"><span><b>${s.area ? nf.format(s.area) + " m²" : "—"}</b> surface</span><span><b>${s.docks ?? "—"}</b> quais</span><span><b>${s.cells ?? "—"}</b> cellules</span></div>
+    <div class="big">${s.lease}</div><div class="big-sub">Échéance du bail</div>
+    <div class="follow"><div class="eyebrow">Suivi du dossier</div><ul>${s.tasks.map((t) => `<li>• ${t}</li>`).join("")}</ul>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted)">Complétude ${s.compl} %</div><div class="bar"><div style="width:${s.compl}%"></div></div></div>
+    <div class="peek-actions"><button class="btn btn-primary" data-goto="fiche">Ouvrir la fiche ↗</button><button class="btn btn-ghost" title="Copier le lien">⧉</button></div>`;
+}
+map.on("click", () => {});
+document.querySelectorAll("[data-label]").forEach((b) => b.addEventListener("click", () => {
+  labelMode = b.dataset.label;
+  document.querySelectorAll("[data-label]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  drawPins();
+}));
+document.querySelectorAll("[data-base]").forEach((b) => b.addEventListener("click", () => {
+  const ortho = b.dataset.base === "ortho";
+  map.setLayoutProperty("ortho", "visibility", ortho ? "visible" : "none");
+  document.querySelectorAll("[data-base]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+}));
+drawPins(); renderPeek();
+
+/* ── Navigation entre vues ── */
+let siteMap;
+function show(view) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  document.querySelectorAll("nav.main button[data-view]").forEach((b) => (b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
+  if (view === "carte") map.resize();
+  if (view === "fiche") renderSheet();
+  window.scrollTo({ top: 0 });
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-goto],[data-view]");
+  if (!t || t.disabled) return;
+  e.preventDefault();
+  show(t.dataset.goto || t.dataset.view);
+});
+
+const EQ = [
+  { t: "RIA 1", k: "Incendie · R-01", shape: "", dx: -60, dy: 20, ico: '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2.5"/>' },
+  { t: "RIA 2", k: "Incendie · R-02", shape: "", dx: 70, dy: 25, ico: '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2.5"/>' },
+  { t: "Extincteur 1", k: "Incendie", shape: "", dx: -20, dy: -40, ico: '<rect x="9" y="8" width="6" height="12" rx="2"/><path d="M12 8V5h3"/>' },
+  { t: "Poste sprinkler", k: "Incendie · local SP", shape: "", dx: 110, dy: -55, ico: '<path d="M12 4v7M8 11h8M9 15l-1.5 3M12 15v4M15 15l1.5 3"/>' },
+  { t: "TGBT 1", k: "Électricité · local technique", shape: "sq", dx: 140, dy: -20, ico: '<path d="M13 3L7 13h5l-1 8 6-10h-5z"/>' },
+  { t: "Bassin de rétention", k: "Environnement · 1 200 m³", shape: "dia", dx: -150, dy: 75, ico: '<path d="M4 8l2 10h12l2-10"/><path d="M7 13c2-1 3 1 5 0s3 1 5 0"/>' },
+];
+function renderSheet() {
+  const s = selected, [label, color] = STATUS[s.status];
+  document.getElementById("f-crumb").textContent = `Entrepôt ${s.name}`;
+  document.getElementById("f-status").innerHTML = `<span class="dot" style="background:${color}"></span><span style="color:${color}">${label}</span>`;
+  document.getElementById("f-code").textContent = s.code;
+  document.getElementById("f-name").textContent = `Entrepôt ${s.name}`;
+  document.getElementById("f-addr").textContent = s.city;
+  document.getElementById("f-compl").textContent = `${s.compl} %`;
+  document.getElementById("k-area").textContent = s.area ? `${nf.format(s.area)} m²` : "—";
+  document.getElementById("k-lease").textContent = s.lease;
+  document.getElementById("f-ortho").style.backgroundImage = `url('${orthoTile(s.lon, s.lat, 17)}')`;
+  document.getElementById("eqList").innerHTML = EQ.map((e) => `<div class="eq"><span class="eq-ico"><svg viewBox="0 0 24 24">${e.ico}</svg></span><span>${e.t}<small>${e.k}</small></span></div>`).join("");
+  const siteStyle = structuredClone(style);
+  siteStyle.layers[0].layout = { visibility: "none" };
+  siteStyle.layers[1].layout = { visibility: "visible" };
+  if (siteMap) siteMap.remove();
+  siteMap = new maplibregl.Map({ container: "siteMap", style: siteStyle, center: [s.lon, s.lat], zoom: 17.2, attributionControl: { compact: true } });
+  siteMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+  siteMap.on("load", () => {
+    for (const e of EQ) {
+      const el = document.createElement("div");
+      el.className = `eq-marker ${e.shape}`;
+      el.title = e.t;
+      el.innerHTML = `<svg viewBox="0 0 24 24">${e.ico}</svg>`;
+      new maplibregl.Marker({ element: el }).setLngLat([s.lon + e.dx * 0.000011, s.lat - e.dy * 0.0000075]).addTo(siteMap);
+    }
+  });
+}
+</script>
+</body>
+</html>
