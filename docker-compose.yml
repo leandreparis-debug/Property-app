@@ -1,0 +1,51 @@
+# Local development database. In production the DSI-managed SQL Server
+# instance replaces this container; only DATABASE_URL changes.
+# Apple Silicon: enable "Use Rosetta for x86_64/amd64 emulation" in Docker Desktop.
+name: vigie
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: vigie-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD doit être défini dans .env}
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - vigie-mssql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # One-shot job (optional; `pnpm db:up` now runs the same SQL inside `db`): creates the `vigie` database and the end-to-end test database
+  # `vigie_e2e` if they do not exist (idempotent).
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD doit être défini dans .env}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - >-
+        /opt/mssql-tools18/bin/sqlcmd -C -S db -U sa -P "$$MSSQL_SA_PASSWORD" -b
+        -Q "IF DB_ID(N'vigie') IS NULL CREATE DATABASE [vigie]; IF DB_ID(N'vigie_e2e') IS NULL CREATE DATABASE [vigie_e2e];"
+        && echo "Bases 'vigie' et 'vigie_e2e' prêtes."
+    restart: "no"
+
+volumes:
+  vigie-mssql-data:
+    name: vigie-mssql-data

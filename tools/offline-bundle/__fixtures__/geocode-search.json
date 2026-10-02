@@ -1,0 +1,58 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "type": "FeatureCollection",
+  "query": "12 rue de l'Exemple 69800 Saint-Priest",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.9501286,
+          45.6999548
+        ]
+      },
+      "properties": {
+        "label": "12 Rue de l'Exemple 69800 Saint-Priest",
+        "score": 0.93,
+        "housenumber": "12",
+        "id": "69290_0001_00012",
+        "type": "housenumber",
+        "name": "12 Rue de l'Exemple",
+        "postcode": "69800",
+        "citycode": "69290",
+        "x": 0,
+        "y": 0,
+        "city": "Saint-Priest",
+        "context": "69, Rhône, Auvergne-Rhône-Alpes",
+        "importance": 0.6,
+        "street": "Rue de l'Exemple"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.9615759,
+          45.7036175
+        ]
+      },
+      "properties": {
+        "label": "Rue de l'Exemple 69800 Saint-Priest",
+        "score": 0.71,
+        "id": "69290_0001",
+        "type": "street",
+        "name": "Rue de l'Exemple",
+        "postcode": "69800",
+        "citycode": "69290",
+        "city": "Saint-Priest",
+        "context": "69, Rhône, Auvergne-Rhône-Alpes"
+      }
+    }
+  ]
+}

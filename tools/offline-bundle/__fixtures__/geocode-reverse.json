@@ -1,0 +1,29 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.9503859,
+          45.7001809
+        ]
+      },
+      "properties": {
+        "label": "1 Allée Fictive 69800 Saint-Priest",
+        "score": 0.99,
+        "type": "housenumber",
+        "postcode": "69800",
+        "citycode": "69290",
+        "city": "Saint-Priest",
+        "distance": 35
+      }
+    }
+  ]
+}

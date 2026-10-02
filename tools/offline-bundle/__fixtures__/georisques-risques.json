@@ -1,0 +1,30 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "results": 1,
+  "page": 1,
+  "total_pages": 1,
+  "data": [
+    {
+      "code_insee": "{{insee}}",
+      "libelle_commune": "COMMUNE FICTIVE",
+      "risques_detail": [
+        {
+          "num_risque": "11",
+          "libelle_risque_long": "Inondation"
+        },
+        {
+          "num_risque": "13",
+          "libelle_risque_long": "Séisme"
+        },
+        {
+          "num_risque": "215",
+          "libelle_risque_long": "Transport de marchandises dangereuses"
+        }
+      ]
+    }
+  ]
+}

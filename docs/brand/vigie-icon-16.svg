@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Vigie">
+  <title>Vigie</title>
+  <defs><clipPath id="vigie-clip"><rect width="200" height="200" rx="50"/></clipPath></defs>
+  <rect width="200" height="200" rx="50" fill="#141A21"/>
+  <g clip-path="url(#vigie-clip)">
+    <polygon points="80,56 80,96 -20,80 -20,10" fill="#7CC8E0" fill-opacity="0.8"/>
+    <polygon points="120,56 120,96 220,80 220,10" fill="#7CC8E0" fill-opacity="0.8"/>
+    <rect x="76" y="48" width="48" height="48" fill="#7CC8E0"/>
+    <polygon points="72,104 128,104 144,202 56,202" fill="#EEF1F3"/>
+  </g>
+</svg>

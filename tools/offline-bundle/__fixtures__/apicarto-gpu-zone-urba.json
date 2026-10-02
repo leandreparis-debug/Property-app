@@ -1,0 +1,52 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "type": "FeatureCollection",
+  "totalFeatures": 1,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "zone_urba.1",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                4.9448551,
+                45.6963825
+              ],
+              [
+                4.9551449,
+                45.6963825
+              ],
+              [
+                4.9551449,
+                45.7036175
+              ],
+              [
+                4.9448551,
+                45.7036175
+              ],
+              [
+                4.9448551,
+                45.6963825
+              ]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "libelle": "UX",
+        "libelong": "Zone urbaine à vocation d'activités économiques",
+        "typezone": "U",
+        "partition": "DU_{{insee}}",
+        "datappro": "20190617",
+        "idurba": "{{insee}}_PLU_20190617"
+      }
+    }
+  ]
+}
