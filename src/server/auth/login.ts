@@ -121,7 +121,7 @@ export async function authenticate(
   const user = validInput
     ? await db.user.findUnique({
         where: { email: normalizedEmail },
-        select: { id: true, email: true, name: true, role: true, passwordHash: true, isActive: true, failedLoginCount: true, lockedUntil: true },
+        select: { id: true, email: true, name: true, role: true, passwordHash: true, isActive: true, failedLoginCount: true, lockedUntil: true, mustChangePassword: true },
       })
     : null;
 
@@ -155,7 +155,7 @@ export async function authenticate(
       ok: true,
       token: session.token,
       expiresAt: session.expiresAt,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role as UserRole },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role as UserRole, mustChangePassword: user.mustChangePassword },
     };
   });
 }

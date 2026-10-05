@@ -25,6 +25,8 @@ export interface SessionUser {
   email: string;
   name: string | null;
   role: UserRole;
+  /** A temporary password must be replaced before anything else (step 11). */
+  mustChangePassword?: boolean;
 }
 
 /** A valid session and its user. */
@@ -114,7 +116,7 @@ export async function validateSession(
   const sessionId = hashSessionToken(token);
   const session = await db.session.findUnique({
     where: { id: sessionId },
-    include: { user: { select: { id: true, email: true, name: true, role: true, isActive: true, passwordChangedAt: true } } },
+    include: { user: { select: { id: true, email: true, name: true, role: true, isActive: true, passwordChangedAt: true, mustChangePassword: true } } },
   });
   if (!session) return null;
 
@@ -137,7 +139,7 @@ export async function validateSession(
     sessionId,
     expiresAt: session.expiresAt,
     idleExpiresAt,
-    user: { id: user.id, email: user.email, name: user.name, role: user.role as UserRole },
+    user: { id: user.id, email: user.email, name: user.name, role: user.role as UserRole, mustChangePassword: user.mustChangePassword },
   };
 }
 

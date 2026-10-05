@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, LogOut } from "lucide-react";
 import { UserRole } from "@/domain/enums";
 import {
   DropdownMenu,
@@ -51,6 +52,12 @@ export function UserMenu({ name, email, role }: UserMenuProps) {
             <span className="text-xs font-normal text-text-muted">{UserRole.label(role)}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href="/account/password">
+              <KeyRound aria-hidden="true" />
+              Changer mon mot de passe
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <button type="submit" form="logout-form" className="w-full">
               <LogOut aria-hidden="true" />

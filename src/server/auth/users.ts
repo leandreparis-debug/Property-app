@@ -33,10 +33,11 @@ function assertPolicy(password: string, email: string): void {
 
 /**
  * Creates an account.
- * @param input - Email (stored lower-case), display name, role, password (policy checked).
+ * @param input - Email (stored lower-case), display name, role, password (policy
+ *   checked), and whether it is a temporary password to change at first sign-in.
  * @returns The new user id.
  */
-export async function createUser(input: { email: string; name?: string | null; role: string; password: string }): Promise<string> {
+export async function createUser(input: { email: string; name?: string | null; role: string; password: string; mustChangePassword?: boolean }): Promise<string> {
   const email = normalizeEmail(input.email);
   if (!UserRole.is(input.role)) {
     throw new UserServiceError(`Rôle invalide : « ${input.role} » (valeurs : ${UserRole.values.join(", ")}).`);
@@ -52,6 +53,7 @@ export async function createUser(input: { email: string; name?: string | null; r
       role: input.role,
       passwordHash: await hashPassword(input.password),
       passwordChangedAt: new Date(),
+      mustChangePassword: input.mustChangePassword ?? false,
     },
     select: { id: true },
   });

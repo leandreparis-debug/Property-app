@@ -332,23 +332,23 @@ model AnnualMetric {
 
 /// Building footprint (GeoJSON, WGS84).
 model SiteGeometry {
-  id               String    @id @default(cuid()) @db.NVarChar(30)
-  siteId           String    @unique @map("site_id") @db.NVarChar(30)
-  footprintGeoJson String?   @map("footprint_geojson") @db.NVarChar(Max)
+  id                String    @id @default(cuid()) @db.NVarChar(30)
+  siteId            String    @unique @map("site_id") @db.NVarChar(30)
+  footprintGeoJson  String?   @map("footprint_geojson") @db.NVarChar(Max)
   /// import | manual | enrichment (DataSource).
-  source           String?   @db.NVarChar(20)
+  source            String?   @db.NVarChar(20)
   /// Building height in metres (BD TOPO), if known.
-  heightM          Decimal?  @map("height_m") @db.Decimal(8, 2)
+  heightM           Decimal?  @map("height_m") @db.Decimal(8, 2)
   /// Identifier of the source object (e.g. BD TOPO « cleabs »).
-  sourceRef        String?   @map("source_ref") @db.NVarChar(100)
+  sourceRef         String?   @map("source_ref") @db.NVarChar(100)
   /// When the source data was fetched.
-  fetchedAt        DateTime? @map("fetched_at")
+  fetchedAt         DateTime? @map("fetched_at")
   /// Long side of the oriented bounding rectangle carrying the docks: a (first) | b (second).
   dockSide          String    @default("a") @map("dock_side") @db.NVarChar(8)
   /// The generated volume is approximate (no footprint: rectangle from the reference area). Computed, read-only.
   volumeApproximate Boolean   @default(false) @map("volume_approximate")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -448,20 +448,22 @@ model Document {
 
 /// Application user. Authentication logic arrives at step 3.
 model User {
-  id                String    @id @default(cuid()) @db.NVarChar(30)
+  id                 String    @id @default(cuid()) @db.NVarChar(30)
   /// Stored lower-case.
-  email             String    @unique @db.NVarChar(254)
-  name              String?   @db.NVarChar(150)
+  email              String    @unique @db.NVarChar(254)
+  name               String?   @db.NVarChar(150)
   /// admin | editor | viewer (UserRole) — CHECK constraint.
-  role              String    @default("viewer") @db.NVarChar(20)
-  passwordHash      String?   @map("password_hash") @db.NVarChar(255)
-  isActive          Boolean   @default(true) @map("is_active")
-  failedLoginCount  Int       @default(0) @map("failed_login_count")
-  lockedUntil       DateTime? @map("locked_until")
-  lastLoginAt       DateTime? @map("last_login_at")
-  passwordChangedAt DateTime? @map("password_changed_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  role               String    @default("viewer") @db.NVarChar(20)
+  passwordHash       String?   @map("password_hash") @db.NVarChar(255)
+  isActive           Boolean   @default(true) @map("is_active")
+  failedLoginCount   Int       @default(0) @map("failed_login_count")
+  lockedUntil        DateTime? @map("locked_until")
+  lastLoginAt        DateTime? @map("last_login_at")
+  passwordChangedAt  DateTime? @map("password_changed_at")
+  /// Temporary password given by an administrator: must be changed at the next sign-in.
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   calibratedPlans   SitePlan[]    @relation("PlanCalibratedBy")
   uploadedDocuments Document[]    @relation("DocumentUploadedBy")

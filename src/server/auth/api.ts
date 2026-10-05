@@ -1,7 +1,7 @@
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnv } from "@/lib/env";
-import { requireApiUser, UnauthorizedError } from "./current-user";
+import { PasswordChangeRequiredError, requireApiUser, UnauthorizedError } from "./current-user";
 import { assertCan, ForbiddenError, type Action } from "./permissions";
 import { isSameOrigin } from "./origin";
 import type { SessionUser } from "./session";
@@ -37,6 +37,7 @@ export function withApiAuth<C extends object = object>(handler: Handler<C>, opti
     } catch (error) {
       if (error instanceof UnauthorizedError) return jsonError(401, "Authentification requise.");
       if (error instanceof ForbiddenError) return jsonError(403, "Accès refusé.");
+      if (error instanceof PasswordChangeRequiredError) return jsonError(403, error.message);
       throw error;
     }
   };

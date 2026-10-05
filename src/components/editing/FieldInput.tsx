@@ -3,14 +3,11 @@
 import type { FieldDefinition } from "@/domain/fields";
 import type { FormValue } from "@/domain/fields/wire";
 import { DEPARTMENTS, REGIONS } from "@/domain/geo";
+import { INPUT_CLASS } from "@/components/ui/input-class";
 import { cn } from "@/lib/utils";
 
 /** Classes shared by the inputs (tokens only, error = dashed border). */
-export const INPUT_CLASS = cn(
-  "w-full min-w-0 rounded-sm border border-input bg-secondary px-3 py-1.5 text-sm text-foreground outline-none transition-colors",
-  "hover:border-border-strong focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
-  "aria-invalid:border-dashed aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-60",
-);
+export { INPUT_CLASS };
 
 /** Unit suffix of a numeric field. */
 export function unitOf(def: FieldDefinition): string | null {

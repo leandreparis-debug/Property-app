@@ -12,6 +12,17 @@ import { safeRedirectPath } from "./safe-redirect";
 /** Request header set by the middleware with the requested path (for `?next=`). */
 export const PATH_HEADER = "x-vigie-path";
 
+/** Page where a temporary password is replaced. */
+export const PASSWORD_CHANGE_PATH = "/account/password";
+
+/** Raised by API helpers when the user must first replace a temporary password. Maps to HTTP 403. */
+export class PasswordChangeRequiredError extends Error {
+  constructor() {
+    super("Changement de mot de passe requis.");
+    this.name = "PasswordChangeRequiredError";
+  }
+}
+
 /** Raised by API helpers when no valid session exists. Maps to HTTP 401. */
 export class UnauthorizedError extends Error {
   constructor() {
@@ -40,12 +51,14 @@ export async function loginUrl(): Promise<string> {
 }
 
 /**
- * Returns the current user or redirects to `/login?next=…`.
+ * Returns the current user or redirects to `/login?next=…`; a user holding a
+ * temporary password is sent to {@link PASSWORD_CHANGE_PATH} first.
  * For layouts, pages and Server Actions.
  */
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) redirect(await loginUrl());
+  if (user.mustChangePassword) redirect(PASSWORD_CHANGE_PATH);
   return user;
 }
 
@@ -83,10 +96,12 @@ export async function requirePagePermission(action: Action): Promise<SessionUser
 }
 
 /**
- * API variant: the current user, or {@link UnauthorizedError} (no redirect).
+ * API variant: the current user, or {@link UnauthorizedError} (no redirect);
+ * {@link PasswordChangeRequiredError} while a temporary password is held.
  */
 export async function requireApiUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) throw new UnauthorizedError();
+  if (user.mustChangePassword) throw new PasswordChangeRequiredError();
   return user;
 }
