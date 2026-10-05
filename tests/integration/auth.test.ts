@@ -37,7 +37,7 @@ describe("login", () => {
     if (!result.ok) return;
 
     expect(result.token).toMatch(/^[A-Za-z0-9_-]{43}$/); // 32 bytes, base64url
-    expect(result.user).toEqual({ id: userId, email: EMAIL, name: "Utilisateur Test", role: "viewer" });
+    expect(result.user).toEqual({ id: userId, email: EMAIL, name: "Utilisateur Test", role: "viewer", mustChangePassword: false });
     const sessions = await raw.session.findMany();
     expect(sessions).toHaveLength(1);
     expect(sessions[0]!.id).toBe(hashSessionToken(result.token));
