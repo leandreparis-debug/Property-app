@@ -5,9 +5,8 @@
 ## Où est le code
 
 - Dépôt : https://github.com/leandreparis-debug/Property-app (privé).
-- Tout le travail des étapes 1 à 10 est sur la branche `claude/atlas-init-design-system-scuzyd`, proposée à la fusion dans `main` par la pull request [leandreparis-debug/Property-app#1](https://github.com/leandreparis-debug/Property-app/pull/1) (ouverte, sans conflit, non fusionnée au 5 octobre 2026).
-- La branche `claude/ecstatic-cerf-mja73l` contient la même chose, plus ce document et `CLAUDE.md`.
-- `main` ne contient encore que le commit initial.
+- Tout le travail des étapes 1 à 10 est dans `main` : la pull request [leandreparis-debug/Property-app#1](https://github.com/leandreparis-debug/Property-app/pull/1) (branche `claude/atlas-init-design-system-scuzyd`) a été fusionnée le 5 octobre 2026.
+- Ce document et `CLAUDE.md` ont été ajoutés sur la branche `claude/ecstatic-cerf-mja73l`, à fusionner à son tour dans `main`.
 
 ## Le projet
 
@@ -53,12 +52,11 @@ Après l'étape 10 :
 
 ## Ce qui reste à faire
 
-1. **Fusionner** la pull request [leandreparis-debug/Property-app#1](https://github.com/leandreparis-debug/Property-app/pull/1) dans `main` (quand l'utilisatrice le décide).
-2. **Étape 11 — Exploitation** : sauvegardes de la base et de `STORAGE_ROOT`, journaux, supervision technique.
-3. **Étape 12 — Recette et déploiement** : image Docker (`output: "standalone"` déjà en place), procédure de livraison à la DSI, `pnpm db:deploy` sur le serveur.
-4. **Charte Carrefour Property** : remplacer l'accent provisoire (`--color-accent`, `-strong`, `-soft` dans `src/app/globals.css`).
-5. **Décision d'hébergement** : réseau fermé DSI (prévu) ou Google Cloud (proposition) ; dans le second cas, migration vers PostgreSQL et stockage Cloud Storage.
-6. Import du **vrai tableur** (toujours `--dry-run` d'abord) et paquet hors ligne réel si le mode `offline` est retenu.
+1. **Étape 11 — Exploitation** : sauvegardes de la base et de `STORAGE_ROOT`, journaux, supervision technique.
+2. **Étape 12 — Recette et déploiement** : image Docker (`output: "standalone"` déjà en place), procédure de livraison à la DSI, `pnpm db:deploy` sur le serveur.
+3. **Charte Carrefour Property** : remplacer l'accent provisoire (`--color-accent`, `-strong`, `-soft` dans `src/app/globals.css`).
+4. **Décision d'hébergement** : réseau fermé DSI (prévu) ou Google Cloud (proposition) ; dans le second cas, migration vers PostgreSQL et stockage Cloud Storage.
+5. Import du **vrai tableur** (toujours `--dry-run` d'abord) et paquet hors ligne réel si le mode `offline` est retenu.
 
 ## Pour démarrer une nouvelle session
 
