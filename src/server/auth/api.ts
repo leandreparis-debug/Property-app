@@ -28,7 +28,7 @@ type Handler<C> = (request: NextRequest, context: C & { user: SessionUser }) => 
 export function withApiAuth<C extends object = object>(handler: Handler<C>, options: { permission?: Action } = {}) {
   return async (request: NextRequest, context: C): Promise<Response> => {
     try {
-      if (MUTATING_METHODS.has(request.method) && !isSameOrigin(request.headers.get("origin"), getEnv().APP_URL)) {
+      if (MUTATING_METHODS.has(request.method) && !isSameOrigin(request.headers.get("origin"), getEnv().APP_URL, getEnv().SERVER_ACTIONS_ALLOWED_ORIGINS)) {
         return jsonError(403, "Origine de la requête refusée.");
       }
       const user = await requireApiUser();

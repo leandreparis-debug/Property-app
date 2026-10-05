@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: Request) {
   const env = getEnv();
-  if (!isSameOrigin(request.headers.get("origin"), env.APP_URL)) {
+  if (!isSameOrigin(request.headers.get("origin"), env.APP_URL, env.SERVER_ACTIONS_ALLOWED_ORIGINS)) {
     return jsonError(403, "Origine de la requête refusée.");
   }
   const cookieStore = await cookies();

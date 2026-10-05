@@ -45,6 +45,18 @@ function hostOf(entry: string): string | null {
 }
 
 /**
+ * Hosts of a comma-separated list (`SERVER_ACTIONS_ALLOWED_ORIGINS`),
+ * malformed entries ignored.
+ * @param list - E.g. « vigie-x-3000.app.github.dev,localhost:3000 ».
+ */
+export function parseAllowedHosts(list: string | undefined): string[] {
+  return (list ?? "")
+    .split(",")
+    .map(hostOf)
+    .filter((h): h is string => h !== null);
+}
+
+/**
  * Hosts allowed for Server Actions:
  * - the host of `APP_URL`;
  * - each host of `SERVER_ACTIONS_ALLOWED_ORIGINS`;
@@ -60,13 +72,11 @@ export function serverActionsAllowedOrigins(env: AllowedOriginsEnv = process.env
     const host = hostOf(env.APP_URL);
     if (host) hosts.push(host);
   }
-  const extra = (env.SERVER_ACTIONS_ALLOWED_ORIGINS ?? "")
-    .split(",")
-    .map(hostOf)
-    .filter((h): h is string => h !== null);
+  const extra = parseAllowedHosts(env.SERVER_ACTIONS_ALLOWED_ORIGINS);
   hosts.push(...extra);
   if (extra.length === 0 && env.CODESPACE_NAME && env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
-    hosts.push(`${env.CODESPACE_NAME}-${env.PORT ?? "3000"}.${env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`);
+    // The port-forwarding proxy may rewrite the Origin header to localhost.
+    hosts.push(`${env.CODESPACE_NAME}-${env.PORT ?? "3000"}.${env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`, `localhost:${env.PORT ?? "3000"}`);
   }
   return [...new Set(hosts)];
 }

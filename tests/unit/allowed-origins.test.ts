@@ -22,6 +22,10 @@ describe("serverActionsAllowedOrigins", () => {
       "localhost:3000",
       "vigie-abc-3000.app.github.dev",
     ]);
+    expect(serverActionsAllowedOrigins({ APP_URL: "https://vigie-abc-3000.app.github.dev", CODESPACE_NAME: "vigie-abc", GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "app.github.dev" })).toEqual([
+      "vigie-abc-3000.app.github.dev",
+      "localhost:3000",
+    ]);
   });
 
   it("the variable wins over the Codespace fallback; malformed entries are ignored", () => {

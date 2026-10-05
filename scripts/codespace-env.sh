@@ -36,7 +36,7 @@ if [ -f "$TARGET" ]; then
   if in_codespace; then
     PUBLIC_HOST="${CODESPACE_NAME}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
     set_key APP_URL "https://${PUBLIC_HOST}" "$TARGET"
-    set_key SERVER_ACTIONS_ALLOWED_ORIGINS "$PUBLIC_HOST" "$TARGET"
+    set_key SERVER_ACTIONS_ALLOWED_ORIGINS "${PUBLIC_HOST},localhost:3000" "$TARGET"
     set_key COOKIE_SECURE true "$TARGET"
     set_key TRUST_PROXY true "$TARGET"
     echo "$TARGET existe déjà : adresse du Codespace vérifiée (https://${PUBLIC_HOST}), le reste est conservé."
@@ -53,7 +53,7 @@ SA_PASSWORD="Vigie-Dev-$(node -e 'process.stdout.write(require("node:crypto").ra
 if in_codespace; then
   PUBLIC_HOST="${CODESPACE_NAME}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
   APP_URL="https://${PUBLIC_HOST}"
-  ORIGINS_LINE="SERVER_ACTIONS_ALLOWED_ORIGINS=${PUBLIC_HOST}"
+  ORIGINS_LINE="SERVER_ACTIONS_ALLOWED_ORIGINS=${PUBLIC_HOST},localhost:3000"
   COOKIE_SECURE=true
   TRUST_PROXY=true
 else
@@ -70,7 +70,8 @@ cat > "$TARGET" <<ENV
 MSSQL_SA_PASSWORD=${SA_PASSWORD}
 DATABASE_URL="sqlserver://localhost:1433;database=vigie;user=sa;password=${SA_PASSWORD};trustServerCertificate=true"
 APP_URL=${APP_URL}
-# Adresse publique du port transféré (Codespaces) : acceptée pour les Server Actions.
+# Adresse publique du port transféré (Codespaces), et localhost:3000 : le proxy
+# de Codespaces réécrit l'en-tête Origin en localhost:3000.
 ${ORIGINS_LINE}
 
 # HTTPS via le transfert de ports de Codespaces : cookie Secure (préfixe __Host-),
