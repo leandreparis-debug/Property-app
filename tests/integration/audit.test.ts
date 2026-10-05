@@ -224,3 +224,47 @@ describe("authentication events", () => {
     if (ok.ok) expect(toJson(log)).not.toContain(ok.token);
   });
 });
+
+describe("raw SQL inside a transaction", () => {
+  it("$queryRaw and $executeRaw run IN the interactive transaction (locks held, rollback applies)", async () => {
+    const site = await raw.site.create({ data: { code: "RAW-1", name: "Avant" } });
+    const tranCount = await db.$transaction(async (tx) => {
+      const [row] = await tx.$queryRaw<{ n: number }[]>`SELECT @@TRANCOUNT AS n`;
+      return row?.n;
+    });
+    expect(tranCount).toBeGreaterThanOrEqual(1);
+
+    await expect(
+      db.$transaction(async (tx) => {
+        await tx.$executeRaw`UPDATE sites SET name = N'Pendant' WHERE id = ${site.id}`;
+        throw new Error("annulation");
+      }),
+    ).rejects.toThrow("annulation");
+    expect((await raw.site.findUniqueOrThrow({ where: { id: site.id } })).name).toBe("Avant");
+  });
+
+  it("an UPDLOCK taken in one transaction blocks the same lock in another until the commit", async () => {
+    const site = await raw.site.create({ data: { code: "RAW-2", name: "Verrou" } });
+    const order: string[] = [];
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let locked!: () => void;
+    const isLocked = new Promise<void>((resolve) => (locked = resolve));
+    const first = db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM sites WITH (UPDLOCK, ROWLOCK) WHERE id = ${site.id}`;
+      order.push("first locked");
+      locked();
+      await held;
+      order.push("first commits");
+    });
+    await isLocked;
+    const second = db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM sites WITH (UPDLOCK, ROWLOCK) WHERE id = ${site.id}`;
+      order.push("second locked");
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    release();
+    await Promise.all([first, second]);
+    expect(order).toEqual(["first locked", "first commits", "second locked"]);
+  });
+});

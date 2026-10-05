@@ -22,6 +22,10 @@ import { serializeAuditValue } from "./serialize";
  * - `audit_logs` is append-only through the client: update/upsert/delete
  *   operations on `AuditLog` throw.
  *
+ * - Raw SQL (`$queryRaw`, `$executeRaw` and their `Unsafe` forms) issued
+ *   inside `client.$transaction(fn)` runs IN that transaction (locks such as
+ *   `WITH (UPDLOCK)` then hold until the commit).
+ *
  * Limits: raw SQL (`$executeRaw`) and database-level cascades are not
  * audited per row (see docs/security.md).
  */
@@ -323,6 +327,24 @@ export function withAudit(base: PrismaClient) {
       },
     },
     query: {
+      // Raw SQL inside an interactive transaction must use that transaction's
+      // connection (otherwise row locks are released at once).
+      $queryRaw({ args, query }) {
+        const current = transactions.getStore();
+        return current ? current.tx.$queryRaw(args) : query(args);
+      },
+      $executeRaw({ args, query }) {
+        const current = transactions.getStore();
+        return current ? current.tx.$executeRaw(args) : query(args);
+      },
+      $queryRawUnsafe({ args, query }) {
+        const current = transactions.getStore();
+        return current ? current.tx.$queryRawUnsafe(...(args as [string, ...unknown[]])) : query(args);
+      },
+      $executeRawUnsafe({ args, query }) {
+        const current = transactions.getStore();
+        return current ? current.tx.$executeRawUnsafe(...(args as [string, ...unknown[]])) : query(args);
+      },
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           const current = transactions.getStore();
