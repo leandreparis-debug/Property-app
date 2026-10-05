@@ -2,8 +2,9 @@
  * What the audit extension records.
  *
  * Every business model of the data model is audited, except the audit log
- * itself, import batches (they are the « batch » of audit lines) and sessions
- * (technical, high-frequency, contain token hashes).
+ * itself, import batches (they are the « batch » of audit lines), sessions
+ * (technical, high-frequency, contain token hashes) and job runs (technical
+ * journal of the operations jobs; their audited writes carry the run id).
  */
 
 /** Models whose writes produce audit lines (Prisma model names). */
@@ -24,10 +25,11 @@ export const AUDITED_MODELS: ReadonlySet<string> = new Set([
   "Document",
   "User",
   "SitePublicData",
+  "AppSetting",
 ]);
 
 /** Models explicitly not audited (documentation and tests). */
-export const UNAUDITED_MODELS: ReadonlySet<string> = new Set(["AuditLog", "ImportBatch", "Session"]);
+export const UNAUDITED_MODELS: ReadonlySet<string> = new Set(["AuditLog", "ImportBatch", "Session", "JobRun"]);
 
 /** Fields never reported in a diff, for every model. */
 export const IGNORED_FIELDS: ReadonlySet<string> = new Set(["createdAt", "updatedAt", "version"]);

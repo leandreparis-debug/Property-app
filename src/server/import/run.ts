@@ -1,5 +1,6 @@
 import "server-only";
 import { can } from "../auth/permissions";
+import { IMPORT_LOCKED_MESSAGE, isImportLocked } from "../settings";
 import { ensureStorageDir, toStorageRelative } from "../storage";
 import { runRowChecks, rejectDuplicateCodes, type AreaBasis } from "./checks";
 import { detectHeaders, HEADER_SEARCH_ROWS } from "./headers";
@@ -83,7 +84,8 @@ const timestamp = (d: Date) => d.toISOString().replace(/\.\d+Z$/, "").replace(/:
 
 /**
  * Runs an import (or a simulation with `dryRun`).
- * @throws {ImportPreconditionError} Actor not allowed.
+ * @throws {ImportPreconditionError} Actor not allowed, or real import while
+ *   the import is locked (setting `import.locked`).
  * @throws {SpreadsheetFileError} File refused (format, size, signature, sheet).
  */
 export async function runImport(options: ImportOptions): Promise<ImportResult> {
@@ -100,6 +102,9 @@ export async function runImport(options: ImportOptions): Promise<ImportResult> {
     );
   }
 
+  // Locked import (step 11): the simulation stays allowed.
+  if (!dryRun && (await isImportLocked())) throw new ImportPreconditionError(IMPORT_LOCKED_MESSAGE);
+
   const content = await readSpreadsheet(options.filePath, options.sheetName);
   const issues: ImportIssue[] = [...content.issues];
   const headers = detectHeaders(leadingRows(content.rows, HEADER_SEARCH_ROWS), FIXED_HEADERS);
@@ -109,6 +114,8 @@ export async function runImport(options: ImportOptions): Promise<ImportResult> {
 
   const summary: ImportSummary = {
     mode: dryRun ? "simulation" : "import",
+    actor: actor.email,
+    startedAt: now.toISOString(),
     status: "SUCCEEDED",
     file: content.fileName,
     sheet: content.sheetName,

@@ -611,3 +611,17 @@ model JobRun {
   @@index([job, startedAt])
   @@map("job_runs")
 }
+
+/// Application setting (key → JSON value), changed from the administration
+/// screens (`settings:manage`). Audited.
+model AppSetting {
+  id          String   @id @default(cuid()) @db.NVarChar(30)
+  /// Setting key, e.g. « import.locked » (src/server/settings.ts).
+  key         String   @unique @db.NVarChar(100)
+  valueJson   String   @map("value_json") @db.NVarChar(Max)
+  updatedById String?  @map("updated_by_id") @db.NVarChar(30)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}

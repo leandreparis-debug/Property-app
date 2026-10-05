@@ -12,6 +12,10 @@ import type { ImportIssue } from "./types";
 /** Aggregated figures of a run (also stored in `import_batches.stats_json`). */
 export interface ImportSummary {
   mode: "simulation" | "import";
+  /** Email of the actor (`--actor`), also for a simulation (step 11 history). */
+  actor?: string;
+  /** Start instant, ISO 8601 (step 11 history). */
+  startedAt?: string;
   status: "SUCCEEDED" | "PARTIAL" | "FAILED";
   file: string;
   sheet: string | null;

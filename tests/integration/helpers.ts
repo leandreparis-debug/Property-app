@@ -47,6 +47,7 @@ export async function markAudit(): Promise<void> {
 export async function resetDatabase(): Promise<void> {
   await raw.session.deleteMany();
   await raw.jobRun.deleteMany();
+  await raw.appSetting.deleteMany();
   await raw.equipment.deleteMany();
   await raw.sitePlan.deleteMany();
   await raw.site.deleteMany();
