@@ -154,7 +154,12 @@ test.describe("édition — éditeur", () => {
     await page.waitForLoadState("networkidle"); // hydrated: the file input listens
     const uploader = page.locator('[data-slot="document-uploader"]');
     const pdf = Buffer.from("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
-    await uploader.locator('input[type="file"]').setInputFiles({ name: "Bail signé 2026.pdf", mimeType: "application/pdf", buffer: pdf });
+    // « networkidle » does not guarantee hydration under load: choose the file
+    // again until the uploader reacts (its form appears).
+    await expect(async () => {
+      await uploader.locator('input[type="file"]').setInputFiles({ name: "Bail signé 2026.pdf", mimeType: "application/pdf", buffer: pdf });
+      await expect(uploader.getByLabel("Catégorie")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
     await uploader.getByLabel("Catégorie").selectOption("LEASE");
     await uploader.getByRole("button", { name: "Envoyer" }).click();
     const item = page.locator('[data-slot="documents"][data-category="LEASE"] li').first();
