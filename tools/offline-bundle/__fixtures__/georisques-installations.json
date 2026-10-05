@@ -1,0 +1,61 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "results": 2,
+  "page": 1,
+  "total_pages": 1,
+  "page_size": 100,
+  "data": [
+    {
+      "codeAIOT": "00061{{seed}}",
+      "raisonSociale": "LOGISTIQUE FICTIVE SAS",
+      "siret": "00000000000000",
+      "adresse1": "Rue de l'Exemple",
+      "codePostal": "69800",
+      "codeInsee": "69290",
+      "commune": "SAINT-PRIEST",
+      "longitude": 4.9505145,
+      "latitude": 45.7002713,
+      "regime": "Enregistrement",
+      "statutSeveso": "Non Seveso",
+      "etatActivite": "En fonctionnement",
+      "rubriques": [
+        {
+          "numeroRubrique": "1510",
+          "nature": "Entrepôts couverts",
+          "regimeAutoriseAlinea": "E",
+          "quantiteTotale": "480000",
+          "unite": "m3"
+        },
+        {
+          "numeroRubrique": "2925",
+          "nature": "Ateliers de charge d'accumulateurs",
+          "regimeAutoriseAlinea": "D"
+        },
+        {
+          "numeroRubrique": "4331",
+          "nature": "Liquides inflammables",
+          "regimeAutoriseAlinea": "DC"
+        }
+      ]
+    },
+    {
+      "codeAIOT": "00061{{seed2}}",
+      "raisonSociale": "CHIMIE VOISINE SA",
+      "longitude": 4.9422827,
+      "latitude": 45.7040697,
+      "regime": "Autorisation",
+      "statutSeveso": "Seuil Bas",
+      "rubriques": [
+        {
+          "numeroRubrique": "4001",
+          "nature": "Substances dangereuses",
+          "regimeAutoriseAlinea": "A"
+        }
+      ]
+    }
+  ]
+}

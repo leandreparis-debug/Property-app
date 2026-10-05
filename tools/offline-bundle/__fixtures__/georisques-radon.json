@@ -1,0 +1,17 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "results": 1,
+  "page": 1,
+  "total_pages": 1,
+  "data": [
+    {
+      "code_insee": "{{insee}}",
+      "libelle_commune": "COMMUNE FICTIVE",
+      "classe_potentiel": "1"
+    }
+  ]
+}

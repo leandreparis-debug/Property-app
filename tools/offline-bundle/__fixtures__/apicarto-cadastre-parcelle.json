@@ -1,0 +1,91 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "type": "FeatureCollection",
+  "totalFeatures": 2,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "parcelle.1",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                4.9484565,
+                45.6990956
+              ],
+              [
+                4.9507717,
+                45.6990956
+              ],
+              [
+                4.9507717,
+                45.7009044
+              ],
+              [
+                4.9484565,
+                45.7009044
+              ],
+              [
+                4.9484565,
+                45.6990956
+              ]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "idu": "{{insee}}000AB0012",
+        "code_insee": "{{insee}}",
+        "section": "AB",
+        "numero": "0012",
+        "contenance": 36000
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "parcelle.2",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                4.9509003,
+                45.6990956
+              ],
+              [
+                4.9529583,
+                45.6990956
+              ],
+              [
+                4.9529583,
+                45.7009044
+              ],
+              [
+                4.9509003,
+                45.7009044
+              ],
+              [
+                4.9509003,
+                45.6990956
+              ]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "idu": "{{insee}}000AB0013",
+        "code_insee": "{{insee}}",
+        "section": "AB",
+        "numero": "0013",
+        "contenance": 32000
+      }
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "_comment": "synthétique — à confirmer par probe",
+  "_referencePoint": [
+    4.95,
+    45.7
+  ],
+  "type": "FeatureCollection",
+  "totalFeatures": 3,
+  "numberMatched": 3,
+  "numberReturned": 3,
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "batiment.BATIMENT0000000240000001",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                4.948971,
+                45.6994574
+              ],
+              [
+                4.9515435,
+                45.6994574
+              ],
+              [
+                4.9515435,
+                45.7005426
+              ],
+              [
+                4.948971,
+                45.7005426
+              ],
+              [
+                4.948971,
+                45.6994574
+              ]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cleabs": "BATIMENT0000000240000001",
+        "nature": "Industriel, agricole ou commercial",
+        "usage_1": "Commercial et services",
+        "hauteur": 12.5,
+        "etat_de_l_objet": "En service"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "batiment.BATIMENT0000000240000002",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                4.95,
+                45.7009044
+              ],
+              [
+                4.9505145,
+                45.7009044
+              ],
+              [
+                4.9505145,
+                45.7010852
+              ],
+              [
+                4.95,
+                45.7010852
+              ],
+              [
+                4.95,
+                45.7009044
+              ]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cleabs": "BATIMENT0000000240000002",
+        "nature": "Indifférenciée",
+        "usage_1": "Annexe",
+        "hauteur": 4,
+        "etat_de_l_objet": "En service"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "batiment.BATIMENT0000000240000003",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                4.9475562,
+                45.6976034
+              ],
+              [
+                4.9514148,
+                45.6976034
+              ],
+              [
+                4.9514148,
+                45.69896
+              ],
+              [
+                4.9475562,
+                45.69896
+              ],
+              [
+                4.9475562,
+                45.6976034
+              ]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cleabs": "BATIMENT0000000240000003",
+        "nature": "Industriel, agricole ou commercial",
+        "usage_1": "Industriel",
+        "hauteur": 0,
+        "etat_de_l_objet": "En service"
+      }
+    }
+  ]
+}

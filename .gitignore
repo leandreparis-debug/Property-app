@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+*.tsbuildinfo
+
+# tests
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# env
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.log
+
+# prisma client (pnpm db:generate / postinstall)
+/generated/
+/tests/e2e/.auth/
+
+# application files (reports, documents): STORAGE_ROOT
+/storage/
+# storage root of the end-to-end suite
+/.e2e-storage/
+
+# offline bundle (tools/offline-bundle): working files, probe output, bundles, site exports
+/.bundle-work/
+/probe-output/
+/vigie-offline-bundle-*/
+/sites.json
+
+# local screenshots (pnpm run skill / manual captures)
+/captures/
