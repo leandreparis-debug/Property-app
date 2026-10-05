@@ -121,8 +121,8 @@ Détails et justifications : [`docs/security.md`](security.md).
 5. **Enrichissement et ressources carto** : paquet hors ligne préparé sur un poste connecté (données publiques, fond de carte, orthophotos), installé et appliqué sur le serveur *(terminée, voir `docs/offline-bundle.md`)*.
 6. **Carte nationale** : MapLibre, statut de conformité calculé, aperçu d'un site *(terminée, voir « Carte nationale » ci-dessous et `docs/compliance-rules.md`)*.
 7. **Filtres et supervision** : filtres dans l'URL, recherche Ctrl+K, liste des sites, supervision et mode présentation *(terminée, voir `docs/filters-and-search.md`)*.
-8. **Fiche entrepôt**.
-9. **Édition tracée** : modifications avec journal d'audit.
-10. **Volume 3D et plan**.
+8. **Fiche entrepôt** *(terminée, voir `docs/site-sheet.md`)*.
+9. **Édition tracée** : modifications avec journal d'audit *(terminée, voir `docs/editing.md`)*.
+10. **Volume 3D et plan** *(terminée, voir `docs/plans-and-equipment.md`)*.
 11. **Exploitation** : sauvegardes, journaux, supervision technique.
 12. **Recette et déploiement** : conteneur, livraison à la DSI.
