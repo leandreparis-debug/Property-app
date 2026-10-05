@@ -524,6 +524,10 @@ model AuditLog {
   @@index([siteId])
   @@index([occurredAt])
   @@index([batchId])
+  /// Journal screen (step 11): actor, source and field filters, most recent first.
+  @@index([actorId, occurredAt])
+  @@index([source, occurredAt])
+  @@index([field])
   @@map("audit_logs")
 }
 

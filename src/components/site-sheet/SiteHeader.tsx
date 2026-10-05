@@ -26,7 +26,7 @@ function Landmark({ label, value }: { label: string; value: ReactNode }) {
  * with every reason, archived / inactive banners, landmarks, actions and
  * previous / next navigation. `preview` is the map preview (top right).
  */
-export function SiteHeader({ detail, canArchive, preview, printedOn }: { detail: SiteDetail; canArchive: boolean; preview: ReactNode; printedOn: Date }) {
+export function SiteHeader({ detail, canArchive, canAudit = false, preview, printedOn }: { detail: SiteDetail; canArchive: boolean; canAudit?: boolean; preview: ReactNode; printedOn: Date }) {
   const { site, evaluation } = detail;
   const department = resolveDepartment(site.departmentCode);
   const status = evaluation.status;
@@ -112,7 +112,7 @@ export function SiteHeader({ detail, canArchive, preview, printedOn }: { detail:
             </div>
           </dl>
 
-          <SheetActions code={site.code} siteId={site.id} name={site.name} canArchive={canArchive} archived={site.archivedAt !== null} />
+          <SheetActions code={site.code} siteId={site.id} name={site.name} canArchive={canArchive} archived={site.archivedAt !== null} canAudit={canAudit} />
         </div>
         {preview}
       </div>

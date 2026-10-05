@@ -79,6 +79,7 @@ export default async function SitePage({ params }: Props) {
           <SiteHeader
             detail={detail}
             canArchive={can(user.role, "site:archive")}
+            canAudit={can(user.role, "audit:read")}
             printedOn={new Date()}
             preview={<SitePreview code={site.code} center={center} footprint={footprint} assets={assets} />}
           />

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Map as MapIcon, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileClock, Map as MapIcon, Printer } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { listContextQuery, siteNeighbours, siteSheetHref } from "@/domain/site-sheet/navigation";
 import { parseSort, sortEntries } from "@/domain/sites-table";
@@ -98,7 +98,7 @@ export function SiblingNavigation({ siteId }: { siteId: string }) {
 }
 
 /** « Voir sur la carte », « Imprimer » and, for administrators, « Plus d'actions » (archiving). */
-export function SheetActions({ code, siteId, name, canArchive, archived }: { code: string; siteId: string; name: string; canArchive: boolean; archived: boolean }) {
+export function SheetActions({ code, siteId, name, canArchive, archived, canAudit = false }: { code: string; siteId: string; name: string; canArchive: boolean; archived: boolean; canAudit?: boolean }) {
   const params = useSearchParams();
   const filters = filterQuery(params.toString());
   const mapHref = `/?${[filters, `site=${encodeURIComponent(code)}`].filter(Boolean).join("&")}`;
@@ -116,6 +116,14 @@ export function SheetActions({ code, siteId, name, canArchive, archived }: { cod
         <Printer aria-hidden="true" />
         Imprimer
       </Button>
+      {canAudit && (
+        <Button asChild variant="secondary" size="sm">
+          <Link href={`/admin/audit?siteId=${encodeURIComponent(siteId)}`}>
+            <FileClock aria-hidden="true" />
+            Voir dans le journal d&apos;audit
+          </Link>
+        </Button>
+      )}
       {canArchive && <ArchiveControls siteId={siteId} name={name} archived={archived} />}
     </div>
   );
