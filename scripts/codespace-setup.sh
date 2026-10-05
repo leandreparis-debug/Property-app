@@ -7,6 +7,9 @@
 # Usage: pnpm codespace:setup   (or: bash scripts/codespace-setup.sh)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/codespace-lib.sh
+source scripts/codespace-lib.sh
+load_codespace_env
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0 NEXT_TELEMETRY_DISABLED=1
 
 step() { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }

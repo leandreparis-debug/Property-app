@@ -7,6 +7,9 @@
 # Does nothing if something already listens on port 3000.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/codespace-lib.sh
+source scripts/codespace-lib.sh
+load_codespace_env
 MODE="${1:-prod}"
 export NEXT_TELEMETRY_DISABLED=1
 
@@ -17,6 +20,12 @@ fi
 if [ ! -f .env ]; then
   echo "Préparation pas encore terminée : attendre la fin de « pnpm codespace:setup » (terminal de création), puis relancer « pnpm codespace:prod »."
   exit 1
+fi
+# Codespace: make sure .env carries this Codespace's public address (Server
+# Actions origin, secure cookie) — read by the server when it starts.
+bash scripts/codespace-env.sh >/dev/null
+if [ -n "${CODESPACES:-}" ] && ! in_codespace; then
+  echo "⚠ Adresse du Codespace introuvable (CODESPACE_NAME absent) : la connexion risque d'être refusée. Voir docs/demarrage-codespaces.md, « Problèmes fréquents »."
 fi
 for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
 pnpm -s db:up >/dev/null

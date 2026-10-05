@@ -3,6 +3,9 @@
 # resumes, Docker has been stopped — restart SQL Server (idempotent).
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/codespace-lib.sh
+source scripts/codespace-lib.sh
+load_codespace_env
 if [ ! -f .env ]; then
   echo "Préparation pas encore faite (.env absent) : rien à relancer."
   exit 0
