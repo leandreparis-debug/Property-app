@@ -226,60 +226,69 @@
   text-shadow: 0 0 4px var(--color-surface-1);
 }
 
-/* Site pins (HTML markers, see components/map/site-pins.ts). */
+/* Site pins (HTML markers, see components/map/site-pins.ts): small white
+ * labels with a hairline border, the status dot and a short tail. */
 .vigie-pin {
+  --pin-edge: rgb(29 27 24 / 0.14);
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 7px;
-  padding: 5px 11px 5px 8px;
-  border: 2px solid var(--color-surface-1);
+  gap: 5px;
+  margin-bottom: 5px;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid var(--pin-edge);
   border-radius: 999px;
   background: var(--color-surface-1);
   color: var(--color-text);
-  font: 700 12px/1.2 var(--font-sans);
+  font: 600 11.5px/1.25 var(--font-sans);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgb(40 30 10 / 0.25);
+  box-shadow: 0 1px 2px rgb(29 27 24 / 0.10), 0 3px 8px rgb(29 27 24 / 0.08);
   cursor: pointer;
-  transition: transform 120ms;
+  transition: transform 120ms, box-shadow 120ms;
 }
 .vigie-pin::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -7px;
-  width: 9px;
-  height: 9px;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
   background: inherit;
-  border-right: 2px solid var(--color-surface-1);
-  border-bottom: 2px solid var(--color-surface-1);
+  border-right: 1px solid var(--pin-edge);
+  border-bottom: 1px solid var(--pin-edge);
   transform: translateX(-50%) rotate(45deg);
-  z-index: -1;
 }
 .vigie-pin:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgb(29 27 24 / 0.12), 0 6px 14px rgb(29 27 24 / 0.12);
 }
 .vigie-pin:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 .vigie-pin[data-selected="true"] {
+  --pin-edge: var(--color-accent);
   background: var(--color-accent);
   color: var(--color-on-accent);
   z-index: 2;
 }
+@media (prefers-reduced-motion: reduce) {
+  .vigie-pin { transition: none; }
+  .vigie-pin:hover { transform: none; }
+}
 .vigie-pin-dot {
-  width: 9px;
-  height: 9px;
+  flex: none;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
-  box-shadow: 0 0 0 2px var(--color-surface-1);
+  box-shadow: 0 0 0 1.5px var(--color-surface-1);
 }
 .vigie-pin-dot[data-status="ok"] { background: var(--color-status-ok); }
 .vigie-pin-dot[data-status="warning"] { background: var(--color-status-warning); }
 .vigie-pin-dot[data-status="critical"] { background: var(--color-status-critical); }
-.vigie-pin-dot[data-status="unknown"] { background: var(--color-status-unknown); }
+.vigie-pin-dot[data-status="unknown"] { background: var(--color-surface-1); box-shadow: inset 0 0 0 1.5px var(--color-status-unknown), 0 0 0 1.5px var(--color-surface-1); }
 
 .vigie-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
   background: transparent;

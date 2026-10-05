@@ -187,6 +187,7 @@ Par défaut (`MAP_BASEMAP=ign`), le **navigateur** de chaque utilisateur charge 
 
 - **Le serveur n'appelle jamais internet** : seuls les postes des utilisateurs contactent `data.geopf.fr`. Ils doivent y avoir accès (proxy de l'entreprise).
 - **CSP** : cette seule origine est ajoutée, et seulement à `img-src` et `connect-src` (`src/lib/basemap.ts`, `src/lib/csp.ts`). Aucun script, style, police ni cadre externe. Un test unitaire le vérifie.
+- **Plan IGN gris** : le navigateur lit le style vectoriel `gris` de l'IGN, puis ses tuiles, glyphes et pictogrammes, tous sur `data.geopf.fr` (`connect-src`) ; ce sont des données de carte, pas des feuilles de style ni des polices CSS. Un style qui référencerait une autre origine est ignoré (`isUsableIgnStyle`) et la carte revient au Plan IGN en images.
 - **Ce qui sort** : des demandes de tuiles (zoom, x, y), donc la zone consultée. Aucune donnée métier : ni code, ni nom, ni statut de site. L'IGN voit l'adresse IP de sortie et l'en-tête `Referer` est réduit à l'origine (`Referrer-Policy: same-origin` : aucun `Referer` vers un autre site).
 - **Mode fermé** : `MAP_BASEMAP=offline` revient au fond installé sur le serveur (étape 5) ou au fond de secours, sans aucune requête externe. Les tests e2e tournent dans ce mode et vérifient qu'aucune requête ne quitte l'origine.
 

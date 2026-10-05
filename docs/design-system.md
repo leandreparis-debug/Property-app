@@ -103,11 +103,11 @@ Kit de marque « vigie-brand » : un phare dans une tuile arrondie, une lanterne
 
 **Page d'accueil « Carte du portefeuille »** (`src/app/(app)/page.tsx`) : titre et date, bouton « Nouveau site », trois cartes (`PortfolioBriefs` : **Échéances** sous 6 mois, fiches **À compléter** sous 60 %, décompte **Conformité**), puis la carte dans une carte blanche, avec à droite une colonne de 380 px : le résumé du site sélectionné (`SitePeek`), la liste des sites, ou une invitation à choisir un site.
 
-**Étiquettes des sites** (`site-pins.ts`) : chaque site isolé est une pastille blanche (marqueur HTML, aucune police de carte nécessaire) avec la pastille de statut et, au choix (« Étiquette » : Surface / Échéance / Code), la surface de référence, la tranche d'échéance du bail ou le code. Le site sélectionné passe en `accent` (texte blanc). Les groupes (jusqu'au zoom 7) restent des disques neutres cerclés de la sévérité la plus grave.
+**Étiquettes des sites** (`site-pins.ts`, styles `.vigie-pin` de `globals.css`) : chaque site isolé est une petite étiquette blanche à filet fin et pointe discrète (marqueur HTML, aucune police de carte nécessaire) avec la pastille de statut (cercle creux gris pour « Non évalué ») et, au choix (« Étiquette » : Surface / Échéance / Code), la surface de référence, la tranche d'échéance du bail ou le code. Le site sélectionné passe en `accent` (texte blanc). Les groupes (jusqu'au zoom 7) restent des disques blancs cerclés de la sévérité la plus grave.
 
 **Fonds de carte.** **Seules les couleurs neutres** construisent le fond : les couleurs de statut n'apparaissent que sur les sites, et `accent` uniquement pour la sélection et le focus. Des tests vérifient l'absence de ces couleurs dans les styles du fond.
 
-- **IGN Géoplateforme, en ligne** (par défaut, `MAP_BASEMAP=ign`, `style/ign-style.ts`) : « Plan IGN » (légèrement désaturé, −30 %) et photographies aériennes (BD ORTHO), tuiles WMTS chargées par le navigateur. Bascule « Plan IGN / Photo aérienne » sur la carte ; la fiche et l'onglet Plan s'ouvrent sur la photo aérienne. Voir `docs/security.md` pour l'exception au réseau fermé.
+- **IGN Géoplateforme, en ligne** (par défaut, `MAP_BASEMAP=ign`, `style/ign-style.ts`) : « Plan IGN » **gris** (tuiles vectorielles avec le style `gris` de l'IGN, pictogrammes des points d'intérêt retirés) et photographies aériennes (BD ORTHO), chargés par le navigateur. Le style gris est lu au chargement de la carte ; s'il est injoignable, ou s'il référence une autre origine que `data.geopf.fr`, la carte prend le « Plan IGN » en tuiles images, entièrement désaturé et éclairci. Bascule « Plan IGN / Photo aérienne » sur la carte ; la fiche et l'onglet Plan s'ouvrent sur la photo aérienne. Voir `docs/security.md` pour l'exception au réseau fermé.
 - **Fond hors ligne** (`MAP_BASEMAP=offline`, `style/basemap-style.ts`, dérivé des jetons) : terres `#F1ECE3`, eau `#D6E0E6`, routes blanches, autoroutes sable `#D9C7A4` avec un halo, limites régionales en pointillés, noms de villes en `text-muted`, bâtiments extrudés à partir du zoom 15, points d'intérêt retirés.
 - **Fond de secours** (`style/fallback-style.ts`), quand rien n'est disponible : silhouettes des pays (Natural Earth 1:50 millions), France en `#F1ECE3`, voisins atténués, mer `#D6E0E6`, aucun texte ; un bandeau discret signale « Fond de carte détaillé non installé ».
 
@@ -122,17 +122,17 @@ Kit de marque « vigie-brand » : un phare dans une tuile arrondie, une lanterne
 
 - Les points critiques sont dessinés par-dessus les autres (`circle-sort-key`).
 - **Halo** : sur une couche séparée. Seules ses propriétés de peinture sont animées, à environ 15 images par seconde, et l'animation se met en pause quand l'onglet est caché. Avec `prefers-reduced-motion`, le halo est fixe.
-- **Groupes** (jusqu'au zoom 7) : disque `surface-2` dont le contour prend la couleur de la sévérité **la plus grave** du groupe. Le nombre de sites est affiché en Geist Mono par un marqueur HTML, car Geist n'existe pas en glyphes de carte.
+- **Groupes** (jusqu'au zoom 7) : disque blanc (`surface-1`) dont le contour prend la couleur de la sévérité **la plus grave** du groupe. Le nombre de sites est affiché en Geist Mono par un marqueur HTML, car Geist n'existe pas en glyphes de carte.
 - **Sélection** : anneau `accent` autour du point, et volume du bâtiment teinté en `accent` atténué avec un liseré `accent`.
 
 **Volumes des bâtiments** (à partir du zoom 14, étape 10, règles de génération dans `docs/plans-and-equipment.md`) :
-- **cellules** en `fill-extrusion`, dans deux tons chauds clairs alternés à peine distincts (`#ECE6DB` et `#E3DCCF`) pour lire le découpage ;
-- **murs coupe-feu** plus foncés (`#CFC5B5`), dépassant le toit de 1 m ;
-- **arêtes de toit** soulignées par un acrotère fin (`#A89C88`, 0,35 m de large, 0,4 m de haut), qui remplace une ligne : MapLibre ne sait pas tracer une ligne en altitude ;
-- **quais** plus foncés (`#8F8472`), 4,5 m de haut, le long du côté choisi ;
-- liseré au sol de la couleur du statut du site (inchangé) ; au-dessus du dégradé vertical de MapLibre, aucune autre couleur ;
+- **cellules** en `fill-extrusion`, dans deux gris clairs alternés à peine distincts (`#EDEBE7` et `#E5E2DC`), accordés au Plan IGN gris, pour lire le découpage ;
+- **murs coupe-feu** plus foncés (`#D2CDC5`), dépassant le toit de 1 m ;
+- **arêtes de toit** soulignées par un acrotère fin (`#B7B0A5`, opacité 80 %, 0,35 m de large, 0,4 m de haut), qui remplace une ligne : MapLibre ne sait pas tracer une ligne en altitude ;
+- **quais** plus foncés (`#A19A8F`), 4,5 m de haut, le long du côté choisi ;
+- liseré au sol **neutre** et fin (`text-muted`, 1,25 px, opacité 60 %), en `accent` pour le site sélectionné : le statut se lit sur l'étiquette, pas sur l'emprise ; au-dessus du dégradé vertical de MapLibre, aucune autre couleur ;
 - **site sélectionné** : cellules en `accent` éclairci (`#9FB6DC`), acrotères en `accent`, via l'état global `selectedSiteId` (aucune donnée à recharger) ;
-- **volume approximatif** (emprise non renseignée) : **filaire translucide**, avec des cellules, murs et quais à 22 % d'opacité, des acrotères pleins qui dessinent les arêtes et un liseré au sol en pointillés. `SitePeek` affiche « Volume approximatif (emprise non renseignée) », et « Hauteur estimée (12 m par défaut) » si la hauteur manque.
+- **volume approximatif** (emprise non renseignée) : **filaire translucide**, avec des cellules, murs et quais à 18 % d'opacité, des acrotères pleins qui dessinent les arêtes et un liseré au sol en pointillés. `SitePeek` affiche « Volume approximatif (emprise non renseignée) », et « Hauteur estimée (12 m par défaut) » si la hauteur manque.
 
 **Équipements** (`src/components/plan/`) :
 - **pictogrammes dessinés à la main** en SVG dans le dépôt (`pictograms.ts`), transformés à l'exécution en images MapLibre (canvas → `map.addImage`, à 2×), sans sprite ni police ;

@@ -10,7 +10,10 @@
  *   (only its paint properties are animated).
  * Critical sites are drawn on top (circle-sort-key = statusRank).
  *
- * Clusters (up to zoom 7) are surface-2 discs whose ring takes the color of
+ * Footprints and volumes stay neutral (the status is carried by the pin);
+ * only the selected site's turn accent.
+ *
+ * Clusters (up to zoom 7) are white discs whose ring takes the color of
  * the MOST SEVERE site they contain; their count is an HTML marker in Geist
  * Mono (see NationalMap), so no glyph is needed.
  */
@@ -22,7 +25,7 @@ import type {
   LineLayerSpecification,
 } from "maplibre-gl";
 import type { MapSitesData } from "@/domain/map-dto";
-import { ACCENT, ACCENT_VOLUME, NEUTRAL, STATUS_COLORS, VOLUME_COLORS } from "../style/theme";
+import { ACCENT, ACCENT_VOLUME, FOOTPRINT_COLOR, NEUTRAL, STATUS_COLORS, VOLUME_COLORS } from "../style/theme";
 
 /** Source and layer ids. */
 export const SITES_SOURCE = "sites";
@@ -104,10 +107,10 @@ export const CLUSTERS_LAYER: CircleLayerSpecification = {
   source: SITES_SOURCE,
   filter: ["has", "point_count"],
   paint: {
-    "circle-color": NEUTRAL.surface2,
-    "circle-opacity": 0.92,
-    "circle-radius": ["interpolate", ["linear"], ["get", "point_count"], 2, 14, 20, 20, 100, 28],
-    "circle-stroke-width": 2,
+    "circle-color": NEUTRAL.surface1,
+    "circle-opacity": 0.96,
+    "circle-radius": ["interpolate", ["linear"], ["get", "point_count"], 2, 13, 20, 18, 100, 25],
+    "circle-stroke-width": 2.5,
     "circle-stroke-color": statusColor(CLUSTER_WORST_STATUS),
     "circle-pitch-alignment": "viewport",
   },
@@ -208,13 +211,15 @@ const extrusion = (id: string, filter: ExpressionSpecification, opacity: number)
 });
 
 /** Generated volume (footprint known): cells, firewalls, docks. */
-export const VOLUME_SOLID_LAYER = extrusion(LAYER.volumeSolid, ["all", ["!", APPROXIMATE], ["!=", PART, "edge"]], 0.92);
+export const VOLUME_SOLID_LAYER = extrusion(LAYER.volumeSolid, ["all", ["!", APPROXIMATE], ["!=", PART, "edge"]], 0.9);
 /** Approximate volume (no footprint): translucent, only its parapets stay solid (wireframe look). */
-export const VOLUME_APPROX_LAYER = extrusion(LAYER.volumeApprox, ["all", APPROXIMATE, ["!=", PART, "edge"]], 0.22);
+export const VOLUME_APPROX_LAYER = extrusion(LAYER.volumeApprox, ["all", APPROXIMATE, ["!=", PART, "edge"]], 0.18);
 /** Roof edges (parapets) of every cell: the fine lines of the roofs. */
-export const VOLUME_EDGES_LAYER = extrusion(LAYER.volumeEdges, ["==", PART, "edge"], 0.95);
+export const VOLUME_EDGES_LAYER = extrusion(LAYER.volumeEdges, ["==", PART, "edge"], 0.8);
 
-/** Ground edge of the footprint, in the site's status color. */
+const FOOTPRINT_SELECTED: ExpressionSpecification = ["boolean", ["feature-state", "selected"], false];
+
+/** Ground edge of the footprint: thin neutral line, accent when selected. */
 export const FOOTPRINT_EDGE_LAYER: LineLayerSpecification = {
   id: LAYER.footprintEdge,
   type: "line",
@@ -222,9 +227,9 @@ export const FOOTPRINT_EDGE_LAYER: LineLayerSpecification = {
   minzoom: FOOTPRINT_MIN_ZOOM,
   filter: ["!", APPROXIMATE],
   paint: {
-    "line-color": ["case", ["boolean", ["feature-state", "selected"], false], ACCENT, statusColor(STATUS)],
-    "line-width": 2,
-    "line-opacity": 0.9,
+    "line-color": ["case", FOOTPRINT_SELECTED, ACCENT, FOOTPRINT_COLOR],
+    "line-width": ["case", FOOTPRINT_SELECTED, 2, 1.25],
+    "line-opacity": ["case", FOOTPRINT_SELECTED, 0.95, 0.6],
   },
 };
 

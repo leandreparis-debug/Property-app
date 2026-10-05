@@ -4,7 +4,7 @@
  * checks that these values match the CSS tokens.
  *
  * - NEUTRAL: the only colors the basemap may use.
- * - STATUS: reserved for the sites (points, cluster rings, footprint edges).
+ * - STATUS: reserved for the sites (points, pins, cluster rings).
  * - ACCENT: selection and focus only.
  */
 import type { ComplianceStatus } from "@/lib/status";
@@ -49,14 +49,17 @@ export const ACCENT = "#1b4f9c";
 export const ACCENT_VOLUME = "#9fb6dc";
 
 /**
- * Building volumes (neutral only, never status colors): two very close
- * warm light tones alternate between cells, firewalls and parapets are
- * darker, docks darker still.
+ * Building volumes (neutral only, never status colors): soft light greys
+ * that sit on the grey IGN plan; two barely distinct tones alternate between
+ * cells, firewalls and parapets are a little darker, docks darker still.
  */
 export const VOLUME_COLORS = {
-  cellEven: "#ece6db",
-  cellOdd: "#e3dccf",
-  firewall: "#cfc5b5",
-  edge: "#a89c88",
-  dock: "#8f8472",
+  cellEven: "#edebe7",
+  cellOdd: "#e5e2dc",
+  firewall: "#d2cdc5",
+  edge: "#b7b0a5",
+  dock: "#a19a8f",
 } as const;
+
+/** Ground outline of the footprints (neutral; the status is shown by the pin). */
+export const FOOTPRINT_COLOR = NEUTRAL.textMuted;
