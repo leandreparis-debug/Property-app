@@ -97,6 +97,7 @@ model Site {
   equipments      Equipment[]
   documents       Document[]
   publicData      SitePublicData[]
+  divergences     EnrichmentDivergence[]
 
   @@index([region])
   @@index([departmentCode])
@@ -465,11 +466,12 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  calibratedPlans   SitePlan[]    @relation("PlanCalibratedBy")
-  uploadedDocuments Document[]    @relation("DocumentUploadedBy")
-  importBatches     ImportBatch[] @relation("ImportBatchActor")
-  sessions          Session[]
-  triggeredJobRuns  JobRun[]      @relation("JobRunTriggeredBy")
+  calibratedPlans     SitePlan[]             @relation("PlanCalibratedBy")
+  uploadedDocuments   Document[]             @relation("DocumentUploadedBy")
+  importBatches       ImportBatch[]          @relation("ImportBatchActor")
+  sessions            Session[]
+  triggeredJobRuns    JobRun[]               @relation("JobRunTriggeredBy")
+  resolvedDivergences EnrichmentDivergence[] @relation("DivergenceResolvedBy")
 
   @@map("users")
 }
@@ -624,4 +626,42 @@ model AppSetting {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
+}
+
+/// A public value that differs from the current value of a field, found by
+/// an enrichment application (step 5) and kept for review (step 11).
+/// One OPEN divergence per site, field and proposed value; a dismissed one
+/// is never recreated for the same proposed value. Audited.
+model EnrichmentDivergence {
+  id                String    @id @default(cuid()) @db.NVarChar(30)
+  siteId            String    @map("site_id") @db.NVarChar(30)
+  /// Enrichment target, e.g. « Site.postalCode » (ENRICHMENT_TARGETS).
+  target            String    @db.NVarChar(50)
+  /// Canonical text of the current value when the divergence was detected.
+  currentValue      String?   @map("current_value") @db.NVarChar(Max)
+  /// Canonical text of the proposed public value.
+  proposedValue     String    @map("proposed_value") @db.NVarChar(Max)
+  /// SHA-256 of `proposedValue` (uniqueness on long values).
+  proposedSha256    String    @map("proposed_sha256") @db.Char(64)
+  /// Public source (provider of the offline bundle).
+  provider          String    @db.NVarChar(40)
+  confidence        Decimal?  @db.Decimal(4, 3)
+  evidence          String?   @db.NVarChar(1000)
+  /// Enrichment batch (import_batches) that found it.
+  batchId           String    @map("batch_id") @db.NVarChar(30)
+  /// open | accepted | dismissed (DivergenceStatus) — CHECK constraint.
+  status            String    @default("open") @db.NVarChar(10)
+  resolvedById      String?   @map("resolved_by_id") @db.NVarChar(30)
+  resolvedAt        DateTime? @map("resolved_at")
+  resolutionComment String?   @map("resolution_comment") @db.NVarChar(500)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  site       Site  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation("DivergenceResolvedBy", fields: [resolvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([siteId, target, proposedSha256], map: "enrichment_divergences_one_open", where: raw("[status] = N'open'"))
+  @@index([siteId, target, proposedSha256])
+  @@index([status, createdAt])
+  @@map("enrichment_divergences")
 }

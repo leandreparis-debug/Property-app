@@ -105,8 +105,8 @@ export const TARGET_FIELDS: Readonly<Record<EnrichmentTarget, { model: "Site" | 
 
 const isEmpty = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 
-/** Current value of a target. */
-function currentValue(state: EnrichmentSiteState, target: EnrichmentTarget): unknown {
+/** Current value of a target (also used to check a divergence before adoption). */
+export function currentValue(state: EnrichmentSiteState, target: EnrichmentTarget): unknown {
   switch (target) {
     case "Site.latitude":
       return state.site.latitude;

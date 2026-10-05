@@ -27,6 +27,8 @@ export interface EnrichmentSummary {
   archivedCodes: string[];
   counts: EnrichmentPlan["counts"];
   checks: number;
+  /** Divergences recorded for review (step 11): new ones, already known ones. */
+  divergences?: { created: number; known: number };
   durationMs: number;
 }
 

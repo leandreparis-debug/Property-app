@@ -16,9 +16,9 @@ import {
 import { fromWire, toWire, wireEquals, type DbValue, type FormValue, type WireValue } from "@/domain/fields/wire";
 import type { SessionUser } from "../auth/session";
 import { getFieldProvenance, isWellFormedSiteId, provenanceOf } from "./detail";
-import { Abort, assertAll, auditedTransaction, commentSchema, fail, lockSite, sectionPermissions, statusOf, withForbidden, type ConflictInfo, type Failure, type StatusChange, type Tx } from "./edit-common";
+import { Abort, assertAll, auditedTransaction, commentSchema, fail, lockSite, sectionPermissions, statusOf, withForbidden, type AuditChannel, type ConflictInfo, type Failure, type StatusChange, type Tx } from "./edit-common";
 
-export { COMMENT_MAX, newBatchId, sectionPermissions, type ConflictInfo, type Failure, type StatusChange } from "./edit-common";
+export { COMMENT_MAX, newBatchId, sectionPermissions, type AuditChannel, type ConflictInfo, type Failure, type StatusChange } from "./edit-common";
 
 /**
  * Traced editing of a site (step 9). Every write:
@@ -150,9 +150,10 @@ async function conflictInfos(siteId: string, entity: FieldEntity, recordId: stri
  *
  * @param user - Acting user.
  * @param input - Site, section, `{ key: { from, to } }`, optional reason.
+ * @param channel - Audit channel (default: interface, new batch).
  * @returns The number of changed fields and the status before / after, or a failure.
  */
-export async function saveSiteSection(user: SessionUser, input: SaveSectionInput): Promise<SaveSectionResult> {
+export async function saveSiteSection(user: SessionUser, input: SaveSectionInput, channel?: AuditChannel): Promise<SaveSectionResult> {
   return withForbidden(async () => {
     const parsedInput = saveSectionInput.safeParse(input);
     if (!parsedInput.success) return fail("invalid", parsedInput.error.issues[0]?.message ?? "Requête invalide.");
@@ -216,7 +217,7 @@ export async function saveSiteSection(user: SessionUser, input: SaveSectionInput
       else await delegate(tx, entity).create({ data: { ...data, siteId } });
       await tx.site.update({ where: { id: siteId }, data: { version: { increment: 1 } } });
       return changedCount;
-    });
+    }, channel);
     if (typeof result !== "number") return result;
     return { ok: true, changedCount: result, status: { before, after: await statusOf(siteId) } };
   });

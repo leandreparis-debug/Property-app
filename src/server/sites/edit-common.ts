@@ -107,10 +107,20 @@ export class Abort extends Error {
   }
 }
 
+/**
+ * Audit channel of a save: the interface by default; the adoption of an
+ * enrichment divergence (step 11) writes with source `enrichment` and the
+ * enrichment batch.
+ */
+export interface AuditChannel {
+  source: "ui" | "enrichment";
+  batchId: string;
+}
+
 /** Runs `fn` in an audited transaction; an {@link Abort} rolls back and becomes the result. */
-export async function auditedTransaction<T>(user: SessionUser, comment: string | null, fn: (tx: Tx) => Promise<T>): Promise<T | Failure> {
+export async function auditedTransaction<T>(user: SessionUser, comment: string | null, fn: (tx: Tx) => Promise<T>, channel?: AuditChannel): Promise<T | Failure> {
   try {
-    return await runWithAuditContext({ actorId: user.id, source: "ui", batchId: newBatchId(), comment }, () => db.$transaction((tx) => fn(tx)));
+    return await runWithAuditContext({ actorId: user.id, source: channel?.source ?? "ui", batchId: channel?.batchId ?? newBatchId(), comment }, () => db.$transaction((tx) => fn(tx)));
   } catch (error) {
     if (error instanceof Abort) return error.failure;
     throw error;

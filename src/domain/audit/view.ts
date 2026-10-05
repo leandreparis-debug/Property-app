@@ -33,6 +33,7 @@ export const ENTITY_LABELS: Readonly<Record<string, string>> = {
   TrashFile: "Fichier de la corbeille",
   AppSetting: "Paramètre",
   EnrichmentDivergence: "Divergence d'enrichissement",
+  EnrichmentExport: "Export pour l'enrichissement",
   Export: "Export",
 };
 

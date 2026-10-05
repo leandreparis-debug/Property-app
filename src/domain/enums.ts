@@ -164,3 +164,11 @@ export const JobStatus = defineEnum({
   failed: "Échec",
 });
 export type JobStatus = (typeof JobStatus.values)[number];
+
+/** Review status of an enrichment divergence (CHECK constraint `enrichment_divergences_status_check`). */
+export const DivergenceStatus = defineEnum({
+  open: "À examiner",
+  accepted: "Valeur proposée adoptée",
+  dismissed: "Valeur actuelle conservée",
+});
+export type DivergenceStatus = (typeof DivergenceStatus.values)[number];

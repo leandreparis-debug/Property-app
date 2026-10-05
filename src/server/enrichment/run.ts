@@ -9,7 +9,7 @@ import { ensureStorageDir, toStorageRelative } from "../storage";
 import { planEnrichment, type EnrichmentPlan } from "./plan";
 import { formatEnrichmentSummary, writeEnrichmentReport, type EnrichmentSummary } from "./report";
 import { loadEnrichmentState } from "./state";
-import { createEnrichmentBatch, finalizeEnrichmentBatch, writeSiteEnrichment } from "./writer";
+import { createEnrichmentBatch, finalizeEnrichmentBatch, recordDivergences, writeSiteEnrichment } from "./writer";
 
 /**
  * Orchestration of `pnpm enrichment:apply` (used by the CLI and the tests):
@@ -117,6 +117,8 @@ export async function runEnrichment(options: EnrichmentOptions): Promise<Enrichm
       }
     }
     if (summary.sitesFailed.length > 0) summary.status = summary.sitesWritten > 0 ? "PARTIAL" : "FAILED";
+    const siteIdByCode = new Map([...states.values()].map((s) => [s.code, s.id]));
+    summary.divergences = await recordDivergences(plan.lines, siteIdByCode, { actorId: actor.id, batchId });
   }
 
   const reportDir = await ensureStorageDir("enrichment", batchId ?? `dry-run-${timestamp(now)}`);

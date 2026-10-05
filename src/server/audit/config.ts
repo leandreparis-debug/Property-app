@@ -26,6 +26,7 @@ export const AUDITED_MODELS: ReadonlySet<string> = new Set([
   "User",
   "SitePublicData",
   "AppSetting",
+  "EnrichmentDivergence",
 ]);
 
 /** Models explicitly not audited (documentation and tests). */

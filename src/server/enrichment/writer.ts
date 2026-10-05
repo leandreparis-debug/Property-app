@@ -1,7 +1,8 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { runWithAuditContext } from "../audit/context";
 import { db } from "../db";
-import type { SiteEnrichmentWrites } from "./plan";
+import type { ProposalLine, SiteEnrichmentWrites } from "./plan";
 
 /**
  * The ONLY module of the enrichment application that writes business data.
@@ -74,4 +75,60 @@ export function writeSiteEnrichment(writes: SiteEnrichmentWrites, context: { act
       { timeout: 60_000, maxWait: 10_000 },
     ),
   );
+}
+
+/** Result of {@link recordDivergences}. */
+export interface DivergenceRecording {
+  /** New open divergences. */
+  created: number;
+  /** Already open, or dismissed for the same proposed value: not recreated. */
+  known: number;
+}
+
+/**
+ * Records the divergences of an application for review (step 11),
+ * IDEMPOTENTLY: one open divergence per site, field and proposed value; a
+ * divergence dismissed for the same proposed value is never recreated.
+ * Audited with the enrichment context (source `enrichment`, batch).
+ * @param lines - Divergence lines of the plan.
+ * @param siteIdByCode - Site ids by code.
+ * @param context - Actor and enrichment batch.
+ */
+export async function recordDivergences(
+  lines: readonly ProposalLine[],
+  siteIdByCode: ReadonlyMap<string, string>,
+  context: { actorId: string; batchId: string },
+): Promise<DivergenceRecording> {
+  const result: DivergenceRecording = { created: 0, known: 0 };
+  await runWithAuditContext({ actorId: context.actorId, source: "enrichment", batchId: context.batchId }, async () => {
+    for (const line of lines) {
+      if (line.outcome !== "divergence") continue;
+      const siteId = siteIdByCode.get(line.code);
+      if (!siteId) continue;
+      const proposedSha256 = createHash("sha256").update(line.proposed, "utf8").digest("hex");
+      const existing = await db.enrichmentDivergence.findFirst({
+        where: { siteId, target: line.target, proposedSha256, status: { in: ["open", "dismissed"] } },
+        select: { id: true },
+      });
+      if (existing) {
+        result.known++;
+        continue;
+      }
+      await db.enrichmentDivergence.create({
+        data: {
+          siteId,
+          target: line.target,
+          currentValue: line.current,
+          proposedValue: line.proposed,
+          proposedSha256,
+          provider: line.provider.slice(0, 40),
+          confidence: Math.round(line.confidence * 1000) / 1000,
+          evidence: line.evidence.slice(0, 1000) || null,
+          batchId: context.batchId,
+        },
+      });
+      result.created++;
+    }
+  });
+  return result;
 }
