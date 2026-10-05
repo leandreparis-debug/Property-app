@@ -30,6 +30,8 @@ describe("parseEnv", () => {
       MAP_BASEMAP: "ign",
       OPS_SCHEDULER: "off",
       OPS_DAILY_AT: "03:30",
+      EXPORT_RETENTION_DAYS: 30,
+      EXPORT_RETENTION_MONTHS: 12,
     });
   });
 

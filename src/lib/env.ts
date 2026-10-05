@@ -59,6 +59,10 @@ const envSchema = z.object({
     .trim()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "doit être une heure HH:MM (ex. 03:30)")
     .default("03:30"),
+  /** Every nightly export younger than this many days is kept. */
+  EXPORT_RETENTION_DAYS: positiveInt(30, 3650),
+  /** Beyond, the first export of each month is kept this many months. */
+  EXPORT_RETENTION_MONTHS: positiveInt(12, 120),
 });
 
 /** Validated, typed server environment. */
