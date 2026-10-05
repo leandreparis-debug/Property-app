@@ -51,11 +51,21 @@ const envSchema = z.object({
   STORAGE_ROOT: z.string().trim().min(1, "ne doit pas être vide").optional(),
   /** Basemap: `ign` (IGN Géoplateforme, online in the browser) or `offline` (see lib/basemap.ts). */
   MAP_BASEMAP: z.enum(["ign", "offline"], { error: "doit valoir « ign » ou « offline »" }).default("ign"),
+  /** Operations scheduler: `on` / `off`. Default: off when NODE_ENV=test, on otherwise. */
+  OPS_SCHEDULER: z.enum(["on", "off"], { error: "doit valoir « on » ou « off »" }).optional(),
+  /** Time of the daily jobs (HH:MM, Europe/Paris). */
+  OPS_DAILY_AT: z
+    .string()
+    .trim()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "doit être une heure HH:MM (ex. 03:30)")
+    .default("03:30"),
 });
 
 /** Validated, typed server environment. */
-export type Env = Omit<z.infer<typeof envSchema>, "COOKIE_SECURE" | "STORAGE_ROOT"> & {
+export type Env = Omit<z.infer<typeof envSchema>, "COOKIE_SECURE" | "STORAGE_ROOT" | "OPS_SCHEDULER"> & {
   COOKIE_SECURE: boolean;
+  /** Always set: defaults to `off` when NODE_ENV=test, `on` otherwise. */
+  OPS_SCHEDULER: "on" | "off";
   /** Always set: defaults to `./storage` outside production, required in production. */
   STORAGE_ROOT: string;
 };
@@ -97,6 +107,7 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
       ...data,
       COOKIE_SECURE: data.COOKIE_SECURE ?? data.NODE_ENV === "production",
       STORAGE_ROOT: data.STORAGE_ROOT ?? "./storage",
+      OPS_SCHEDULER: data.OPS_SCHEDULER ?? (data.NODE_ENV === "test" ? "off" : "on"),
     };
   }
 

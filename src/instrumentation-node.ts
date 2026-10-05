@@ -5,7 +5,9 @@
  *    immediately, with a message naming it);
  * 2. warn when production runs without Secure cookies, or with the e2e test
  *    hooks enabled;
- * 3. purge expired sessions (scheduled cleanup arrives at step 11).
+ * 3. purge expired sessions;
+ * 4. start the operations scheduler (`OPS_SCHEDULER=on`), never during
+ *    `next build`.
  */
 export async function registerNode(): Promise<void> {
   const { getEnv, EnvValidationError } = await import("@/lib/env");
@@ -44,5 +46,11 @@ export async function registerNode(): Promise<void> {
   } catch (error) {
     // The database may be down at start-up: /api/health reports it; don't crash.
     console.warn(`[vigie] purge des sessions impossible (${error instanceof Error ? error.name : "erreur"}).`);
+  }
+
+  if (env.OPS_SCHEDULER === "on" && process.env.NEXT_PHASE !== "phase-production-build") {
+    const { parseDailyTime } = await import("@/domain/ops/schedule");
+    const { startScheduler } = await import("@/server/ops/scheduler");
+    startScheduler({ at: parseDailyTime(env.OPS_DAILY_AT)! });
   }
 }

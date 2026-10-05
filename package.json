@@ -29,6 +29,8 @@
     "db:studio": "prisma studio",
     "fields:lengths": "tsx scripts/generate-field-lengths.ts",
     "sites:archive": "tsx --conditions=react-server scripts/sites-archive.ts",
+    "ops:list": "tsx --conditions=react-server scripts/ops.ts list",
+    "ops:run": "tsx --conditions=react-server scripts/ops.ts run",
     "db:sql": "bash scripts/db-sql.sh",
     "user:create": "tsx --conditions=react-server scripts/user-create.ts",
     "user:reset-password": "tsx --conditions=react-server scripts/user-reset-password.ts",

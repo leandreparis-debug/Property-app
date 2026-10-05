@@ -28,7 +28,18 @@ describe("parseEnv", () => {
       TRUST_PROXY: false,
       STORAGE_ROOT: "./storage",
       MAP_BASEMAP: "ign",
+      OPS_SCHEDULER: "off",
+      OPS_DAILY_AT: "03:30",
     });
+  });
+
+  it("OPS_SCHEDULER: off by default in test, on otherwise; OPS_DAILY_AT must be HH:MM", () => {
+    expect(parseEnv({ ...valid, NODE_ENV: "development" }).OPS_SCHEDULER).toBe("on");
+    expect(parseEnv({ ...valid, NODE_ENV: "production", STORAGE_ROOT: "/srv" }).OPS_SCHEDULER).toBe("on");
+    expect(parseEnv({ ...valid, OPS_SCHEDULER: "on" }).OPS_SCHEDULER).toBe("on");
+    expect(errorOf(() => parseEnv({ ...valid, OPS_SCHEDULER: "yes" })).variables).toEqual(["OPS_SCHEDULER"]);
+    expect(parseEnv({ ...valid, OPS_DAILY_AT: "04:15" }).OPS_DAILY_AT).toBe("04:15");
+    expect(errorOf(() => parseEnv({ ...valid, OPS_DAILY_AT: "4h15" })).variables).toEqual(["OPS_DAILY_AT"]);
   });
 
   it("MAP_BASEMAP: ign by default, offline accepted, anything else refused", () => {

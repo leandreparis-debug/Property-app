@@ -147,3 +147,20 @@ export const DatePrecision = defineEnum({
   year: "Année",
 });
 export type DatePrecision = (typeof DatePrecision.values)[number];
+
+/** What started a job run (CHECK constraint `job_runs_trigger_check`). */
+export const JobTrigger = defineEnum({
+  scheduled: "Planifiée",
+  catchup: "Rattrapage",
+  manual: "Manuelle",
+  cli: "Ligne de commande",
+});
+export type JobTrigger = (typeof JobTrigger.values)[number];
+
+/** Outcome of a job run (CHECK constraint `job_runs_status_check`). */
+export const JobStatus = defineEnum({
+  running: "En cours",
+  success: "Réussie",
+  failed: "Échec",
+});
+export type JobStatus = (typeof JobStatus.values)[number];

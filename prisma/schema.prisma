@@ -467,6 +467,7 @@ model User {
   uploadedDocuments Document[]    @relation("DocumentUploadedBy")
   importBatches     ImportBatch[] @relation("ImportBatchActor")
   sessions          Session[]
+  triggeredJobRuns  JobRun[]      @relation("JobRunTriggeredBy")
 
   @@map("users")
 }
@@ -568,4 +569,39 @@ model SitePublicData {
 
   @@unique([siteId, provider, key])
   @@map("site_public_data")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Operations (step 11)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One execution of an operations job (nightly export, purges). Technical
+/// journal: NOT audited (the audited writes of a job carry its id as batchId).
+model JobRun {
+  id            String    @id @default(cuid()) @db.NVarChar(30)
+  /// Job name (src/server/ops/jobs.ts).
+  job           String    @db.NVarChar(40)
+  /// scheduled | catchup | manual | cli (JobTrigger) — CHECK constraint.
+  trigger       String    @db.NVarChar(10)
+  /// running | success | failed (JobStatus) — CHECK constraint.
+  status        String    @default("running") @db.NVarChar(10)
+  /// Business date of the run (calendar day in Europe/Paris).
+  businessDate  DateTime  @map("business_date") @db.Date
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  /// JSON summary returned by the job.
+  summaryJson   String?   @map("summary_json") @db.NVarChar(Max)
+  /// Error message of a failed run (never a stack trace).
+  error         String?   @db.NVarChar(2000)
+  /// User who launched a manual or CLI run; null for the scheduler.
+  triggeredById String?   @map("triggered_by_id") @db.NVarChar(30)
+
+  triggeredBy User? @relation("JobRunTriggeredBy", fields: [triggeredById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  /// Mutual exclusion: at most one running execution per job.
+  @@unique([job], map: "job_runs_one_running", where: raw("[status] = N'running'"))
+  /// At most one successful scheduled or catch-up run per job and business date.
+  @@unique([job, businessDate], map: "job_runs_one_scheduled_success", where: raw("[status] = N'success' AND [trigger] IN (N'scheduled', N'catchup')"))
+  @@index([job, startedAt])
+  @@map("job_runs")
 }

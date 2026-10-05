@@ -27,6 +27,7 @@ export function e2eDatabaseUrl(): string {
 
 /** Variables given to every process of the suite (server, scripts). */
 export function e2eEnv(port = E2E_PORT): Record<string, string> {
-  // Closed network: the offline basemap (never the IGN online tiles).
-  return { DATABASE_URL: e2eDatabaseUrl(), STORAGE_ROOT: E2E_STORAGE_ROOT, APP_URL: `http://localhost:${port}`, PORT: String(port), MAP_BASEMAP: "offline" };
+  // Closed network: the offline basemap (never the IGN online tiles). No
+  // scheduler: the operations jobs only run when a test launches them.
+  return { DATABASE_URL: e2eDatabaseUrl(), STORAGE_ROOT: E2E_STORAGE_ROOT, APP_URL: `http://localhost:${port}`, PORT: String(port), MAP_BASEMAP: "offline", OPS_SCHEDULER: "off" };
 }
