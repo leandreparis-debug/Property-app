@@ -506,7 +506,7 @@ model AuditLog {
   id          BigInt   @id @default(autoincrement())
   occurredAt  DateTime @default(now()) @map("occurred_at")
   actorId     String?  @map("actor_id") @db.NVarChar(30)
-  /// CREATE | UPDATE | DELETE | IMPORT | ENRICH | LOGIN | LOGIN_FAILED | LOGOUT — CHECK constraint.
+  /// CREATE | UPDATE | DELETE | IMPORT | ENRICH | LOGIN | LOGIN_FAILED | LOGOUT | EXPORT — CHECK constraint.
   action      String   @db.NVarChar(20)
   /// ui | import | enrichment | system — CHECK constraint.
   source      String   @db.NVarChar(20)

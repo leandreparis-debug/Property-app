@@ -24,7 +24,7 @@ const cases: [string, EnumDefinition<string>, string[]][] = [
     ["LEASE", "PLAN", "ADMIN", "ICPE", "ENERGY", "PHOTO", "CONTROL_REPORT", "AUDIT", "N100", "VISIT_REPORT", "DAMAGE_INSURANCE", "OTHER"],
   ],
   ["UserRole", UserRole, ["admin", "editor", "viewer"]],
-  ["AuditAction", AuditAction, ["CREATE", "UPDATE", "DELETE", "IMPORT", "ENRICH", "LOGIN", "LOGIN_FAILED", "LOGOUT"]],
+  ["AuditAction", AuditAction, ["CREATE", "UPDATE", "DELETE", "IMPORT", "ENRICH", "LOGIN", "LOGIN_FAILED", "LOGOUT", "EXPORT"]],
   ["AuditSource", AuditSource, ["ui", "import", "enrichment", "system"]],
   ["ImportBatchKind", ImportBatchKind, ["SPREADSHEET", "ENRICHMENT"]],
   ["ImportBatchStatus", ImportBatchStatus, ["RUNNING", "SUCCEEDED", "FAILED", "PARTIAL"]],

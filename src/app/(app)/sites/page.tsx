@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Archive } from "lucide-react";
 import { NewSiteDialog } from "@/components/editing/NewSiteDialog";
+import { ExportMenu } from "@/components/sites/ExportMenu";
 import { PageContainer } from "@/components/shell/PageContainer";
 import { SitesTable } from "@/components/sites/SitesTable";
 import { formatDate } from "@/lib/format";
@@ -31,6 +32,7 @@ export default async function SitesPage({ searchParams }: { searchParams: Promis
             {showArchived ? "Revenir aux sites actifs" : "Afficher les sites archivés"}
           </Link>
         )}
+        {can(user.role, "export:read") && !showArchived && <ExportMenu />}
         {can(user.role, "site:write") && !showArchived && <NewSiteDialog />}
       </div>
       {showArchived ? (

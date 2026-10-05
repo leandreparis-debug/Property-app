@@ -112,6 +112,7 @@ export const AuditAction = defineEnum({
   LOGIN: "Connexion",
   LOGIN_FAILED: "Échec de connexion",
   LOGOUT: "Déconnexion",
+  EXPORT: "Export",
 });
 export type AuditAction = (typeof AuditAction.values)[number];
 

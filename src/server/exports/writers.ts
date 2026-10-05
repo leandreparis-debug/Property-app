@@ -56,10 +56,13 @@ export async function xlsxBuffer(tables: readonly ExportTable[]): Promise<Buffer
 }
 
 /**
- * CSV content of a table; the header is the TECHNICAL key of each column.
+ * CSV content of a table. Header: the TECHNICAL key of each column (nightly
+ * export files), or its French label (on-demand exports, read by people).
+ * @param table - Table.
+ * @param header - `key` (default) or `label`.
  */
-export function tableCsv(table: ExportTable): string {
-  return CSV_BOM + csvLine(table.columns.map((c) => c.key)) + table.rows.map((r) => csvLine(r)).join("");
+export function tableCsv(table: ExportTable, header: "key" | "label" = "key"): string {
+  return CSV_BOM + csvLine(table.columns.map((c) => (header === "key" ? c.key : c.header))) + table.rows.map((r) => csvLine(r)).join("");
 }
 
 /** A written file: rows (header excluded), size and SHA-256. */

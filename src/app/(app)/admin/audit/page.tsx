@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, Download, Search, X } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminCard";
 import { AuditTable } from "@/components/admin/AuditTable";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { auditActorOptions, countAudit, listAuditPage } from "@/server/audit/jou
 import { requirePagePermission } from "@/server/auth/current-user";
 import { can } from "@/server/auth/permissions";
 import { db } from "@/server/db";
+import { AUDIT_EXPORT_MAX } from "@/server/exports/on-demand";
 
 export const metadata: Metadata = { title: "Journal d'audit" };
 
@@ -143,7 +144,20 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         </div>
       </form>
 
-      {!finance && <p className="mb-3 text-sm text-text-muted">Les valeurs des champs financiers sont masquées (permission finance:read requise).</p>}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-text-muted">{!finance ? "Les valeurs des champs financiers sont masquées (permission finance:read requise)." : ""}</p>
+        <Button asChild variant="secondary" size="sm">
+          <a href={`/api/exports/audit?${auditQuery(filters)}`} download data-slot="audit-export">
+            <Download aria-hidden="true" />
+            Exporter en CSV
+          </a>
+        </Button>
+      </div>
+      {total > AUDIT_EXPORT_MAX && (
+        <p role="status" className="mb-3 text-sm font-medium text-text" data-slot="audit-export-cap">
+          L&apos;export est limité aux {formatNumber(AUDIT_EXPORT_MAX)} lignes les plus récentes sur {formatNumber(total)} : affiner les filtres (période, acteur…) pour tout exporter.
+        </p>
+      )}
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface-1 shadow-panel">
         <AuditTable rows={page.rows} filters={filters} />
