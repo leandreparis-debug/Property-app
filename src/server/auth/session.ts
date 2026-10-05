@@ -177,3 +177,20 @@ export async function purgeExpiredSessions(now: Date = new Date()): Promise<numb
   });
   return count;
 }
+
+/**
+ * Deletes the sessions expired (absolute or inactivity) for more than
+ * `graceDays` days — job `purge-sessions` and server start-up. Revoked
+ * sessions (logout, deactivation, password change) are deleted at once and
+ * never reach this purge.
+ * @param now - Current instant.
+ * @param graceDays - Days kept after expiry (SESSION_PURGE_DAYS).
+ * @returns Number of deleted sessions.
+ */
+export async function purgeStaleSessions(now: Date, graceDays: number): Promise<number> {
+  const limit = new Date(now.getTime() - graceDays * 86_400_000);
+  const { count } = await db.session.deleteMany({
+    where: { OR: [{ expiresAt: { lte: limit } }, { idleExpiresAt: { lte: limit } }] },
+  });
+  return count;
+}

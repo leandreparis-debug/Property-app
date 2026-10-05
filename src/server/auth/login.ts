@@ -46,6 +46,17 @@ export function lockDurationMs(failedCount: number): number {
 
 const defaultLimiter = createLoginIpLimiter();
 
+/**
+ * Forgets the expired entries of the per-IP login limiter of this process
+ * (job `purge-sessions`). The limiter lives in memory: nothing is stored in
+ * the database.
+ * @returns Number of addresses still tracked.
+ */
+export function pruneLoginRateLimiter(): number {
+  defaultLimiter.prune();
+  return defaultLimiter.size;
+}
+
 /** Options of {@link authenticate} (all injectable for tests). */
 export interface AuthenticateOptions {
   now?: Date;

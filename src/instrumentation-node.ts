@@ -5,7 +5,7 @@
  *    immediately, with a message naming it);
  * 2. warn when production runs without Secure cookies, or with the e2e test
  *    hooks enabled;
- * 3. purge expired sessions;
+ * 3. purge the sessions expired for more than SESSION_PURGE_DAYS days;
  * 4. start the operations scheduler (`OPS_SCHEDULER=on`), never during
  *    `next build`.
  */
@@ -40,8 +40,8 @@ export async function registerNode(): Promise<void> {
   }
 
   try {
-    const { purgeExpiredSessions } = await import("@/server/auth/session");
-    const purged = await purgeExpiredSessions();
+    const { purgeStaleSessions } = await import("@/server/auth/session");
+    const purged = await purgeStaleSessions(new Date(), env.SESSION_PURGE_DAYS);
     if (purged > 0) console.info(`[vigie] ${purged} session(s) expirée(s) supprimée(s).`);
   } catch (error) {
     // The database may be down at start-up: /api/health reports it; don't crash.

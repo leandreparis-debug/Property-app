@@ -32,6 +32,8 @@ describe("parseEnv", () => {
       OPS_DAILY_AT: "03:30",
       EXPORT_RETENTION_DAYS: 30,
       EXPORT_RETENTION_MONTHS: 12,
+      SESSION_PURGE_DAYS: 7,
+      TRASH_RETENTION_DAYS: 30,
     });
   });
 

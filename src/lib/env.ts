@@ -63,6 +63,10 @@ const envSchema = z.object({
   EXPORT_RETENTION_DAYS: positiveInt(30, 3650),
   /** Beyond, the first export of each month is kept this many months. */
   EXPORT_RETENTION_MONTHS: positiveInt(12, 120),
+  /** Expired sessions are deleted this many days after their expiry. */
+  SESSION_PURGE_DAYS: positiveInt(7, 365),
+  /** Files stay this many days in the trash before being erased. */
+  TRASH_RETENTION_DAYS: positiveInt(30, 3650),
 });
 
 /** Validated, typed server environment. */
