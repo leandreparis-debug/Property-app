@@ -170,3 +170,52 @@ export function formatDateWithPrecision(value: DateInput, precision: DatePrecisi
   }
   return formatDate(date);
 }
+
+/**
+ * Formats an instant with its time (« 5 oct. 2026, 03:30 »), Europe/Paris time zone.
+ * @param value - `Date`, ISO string or epoch milliseconds.
+ * @returns The formatted string, or « — » if the date is missing or invalid.
+ */
+export function formatDateTime(value: DateInput): string {
+  if (value === null || value === undefined) return EMPTY_VALUE;
+  if (typeof value !== "string" && typeof value !== "number" && !(value instanceof Date)) return EMPTY_VALUE;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return EMPTY_VALUE;
+  return new Intl.DateTimeFormat(LOCALE, { dateStyle: "medium", timeStyle: "short", timeZone: TIME_ZONE }).format(date);
+}
+
+/**
+ * Formats a size in bytes with a binary-free French unit (« 12,4 Mo »):
+ * octets below 1 kilo-octet, then ko, Mo, Go (powers of 1 000).
+ * @param bytes - Size in bytes.
+ * @returns The formatted string, or « — ».
+ */
+export function formatBytes(bytes: NumericInput): string {
+  const n = toFiniteNumber(bytes);
+  if (n === null || n < 0) return EMPTY_VALUE;
+  const units = ["octets", "ko", "Mo", "Go", "To"] as const;
+  let value = n;
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  const digits = unit === 0 ? 0 : value < 10 ? 1 : 0;
+  return `${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: digits }).format(value)}${NBSP}${units[unit]}`;
+}
+
+/**
+ * Formats a duration (« 850 ms », « 12 s », « 3 min 05 s », « 1 h 02 min »).
+ * @param ms - Duration in milliseconds.
+ * @returns The formatted string, or « — ».
+ */
+export function formatDuration(ms: NumericInput): string {
+  const n = toFiniteNumber(ms);
+  if (n === null || n < 0) return EMPTY_VALUE;
+  if (n < 1000) return `${Math.round(n)}${NBSP}ms`;
+  const seconds = Math.round(n / 1000);
+  if (seconds < 60) return `${seconds}${NBSP}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}${NBSP}min ${String(seconds % 60).padStart(2, "0")}${NBSP}s`;
+  return `${Math.floor(minutes / 60)}${NBSP}h ${String(minutes % 60).padStart(2, "0")}${NBSP}min`;
+}

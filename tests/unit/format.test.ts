@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_VALUE,
   formatCurrency,
+  formatBytes,
   formatDate,
+  formatDateTime,
+  formatDuration,
   formatEnergy,
   formatNumber,
   formatPercent,
@@ -166,5 +169,30 @@ describe("formatDateWithPrecision", () => {
   it("returns « — » for missing values", () => {
     expect(formatDateWithPrecision(null, "year")).toBe(EMPTY_VALUE);
     expect(formatDateWithPrecision("n'importe quoi", "day")).toBe(EMPTY_VALUE);
+  });
+});
+
+describe("formatDateTime, formatBytes, formatDuration (step 11)", () => {
+  it("date and time in Paris", () => {
+    expect(formatDateTime("2026-10-05T01:30:00Z")).toBe("5 oct. 2026, 03:30");
+    expect(formatDateTime(null)).toBe("—");
+    expect(formatDateTime("pas une date")).toBe("—");
+  });
+
+  it("sizes in octets, ko, Mo, Go", () => {
+    expect(formatBytes(0)).toBe("0 octets");
+    expect(formatBytes(999)).toBe("999 octets");
+    expect(formatBytes(12_400_000)).toBe("12 Mo");
+    expect(formatBytes(1_250_000)).toBe("1,3 Mo");
+    expect(formatBytes(-1)).toBe("—");
+    expect(formatBytes(Number.NaN)).toBe("—");
+  });
+
+  it("durations", () => {
+    expect(formatDuration(850)).toBe("850 ms");
+    expect(formatDuration(12_400)).toBe("12 s");
+    expect(formatDuration(185_000)).toBe("3 min 05 s");
+    expect(formatDuration(3_720_000)).toBe("1 h 02 min");
+    expect(formatDuration(undefined)).toBe("—");
   });
 });
