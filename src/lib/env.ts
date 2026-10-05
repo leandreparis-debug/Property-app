@@ -51,6 +51,11 @@ const envSchema = z.object({
   STORAGE_ROOT: z.string().trim().min(1, "ne doit pas être vide").optional(),
   /** Basemap: `ign` (IGN Géoplateforme, online in the browser) or `offline` (see lib/basemap.ts). */
   MAP_BASEMAP: z.enum(["ign", "offline"], { error: "doit valoir « ign » ou « offline »" }).default("ign"),
+  /**
+   * Extra hosts allowed to send Server Actions, comma-separated (GitHub
+   * Codespaces, reverse proxy). Read by next.config.ts (src/lib/allowed-origins.ts).
+   */
+  SERVER_ACTIONS_ALLOWED_ORIGINS: z.string().trim().max(2000, "trop long").optional(),
   /** Operations scheduler: `on` / `off`. Default: off when NODE_ENV=test, on otherwise. */
   OPS_SCHEDULER: z.enum(["on", "off"], { error: "doit valoir « on » ou « off »" }).optional(),
   /** Time of the daily jobs (HH:MM, Europe/Paris). */

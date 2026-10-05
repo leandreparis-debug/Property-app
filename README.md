@@ -32,6 +32,8 @@ Les sessions ouvertes sous l'ancien nom de cookie sont perdues : il suffit de se
 
 ## Démarrage
 
+> **Tester sans rien installer** : ouvrir un GitHub Codespace sur la branche, tout se prépare seul (base, données d'exemple, comptes de test). Voir [`docs/demarrage-codespaces.md`](docs/demarrage-codespaces.md).
+
 ```bash
 cp .env.example .env        # puis changer le mot de passe si besoin (dans les deux variables)
 corepack enable
@@ -148,6 +150,9 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm enrichment:apply` | Applique `enrichment.json` : ne remplit que les champs vides, liste les divergences (`--dry-run` d'abord) |
 | `pnpm ops:list` | Tâches planifiées : dernière exécution, prochaine échéance |
 | `pnpm ops:run <tâche> [--actor <email>]` | Lance une tâche maintenant (`nightly-export`, `purge-sessions`, `purge-trash`) — voir [`docs/exploitation.md`](docs/exploitation.md) |
+| `pnpm codespace:setup` | Prépare un Codespace ou un poste avec Docker : dépendances, `.env` s'il est absent, SQL Server, migrations, données d'exemple, 3 comptes de test (rejouable) |
+| `pnpm codespace:prod` / `pnpm codespace:dev` | Démarre Vigie sur le port 3000 : version de production (reconstruite si le code a changé) ou serveur de développement |
+| `pnpm codespace:data` | Comptes de test et import du jeu d'exemple s'ils manquent |
 | `pnpm sites:archive` | Archive les sites dont le code commence par un préfixe, par l’archivage audité (`--prefix E2E- --actor <admin> --reason "<motif>"`) ; aucun audit supprimé |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
@@ -259,6 +264,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `EXPORT_RETENTION_MONTHS` | Au-delà, premier export de chaque mois conservé (défaut 12 mois) |
 | `SESSION_PURGE_DAYS` | Sessions expirées supprimées après ce délai (défaut 7 jours) |
 | `TRASH_RETENTION_DAYS` | Documents de la corbeille effacés après ce délai (défaut 30 jours) |
+| `SERVER_ACTIONS_ALLOWED_ORIGINS` | Facultative : hôtes supplémentaires acceptés pour les Server Actions, séparés par des virgules (adresse publique d'un Codespace, reverse proxy). Renseignée automatiquement dans un Codespace |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 | `VIGIE_E2E_TEST_HOOKS` | Réservée à la suite e2e (`1` expose `window.__vigieMap`) ; **ne jamais la définir en production** |
 
