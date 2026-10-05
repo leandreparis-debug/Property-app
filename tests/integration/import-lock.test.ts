@@ -56,7 +56,7 @@ describe("import history", () => {
   it("lists real imports and simulations with their counters and report files", async () => {
     const real = await runImport({ filePath: SAMPLE, actorEmail: ADMIN, activityYear: 2025 });
     await runImport({ filePath: SAMPLE, actorEmail: ADMIN, activityYear: 2025, dryRun: true });
-    expect(await hasSuccessfulImport()).toBe(real.summary.status === "SUCCEEDED");
+    expect(await hasSuccessfulImport()).toBe(real.summary.status !== "FAILED");
     const runs = await listImportRuns();
     const realRun = runs.find((r) => r.id === real.batchId)!;
     expect(realRun).toMatchObject({ mode: "import", file: "vigie-sample.xlsx", files: ["report.csv", "changes.csv", "summary.json"] });

@@ -129,9 +129,9 @@ export async function listImportRuns(limit = 100): Promise<ImportRun[]> {
   return runs.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime()).slice(0, limit);
 }
 
-/** Whether at least one REAL import succeeded. */
+/** Whether at least one REAL import succeeded (fully, or partially: some rows rejected — CLI exit code 2). */
 export async function hasSuccessfulImport(): Promise<boolean> {
-  return (await db.importBatch.count({ where: { kind: "SPREADSHEET", status: "SUCCEEDED" } })) > 0;
+  return (await db.importBatch.count({ where: { kind: "SPREADSHEET", status: { in: ["SUCCEEDED", "PARTIAL"] } } })) > 0;
 }
 
 /**
