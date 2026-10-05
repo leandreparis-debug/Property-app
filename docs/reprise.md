@@ -6,7 +6,7 @@
 
 - Dépôt : https://github.com/leandreparis-debug/Property-app (privé).
 - Tout le travail des étapes 1 à 10 est dans `main` : la pull request [leandreparis-debug/Property-app#1](https://github.com/leandreparis-debug/Property-app/pull/1) (branche `claude/atlas-init-design-system-scuzyd`) a été fusionnée le 5 octobre 2026.
-- Ce document et `CLAUDE.md` ont été ajoutés sur la branche `claude/ecstatic-cerf-mja73l`, à fusionner à son tour dans `main`.
+- Ce document, `CLAUDE.md` et l'étape 11 sont sur la branche `claude/ecstatic-cerf-mja73l`, à fusionner à son tour dans `main`.
 
 ## Le projet
 
@@ -14,7 +14,7 @@
 
 Le projet s'appelait **« Atlas »** au départ ; il a été renommé **« Vigie »** après l'étape 4 (base `vigie`, cookie `vigie_session`, comptes `@vigie.local`, logo « V » dans `docs/brand/`).
 
-## Historique des étapes (toutes terminées)
+## Historique des étapes
 
 | Étape | Contenu | Documentation |
 |---|---|---|
@@ -28,6 +28,7 @@ Le projet s'appelait **« Atlas »** au départ ; il a été renommé **« Vigie
 | 8 | Fiche entrepôt en lecture (`/sites/[id]`) | `docs/site-sheet.md` |
 | 9 | Édition tracée section par section, documents, création et archivage de sites, gestion des conflits | `docs/editing.md` |
 | 10 | Volume 3D, plan AutoCAD calibré superposé à la carte, équipements | `docs/plans-and-equipment.md` |
+| 11 | Exploitation et administration : tâches planifiées (export nocturne avec rétention, purges), espace Administration (exploitation, utilisateurs, journal d'audit, imports et verrou, revue des divergences), exports à la demande | `docs/exploitation.md`, `docs/administration.md` |
 
 Après l'étape 10 :
 
@@ -52,12 +53,11 @@ Après l'étape 10 :
 
 ## Ce qui reste à faire
 
-1. **Étape 11 — Exploitation** : sauvegardes de la base et de `STORAGE_ROOT`, journaux, supervision technique.
-2. **Étape 12 — Recette et déploiement** : image Docker (`output: "standalone"` déjà en place), procédure de livraison à la DSI, `pnpm db:deploy` sur le serveur.
-3. **Charte Carrefour Property** : remplacer l'accent provisoire (`--color-accent`, `-strong`, `-soft` dans `src/app/globals.css`).
-4. **Décision d'hébergement** : réseau fermé DSI (prévu) ou Google Cloud (proposition) ; dans le second cas, migration vers PostgreSQL et stockage Cloud Storage.
-5. Import du **vrai tableur** (toujours `--dry-run` d'abord) et paquet hors ligne réel si le mode `offline` est retenu.
+1. **Étape 12 — Recette et déploiement** : image Docker (`output: "standalone"` déjà en place), procédure de livraison à la DSI, `pnpm db:deploy` sur le serveur.
+2. **Charte Carrefour Property** : remplacer l'accent provisoire (`--color-accent`, `-strong`, `-soft` dans `src/app/globals.css`).
+3. **Décision d'hébergement** : réseau fermé DSI (prévu) ou Google Cloud (proposition) ; dans le second cas, migration vers PostgreSQL et stockage Cloud Storage.
+4. Import du **vrai tableur** (toujours `--dry-run` d'abord) et paquet hors ligne réel si le mode `offline` est retenu.
 
 ## Pour démarrer une nouvelle session
 
-Demander à Claude : « Lis `CLAUDE.md` et `docs/reprise.md`, puis continue avec l'étape 11 » (ou la tâche voulue). Le démarrage local est décrit dans `README.md` (section « Démarrage »).
+Demander à Claude : « Lis `CLAUDE.md` et `docs/reprise.md`, puis continue avec l'étape 12 » (ou la tâche voulue). Le démarrage local est décrit dans `README.md` (section « Démarrage »).

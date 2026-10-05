@@ -98,10 +98,13 @@ erDiagram
 | `site_plans` (`SitePlan`) | 0..n par site | Plan (image PNG, JPEG ou WebP stockée dans `documents`, catégorie `PLAN`) et son calage géographique : points de contrôle, transformation affine, erreur, rotation, opacité. Un seul plan **courant** (`is_current`) par site ; les précédents forment l'historique. |
 | `equipments` (`Equipment`) | 0..n par site | Équipements positionnés sur un plan (`plan_x`, `plan_y`, pixels) **et** toujours par coordonnées (`latitude`, `longitude`). Type = code du catalogue `src/domain/equipment/catalog.ts` (validé par zod, extensible sans migration). |
 | `documents` (`Document`) | 0..n par site | **Métadonnées** d'un fichier stocké sur disque (`storage_path` relatif, type MIME, taille, SHA-256). |
-| `users` (`User`) | — | Comptes de l'application : email en minuscules, rôle, hachage argon2id, verrouillage (voir `docs/security.md`). |
+| `users` (`User`) | — | Comptes de l'application : email en minuscules, rôle, hachage argon2id, verrouillage (voir `docs/security.md`). `must_change_password` (étape 11) : mot de passe temporaire à changer à la prochaine connexion. |
 | `sessions` (`Session`) | 0..n par utilisateur | Sessions ouvertes. L'identifiant est l'**empreinte SHA-256** du jeton du cookie (le jeton n'est jamais stocké). Expirations absolue et d'inactivité. Table **non auditée**, supprimée explicitement (déconnexion, désactivation, changement de mot de passe). |
-| `audit_logs` (`AuditLog`) | — | Journal des modifications, en ajout seul, **rempli automatiquement** par l'extension Prisma d'audit (`src/server/audit/`), plus les événements `LOGIN`, `LOGIN_FAILED` et `LOGOUT`. |
+| `audit_logs` (`AuditLog`) | — | Journal des modifications, en ajout seul, **rempli automatiquement** par l'extension Prisma d'audit (`src/server/audit/`), plus les événements `LOGIN`, `LOGIN_FAILED`, `LOGOUT` et `EXPORT` (export à la demande, étape 11). Index de l'étape 11 pour l'écran du journal : (acteur, date), (source, date), champ. |
 | `import_batches` (`ImportBatch`) | — | Une exécution de l'import du tableur (étape 4) ou de l'enrichissement (étape 5), avec ses statistiques et son rapport. |
+| `job_runs` (`JobRun`) | — | Étape 11 : une exécution d'une tâche d'exploitation (déclenchement `scheduled`, `catchup`, `manual`, `cli` ; statut `running`, `success`, `failed` ; date métier ; résumé JSON ; erreur ; auteur). **Non auditée** (journal technique). Index uniques filtrés : une seule exécution `running` par tâche ; une seule exécution planifiée ou de rattrapage réussie par tâche et par date. |
+| `app_settings` (`AppSetting`) | — | Étape 11 : paramètres applicatifs clé → valeur JSON (`import.locked`). Auditée. |
+| `enrichment_divergences` (`EnrichmentDivergence`) | 0..n par site | Étape 11 : valeur publique différente de la valeur actuelle, à examiner (champ visé, valeur actuelle à la détection, valeur proposée et son SHA-256, source, lot du paquet, statut `open`, `accepted`, `dismissed`, auteur et motif de la résolution). Une seule divergence ouverte par (site, champ, valeur proposée) — index unique filtré. Auditée. |
 
 ## Règles transverses
 

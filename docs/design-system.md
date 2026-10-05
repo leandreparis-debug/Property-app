@@ -55,6 +55,11 @@ Tailwind v4 publie chaque token sous forme de variable CSS sur `:root`, et les u
 3. **Toujours doublées d'un libellé** : la couleur n'est jamais la seule information transmise. `StatusBadge` affiche le libellé (Conforme, À surveiller, Critique, Non évalué). En mode compact (`hideLabel`), il expose le libellé via `role="img"` et `aria-label`. `StatusDot` seul est décoratif (`aria-hidden`), sauf si un `label` lui est fourni.
 4. Les libellés, tokens et ordres de gravité viennent exclusivement de `src/lib/status.ts`.
 
+
+### Statuts qui ne sont pas des statuts de conformité
+
+Les statuts des écrans d'administration (exécution d'une tâche, compte actif ou désactivé, divergence à examiner, verrou d'import, export en retard) n'utilisent **jamais** le vert, l'ambre ou le rouge. Ils combinent une icône lucide, un libellé et les tokens neutres : `text-muted` pour l'état normal, `text` en gras et `border-strong` / `surface-3` pour ce qui demande attention (composants `JobStatusLabel`, `UserStatusLabel`, `Notice`).
+
 ## Niveaux d'emphase
 
 | Statut | Emphase | Rendu |

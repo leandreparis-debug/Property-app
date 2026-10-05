@@ -146,6 +146,8 @@ Pages utiles : `/` (carte), `/dev/design` (vitrine du système de design, hors p
 | `pnpm bundle:build` | **Poste connecté** : prépare `vigie-offline-bundle-AAAAMMJJ/` (enrichissement, fond de carte, orthophotos) ; `--fixtures` fonctionne sans réseau |
 | `pnpm map:install` | Vérifie un paquet et installe sa carte dans `STORAGE_ROOT/map/` (`--rollback` : version précédente) |
 | `pnpm enrichment:apply` | Applique `enrichment.json` : ne remplit que les champs vides, liste les divergences (`--dry-run` d'abord) |
+| `pnpm ops:list` | Tâches planifiées : dernière exécution, prochaine échéance |
+| `pnpm ops:run <tâche> [--actor <email>]` | Lance une tâche maintenant (`nightly-export`, `purge-sessions`, `purge-trash`) — voir [`docs/exploitation.md`](docs/exploitation.md) |
 | `pnpm sites:archive` | Archive les sites dont le code commence par un préfixe, par l’archivage audité (`--prefix E2E- --actor <admin> --reason "<motif>"`) ; aucun audit supprimé |
 | `pnpm verify` | Enchaîne typecheck, lint, test, check:offline et build |
 
@@ -230,6 +232,12 @@ pnpm map:install --bundle vigie-offline-bundle-AAAAMMJJ --actor admin@vigie.loca
 
 Recharger `/` : le fond complet est choisi automatiquement dès que `france.pmtiles`, les polices et les symboles sont installés.
 
+## Exploitation et administration
+
+- **Tâches planifiées** chaque jour à `OPS_DAILY_AT` (heure de Paris) : export nocturne complet (XLSX, CSV, journal d'audit, manifeste) avec rétention, purge des sessions, purge de la corbeille. Voir [`docs/exploitation.md`](docs/exploitation.md). L'export nocturne **n'est pas une sauvegarde** de SQL Server.
+- **Espace Administration** (`/admin`) : Exploitation, Utilisateurs, Journal d'audit, Imports (historique et verrou), Enrichissement (revue des divergences). Voir [`docs/administration.md`](docs/administration.md).
+- **Exports à la demande** : liste des sites filtrée (XLSX ou CSV) depuis `/sites`, journal d'audit filtré (CSV) depuis `/admin/audit`.
+
 ## Variables d'environnement
 
 Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête immédiatement si l'une d'elles manque ou est invalide, avec un message qui la nomme.
@@ -245,6 +253,12 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 | `TRUST_PROXY` | `true` uniquement derrière un reverse proxy qui renseigne `X-Forwarded-For` (défaut `false`) |
 | `STORAGE_ROOT` | Dossier racine des fichiers écrits par l'application (rapports d'import et d'enrichissement, carte installée `map/`, documents). Par défaut `./storage` hors production ; **obligatoire en production**. Tous les chemins sont résolus sous cette racine. |
 | `MAP_BASEMAP` | `ign` (défaut : fond IGN en ligne, chargé par le navigateur) ou `offline` (réseau fermé : fond installé ou fond de secours) |
+| `OPS_SCHEDULER` | `on`/`off` : planificateur des tâches quotidiennes (défaut `on`, `off` si `NODE_ENV=test` ; la suite e2e le force à `off`) |
+| `OPS_DAILY_AT` | Heure des tâches quotidiennes, `HH:MM`, heure de Paris (défaut `03:30`) |
+| `EXPORT_RETENTION_DAYS` | Exports nocturnes conservés sans condition (défaut 30 jours) |
+| `EXPORT_RETENTION_MONTHS` | Au-delà, premier export de chaque mois conservé (défaut 12 mois) |
+| `SESSION_PURGE_DAYS` | Sessions expirées supprimées après ce délai (défaut 7 jours) |
+| `TRASH_RETENTION_DAYS` | Documents de la corbeille effacés après ce délai (défaut 30 jours) |
 | `TEST_DATABASE_URL` | Facultative : base des tests d'intégration (nom terminé par `_test`) |
 | `VIGIE_E2E_TEST_HOOKS` | Réservée à la suite e2e (`1` expose `window.__vigieMap`) ; **ne jamais la définir en production** |
 
@@ -271,6 +285,8 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── import.md             # procédure d'import, anomalies, décisions
 │   ├── security.md           # sessions, rôles, audit
 │   ├── offline-bundle.md     # paquet hors ligne : procédure, données sortantes, licences
+│   ├── exploitation.md       # tâches planifiées, exports, rétention, purges, incidents
+│   ├── administration.md     # guide de l'administrateur (comptes, audit, imports, divergences)
 │   ├── compliance-rules.md   # règles de conformité, complétude
 │   ├── filters-and-search.md # filtres, URL partageables, recherche Ctrl+K
 │   ├── brand/                # SVG de référence du logo
@@ -288,6 +304,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── enrichment-export-sites.ts  # pnpm enrichment:export-sites
 │   ├── enrichment-apply.ts   # pnpm enrichment:apply
 │   ├── map-install.ts        # pnpm map:install
+│   ├── ops.ts                # pnpm ops:list / ops:run
 │   └── lib/                  # cli.ts (arguments, saisie masquée), sample-spreadsheet.ts
 ├── src/
 │   ├── app/                  # routes (App Router)
@@ -298,6 +315,7 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   │   │   └── sites/ supervision/ admin/   # pages placeholder (admin : rôle admin)
 │   │   ├── login/            # page de connexion + Server Action
 │   │   ├── forbidden.tsx     # « Accès refusé » (403)
+│   │   ├── account/password/ # changement de mot de passe (obligatoire après un mot de passe temporaire)
 │   │   ├── dev/design/       # vitrine du design system (404 en production)
 │   │   ├── api/health/       # sonde de vie (publique)
 │   │   ├── api/auth/logout/  # déconnexion (POST)
@@ -316,7 +334,11 @@ Validées au démarrage par `src/lib/env.ts` (zod) : le serveur s'arrête imméd
 │   ├── server/               # accès base (server-only) : db (singleton audité), prisma (fabriques), health
 │   │   ├── auth/             # mots de passe, sessions, cookie, connexion, permissions, couche d'accès
 │   │   ├── audit/            # contexte, diff, sérialisation, extension Prisma d'audit
-│   │   ├── import/           # import du tableur (analyseurs, en-têtes, correspondance, contrôles, plan, écriture, rapport)
+│   │   ├── import/           # import du tableur (analyseurs, en-têtes, correspondance, contrôles, plan, écriture, rapport, historique)
+│   │   ├── ops/              # tâches planifiées : registre, runJob, planificateur, purges, écran Exploitation
+│   │   ├── exports/          # export nocturne, exports à la demande, écrivains XLSX et CSV
+│   │   ├── users/            # gestion des comptes (mots de passe temporaires, garde-fous)
+│   │   ├── settings.ts       # paramètres applicatifs (verrou d'import)
 │   │   └── storage.ts        # chemins sous STORAGE_ROOT (anti-traversée)
 │   ├── instrumentation.ts    # démarrage : environnement, avertissement cookie, purge des sessions
 │   └── middleware.ts         # nonce + CSP ; redirection sans cookie de session

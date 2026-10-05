@@ -223,6 +223,15 @@ Par défaut (`MAP_BASEMAP=ign`), le **navigateur** de chaque utilisateur charge 
 4. **Grouper les écritures liées** dans `db.$transaction(async (tx) => …)`. La forme tableau de `$transaction` est refusée.
 5. **Ne pas utiliser `createPrismaClient()`**, le client **non audité**, dans le code applicatif. Il est réservé aux jeux de données de test et à la maintenance.
 
+### SQL brut dans une transaction
+
+Depuis l'étape 11, le SQL brut (`$queryRaw`, `$executeRaw`) exécuté dans `db.$transaction(fn)` passe par la transaction : un verrou `WITH (UPDLOCK)` (verrou de site de l'édition, comptage des administrateurs actifs) tient jusqu'au commit. Auparavant, ces requêtes partaient hors transaction et le verrou était relâché aussitôt (correctif `fix(audit)`, tests de non-régression dans `tests/integration/audit.test.ts`).
+
+### Comptes et mots de passe temporaires (étape 11)
+- Le mot de passe temporaire d'un compte créé ou réinitialisé par un administrateur est généré par le serveur (16 caractères aléatoires, politique vérifiée), affiché une seule fois, jamais journalisé.
+- `users.must_change_password` : tant qu'il est vrai, toute page renvoie vers `/account/password` et toute route API répond 403. Le changement ferme les autres sessions et en ouvre une nouvelle.
+- Désactivation, changement de rôle et réinitialisation ferment toutes les sessions du compte ; chaque révocation est tracée (nombre de sessions, jamais d'empreinte).
+
 ### Limites connues
 - Le **SQL brut** (`$executeRaw`) et les **suppressions en cascade** faites par la base (suppression d'un site) ne produisent pas de ligne par enregistrement enfant. Seule la suppression du site est tracée, avec son état complet. L'application archive plutôt que de supprimer.
 - L'immuabilité est garantie **via le client** : un accès SQL direct avec un compte qui a les droits d'écriture peut toujours modifier `audit_logs`.
@@ -243,6 +252,9 @@ La suite e2e démarre le build de production avec `VIGIE_E2E_TEST_HOOKS=1`, qui 
   - droits de lecture et d'écriture sur les autres tables ;
   - un compte distinct, plus privilégié, pour `prisma migrate deploy`.
 - **HTTPS** sur le reverse proxy, avec `COOKIE_SECURE=true` et `TRUST_PROXY=true`.
-- Planifier `purgeExpiredSessions()` (étape 11) et surveiller le volume de `audit_logs`, par exemple avec un archivage annuel en lecture seule.
+- **Fuseau horaire du serveur** : Europe/Paris (les tâches planifiées calculent toujours en heure de Paris, mais les journaux du système sont plus lisibles ainsi).
+- **Variables d'exploitation** (étape 11) : `OPS_SCHEDULER=on` sur **une seule** instance, `OPS_DAILY_AT`, `EXPORT_RETENTION_DAYS`, `EXPORT_RETENTION_MONTHS`, `SESSION_PURGE_DAYS`, `TRASH_RETENTION_DAYS` (voir [`exploitation.md`](exploitation.md)).
+- **Sauvegarde SQL Server par le DBA** (complète, différentielle, journaux) : l'export nocturne n'est **pas** une sauvegarde. Sauvegarder aussi le dossier `STORAGE_ROOT` (documents, plans, carte).
+- **Surveiller l'espace disque de `STORAGE_ROOT`** (documents, exports, carte) et le volume de `audit_logs` (jamais purgé), par exemple avec un archivage annuel en lecture seule.
 - Sauvegarder `audit_logs` avec la base, et conserver les sauvegardes selon la politique de la DSI.
 - Si plusieurs instances sont déployées : partager la limite par IP (table SQL) et vérifier l'affinité de session (inutile ici, puisque les sessions sont en base).

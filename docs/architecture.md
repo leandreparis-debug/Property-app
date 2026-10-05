@@ -56,6 +56,12 @@
 | `src/components/brand/` | Logo (symbole et nom) | Couleurs de marque réservées au logo |
 | `src/lib/` | Utilitaires transverses (env, formats, statut, CSP) | — |
 | `tools/offline-bundle/` | Outil de préparation du paquet hors ligne (poste connecté) : client HTTP partagé, fournisseurs, carte, manifeste | **Seul code autorisé à joindre internet.** Jamais importé par `src/`, exclu du build, mais couvert par le typecheck, le lint et les tests |
+| `src/server/ops/`, `src/domain/ops/` | Tâches planifiées : registre, `runJob` (exclusion mutuelle en base), planificateur maison, purges ; calcul pur des échéances | Démarré par `instrumentation-node.ts` (`OPS_SCHEDULER`) |
+| `src/domain/export/`, `src/server/exports/` | Sérialiseur unique des exports (tables, format CSV, rétention) ; export nocturne, exports à la demande | Purs côté `domain` ; fichiers sous `STORAGE_ROOT/exports/` |
+| `src/server/users/`, `src/domain/users/` | Gestion des comptes (mots de passe temporaires, garde-fous) | `user:manage` |
+| `src/domain/audit/`, `src/server/audit/journal.ts` | Lecture du journal : filtres, curseur, masquage financier | Lecture seule |
+| `src/server/settings.ts` | Paramètres applicatifs (`import.locked`) | Audités, `settings:manage` |
+| `src/server/enrichment/divergences.ts` | Revue des divergences (conserver, adopter par le chemin d'écriture de la fiche) | `enrichment:apply` |
 | `generated/prisma/` | Client Prisma généré | Hors de `src/` : n'est pas analysé par `check:offline` (ses commentaires contiennent des liens de documentation, jamais chargés) |
 
 ## Authentification et audit
@@ -124,5 +130,5 @@ Détails et justifications : [`docs/security.md`](security.md).
 8. **Fiche entrepôt** *(terminée, voir `docs/site-sheet.md`)*.
 9. **Édition tracée** : modifications avec journal d'audit *(terminée, voir `docs/editing.md`)*.
 10. **Volume 3D et plan** *(terminée, voir `docs/plans-and-equipment.md`)*.
-11. **Exploitation** : sauvegardes, journaux, supervision technique.
+11. **Exploitation et administration** : tâches planifiées (export nocturne, purges), espace Administration (exploitation, utilisateurs, journal d'audit, imports, enrichissement), exports à la demande *(terminée, voir `docs/exploitation.md` et `docs/administration.md`)*.
 12. **Recette et déploiement** : conteneur, livraison à la DSI.
