@@ -1,0 +1,5 @@
+# Unix line endings everywhere, also on Windows checkouts: the bash scripts
+# (scripts/*.sh, run by pnpm and by the dev container) fail with CRLF.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf

@@ -42,6 +42,9 @@ Après l'étape 10 :
   - `docs/maquettes/` : maquette interactive `maquette-vigie.html` (validée le 30 septembre) et captures de l'application ;
   - `docs/hebergement-google.md` : proposition d'hébergement sur Google Cloud, **non mise en œuvre**.
 
+- **Carte « gris épuré » (5 octobre 2026)** : Plan IGN vectoriel avec le style `gris` de l'IGN (repli sur le Plan IGN en images désaturé), étiquettes de sites plus légères, emprises au trait neutre, volumes en gris clairs (`docs/design-system.md`, section Carte). Rendu du fond IGN **non vérifié** dans l'environnement cloud de Claude (`data.geopf.fr` y est bloqué) ; tests e2e de la carte à relancer.
+- **Poste local (7 octobre 2026)** : guide [`docs/demarrage-local.md`](demarrage-local.md) (conteneur de développement VS Code ou installation directe, Windows compris) ; `.gitattributes` force les fins de ligne Unix pour que les scripts bash marchent sous Windows.
+
 ## Décisions importantes
 
 - **Hors ligne par principe** : le serveur n'appelle jamais internet. Seule exception : le fond IGN, chargé par les postes des utilisateurs (voir `docs/security.md`, section fond de carte).

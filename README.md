@@ -33,6 +33,8 @@ Les sessions ouvertes sous l'ancien nom de cookie sont perdues : il suffit de se
 ## Démarrage
 
 > **Tester sans rien installer** : ouvrir un GitHub Codespace sur la branche, tout se prépare seul (base, données d'exemple, comptes de test). Voir [`docs/demarrage-codespaces.md`](docs/demarrage-codespaces.md).
+>
+> **Sur un PC (Windows, Mac, Linux)** : conteneur de développement VS Code (même préparation automatique que le Codespace) ou installation directe avec `pnpm codespace:setup`. Voir [`docs/demarrage-local.md`](docs/demarrage-local.md).
 
 ```bash
 cp .env.example .env        # puis changer le mot de passe si besoin (dans les deux variables)
